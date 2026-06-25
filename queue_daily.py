@@ -14,7 +14,7 @@ Usage:
 
 This intentionally does NOT try to force exactly 20 good clips out of weak
 source material — see run_pipeline()'s max_clips as a per-video cap, and
-Claude will return fewer if a video doesn't support that many strong clips.
+the model will return fewer if a video doesn't support that many strong clips.
 Add more source videos to input/ on days you want higher output.
 """
 
@@ -24,6 +24,7 @@ from pathlib import Path
 
 from pipeline import run_pipeline
 from upload_youtube import upload_from_meta_file
+from select_clips import DEFAULT_MIN_DURATION, DEFAULT_MAX_DURATION
 
 INPUT_DIR = Path("input")
 SUPPORTED_EXTENSIONS = {".mp4", ".mov", ".mkv", ".webm"}
@@ -44,6 +45,10 @@ def main():
     parser.add_argument("--privacy", default="public", choices=["public", "unlisted", "private"])
     parser.add_argument("--spacing-minutes", type=float, default=20.0,
                          help="Minutes to wait between uploads when --upload is set")
+    parser.add_argument("--min-duration", type=float, default=DEFAULT_MIN_DURATION,
+                         help="Target minimum clip length in seconds (default: 30)")
+    parser.add_argument("--max-duration", type=float, default=DEFAULT_MAX_DURATION,
+                         help="Target maximum clip length in seconds (default: 45)")
     args = parser.parse_args()
 
     videos = find_source_videos()
@@ -63,6 +68,8 @@ def main():
             max_clips=per_video_cap,
             whisper_model=args.whisper_model,
             do_upload=False,  # we control upload pacing separately below
+            min_duration=args.min_duration,
+            max_duration=args.max_duration,
         )
         all_produced.extend(produced)
 

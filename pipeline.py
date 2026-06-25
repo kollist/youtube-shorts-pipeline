@@ -1,6 +1,6 @@
 """
 pipeline.py
-End-to-end orchestrator: long video -> transcript -> Claude clip selection ->
+End-to-end orchestrator: long video -> transcript -> Groq clip selection ->
 ffmpeg cutting -> YouTube upload.
 
 Usage examples:
@@ -28,7 +28,13 @@ import time
 from pathlib import Path
 
 from transcribe import transcribe, save_transcript
-from select_clips import load_transcript, select_clips, save_plan
+from select_clips import (
+    load_transcript,
+    select_clips,
+    save_plan,
+    DEFAULT_MIN_DURATION,
+    DEFAULT_MAX_DURATION,
+)
 from cut_clips import process_all_clips
 from upload_youtube import upload_from_meta_file
 
@@ -42,6 +48,8 @@ def run_pipeline(
     do_upload: bool = False,
     privacy_status: str = "public",
     burn_captions: bool = True,
+    min_duration: float = DEFAULT_MIN_DURATION,
+    max_duration: float = DEFAULT_MAX_DURATION,
 ):
     video_path = Path(video_path)
     stem = video_path.stem
@@ -55,9 +63,14 @@ def run_pipeline(
 
     segments = load_transcript(str(transcript_json_path))
 
-    clips = select_clips(segments, max_clips=max_clips)
+    clips = select_clips(
+        segments,
+        max_clips=max_clips,
+        min_duration=min_duration,
+        max_duration=max_duration,
+    )
     if not clips:
-        print("[pipeline] Claude did not return any confident clips. Stopping.")
+        print("[pipeline] Model did not return any confident clips. Stopping.")
         return []
     plan_path = save_plan(stem, clips)
 
@@ -111,6 +124,10 @@ if __name__ == "__main__":
     parser.add_argument("--upload-only", action="store_true", help="Skip processing, just upload pending clips in output/")
     parser.add_argument("--privacy", default="public", choices=["public", "unlisted", "private"])
     parser.add_argument("--no-captions", action="store_true", help="Disable burned-in captions")
+    parser.add_argument("--min-duration", type=float, default=DEFAULT_MIN_DURATION,
+                         help="Target minimum clip length in seconds (default: 30)")
+    parser.add_argument("--max-duration", type=float, default=DEFAULT_MAX_DURATION,
+                         help="Target maximum clip length in seconds (default: 45)")
     args = parser.parse_args()
 
     if args.upload_only:
@@ -125,4 +142,6 @@ if __name__ == "__main__":
             do_upload=args.upload,
             privacy_status=args.privacy,
             burn_captions=not args.no_captions,
+            min_duration=args.min_duration,
+            max_duration=args.max_duration,
         )

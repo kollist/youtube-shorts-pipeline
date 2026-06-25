@@ -1,19 +1,17 @@
 """
 select_clips.py
-Sends a transcript to a LOCAL Ollama model and asks it to pick the best
-short-form clips, returning timestamps + ready-to-post titles/descriptions
-as structured JSON. Runs fully offline/free on your own machine via Ollama.
+Sends a transcript to Groq's free hosted API (Llama 3.3 70B) and asks it to
+pick the best short-form clips, returning timestamps + ready-to-post
+titles/descriptions/hashtags as structured JSON. Free tier, no local compute -
+just needs a Groq API key and an internet connection.
 
 ONE-TIME SETUP:
-    brew install ollama
-    ollama pull qwen2.5:7b-instruct
-
-    (Ollama runs as a background service after install. If "ollama pull"
-    says it can't connect, run `ollama serve` in a separate terminal tab
-    first, or just restart your Mac once after installing.)
+    1. Get a free API key at https://console.groq.com/keys
+    2. Add it to .env as GROQ_API_KEY=gsk_...
 
 Usage:
-    python select_clips.py transcripts/myvideo.json --max-clips 8
+    python select_clips.py transcripts/myvideo.json --max-clips 8 \
+        --min-duration 30 --max-duration 45
 
 Output:
     clips/myvideo_plan.json  -> list of clip plans:
@@ -26,32 +24,50 @@ Output:
         }
 """
 
-import sys
+import os
 import json
 import argparse
 import urllib.request
 import urllib.error
 from pathlib import Path
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL = "qwen2.5:7b-instruct"  # free, local, runs on Apple Silicon
-MIN_CLIP_SECONDS = 15  # matches the 15-60s rule in SYSTEM_PROMPT
-MAX_CLIP_SECONDS = 65  # small buffer over the prompt's 60s ceiling
+from dotenv import load_dotenv
 
-SYSTEM_PROMPT = """You are an expert short-form video editor who finds the most
+load_dotenv()
+
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+MODEL = "llama-3.3-70b-versatile"  # free tier on Groq, far stronger than any local 7-14B model
+
+DEFAULT_MIN_DURATION = 30
+DEFAULT_MAX_DURATION = 45
+DURATION_TOLERANCE = 8  # seconds of slack around the target window before a clip gets dropped
+SNAP_TOLERANCE = 1.5  # how far a timestamp may drift from a real segment edge and still snap to it
+
+
+def build_system_prompt(min_duration: float, max_duration: float) -> str:
+    return f"""You are an expert short-form video editor who finds the most
 engaging, self-contained moments in long-form video transcripts to turn into
-YouTube Shorts (vertical, <=60s clips).
+YouTube Shorts (vertical clips).
 
-You will be given a transcript as a JSON array of {start, end, text} segments
-(times in seconds). Pick the best candidate clips for Shorts.
+You will be given a transcript as a JSON array of {{start, end, text}} segments
+(times in seconds, already split at natural sentence/pause boundaries). Pick
+the best candidate clips for Shorts.
 
 Rules for picking clips:
 - Each clip must be a SELF-CONTAINED moment that makes sense without context
   from the rest of the video (a strong hook, a punchline, a surprising fact,
   a complete story beat, a clear standalone insight).
-- Clip duration should be between 15 and 60 seconds.
+- Target clip duration is {min_duration:.0f}-{max_duration:.0f} seconds. Only go
+  outside that window if the moment is too strong to cut and no combination of
+  whole segments lands inside it.
+- CLEAN CUTS ONLY: "start" must exactly equal the "start" of one of the given
+  segments, and "end" must exactly equal the "end" of one of the given segments.
+  Never invent a timestamp in the middle of a segment - that chops a word or
+  sentence in half and ruins the cut.
 - Do not let clips overlap.
-- Prefer moments with a strong opening line in the first 3 seconds (hook).
+- Prefer moments with a strong opening line in the first 3 seconds (hook), and
+  end on a complete sentence/thought, never a trailing dependent clause.
 - Skip filler, rambling, or context-dependent moments.
 - Only return clips you are genuinely confident are strong - quality over
   quantity. If the transcript doesn't support the requested number of good
@@ -62,17 +78,19 @@ For each clip, write:
 - "description": 1-2 sentences, include 2-4 relevant hashtags (always include #Shorts)
 - "reason": one short sentence on why this moment works
 
-Respond with ONLY a JSON array, no markdown fences, no preamble, no explanation
-before or after. Example shape:
-[
-  {
-    "start": 102.5,
-    "end": 142.0,
-    "title": "The mistake everyone makes with X",
-    "description": "Why most people get this wrong, explained in 30 seconds. #Shorts #productivity",
-    "reason": "Strong contrarian hook + clean payoff"
-  }
-]
+Respond with ONLY a JSON object of this exact shape, no markdown fences, no
+preamble, no explanation before or after:
+{{
+  "clips": [
+    {{
+      "start": 102.5,
+      "end": 142.0,
+      "title": "The mistake everyone makes with X",
+      "description": "Why most people get this wrong, explained in 30 seconds. #Shorts #productivity",
+      "reason": "Strong contrarian hook + clean payoff"
+    }}
+  ]
+}}
 """
 
 
@@ -89,61 +107,72 @@ def build_user_prompt(segments: list[dict], max_clips: int) -> str:
     )
 
 
-# Plain "format": "json" only guarantees syntactically valid JSON - the model
-# is still free to pick its own shape (we saw it return a video-summary object
-# instead of a clip array). Passing a JSON schema constrains it to this exact
-# array-of-clips shape via grammar-level decoding.
-CLIPS_SCHEMA = {
-    "type": "array",
-    "items": {
-        "type": "object",
-        "properties": {
-            "start": {"type": "number"},
-            "end": {"type": "number"},
-            "title": {"type": "string"},
-            "description": {"type": "string"},
-            "reason": {"type": "string"},
-        },
-        "required": ["start", "end", "title", "description", "reason"],
-    },
-}
+def call_groq(prompt: str, system: str, model: str = MODEL) -> str:
+    if not GROQ_API_KEY:
+        raise RuntimeError(
+            "GROQ_API_KEY is not set. Get a free key at https://console.groq.com/keys "
+            "and add it to your .env file as GROQ_API_KEY=..."
+        )
 
-
-def call_ollama(prompt: str, system: str, model: str = MODEL) -> str:
     payload = {
         "model": model,
-        "prompt": prompt,
-        "system": system,
-        "stream": False,
-        "format": CLIPS_SCHEMA,  # constrain output to this exact array shape
-        "options": {
-            "temperature": 0.4,
-            "num_ctx": 32768,  # max context window qwen2.5:7b-instruct supports
-        },
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.4,
+        "response_format": {"type": "json_object"},
     }
     req = urllib.request.Request(
-        OLLAMA_URL,
+        GROQ_URL,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+        },
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=600) as resp:
+        with urllib.request.urlopen(req, timeout=120) as resp:
             body = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"Groq API error {e.code}: {e.read().decode('utf-8', 'ignore')}")
     except urllib.error.URLError as e:
-        raise RuntimeError(
-            f"Could not reach Ollama at {OLLAMA_URL}. Is it running?\n"
-            f"Try: 'ollama serve' in a terminal, or 'ollama pull {model}' "
-            f"if you haven't downloaded the model yet.\n\nOriginal error: {e}"
-        )
-    return body.get("response", "")
+        raise RuntimeError(f"Could not reach Groq API ({GROQ_URL}): {e}")
+
+    return body["choices"][0]["message"]["content"]
 
 
-def select_clips(segments: list[dict], max_clips: int = 8, model: str = MODEL) -> list[dict]:
+def snap_to_segment_bounds(start: float, end: float, segments: list[dict]) -> tuple[float, float]:
+    """Pull (start, end) onto the nearest real segment edge so the cut lands on a
+    clean sentence boundary instead of mid-word, even if the model's timestamps drift."""
+    if not segments:
+        return start, end
+
+    nearest_start = min((s["start"] for s in segments), key=lambda v: abs(v - start))
+    nearest_end = min((s["end"] for s in segments), key=lambda v: abs(v - end))
+
+    if abs(nearest_start - start) <= SNAP_TOLERANCE:
+        start = nearest_start
+    if abs(nearest_end - end) <= SNAP_TOLERANCE:
+        end = nearest_end
+
+    return start, end
+
+
+def select_clips(
+    segments: list[dict],
+    max_clips: int = 8,
+    model: str = MODEL,
+    min_duration: float = DEFAULT_MIN_DURATION,
+    max_duration: float = DEFAULT_MAX_DURATION,
+) -> list[dict]:
     user_prompt = build_user_prompt(segments, max_clips)
+    system_prompt = build_system_prompt(min_duration, max_duration)
 
-    print(f"[select_clips] Asking local model '{model}' (via Ollama) to pick up to {max_clips} clips...")
-    raw_text = call_ollama(user_prompt, SYSTEM_PROMPT, model=model).strip()
+    print(f"[select_clips] Asking '{model}' (via Groq) to pick up to {max_clips} clips, "
+          f"targeting {min_duration:.0f}-{max_duration:.0f}s each...")
+    raw_text = call_groq(user_prompt, system_prompt, model=model).strip()
 
     # Defensive parsing in case the model wraps in fences despite instructions
     if raw_text.startswith("```"):
@@ -151,8 +180,6 @@ def select_clips(segments: list[dict], max_clips: int = 8, model: str = MODEL) -
         if raw_text.startswith("json"):
             raw_text = raw_text[4:]
 
-    # Some local models occasionally wrap the array in an object like
-    # {"clips": [...]}. Handle both shapes.
     try:
         parsed = json.loads(raw_text)
     except json.JSONDecodeError as e:
@@ -160,21 +187,24 @@ def select_clips(segments: list[dict], max_clips: int = 8, model: str = MODEL) -
             f"Could not parse model response as JSON: {e}\n\nRaw response:\n{raw_text}"
         )
 
+    # We ask for {"clips": [...]} but tolerate a bare array too.
     if isinstance(parsed, dict):
-        # try to find the first list value in the dict
         clips = next((v for v in parsed.values() if isinstance(v, list)), [])
     else:
         clips = parsed
 
-    # Basic validation / sanitation
+    low = max(0.0, min_duration - DURATION_TOLERANCE)
+    high = max_duration + DURATION_TOLERANCE
+
     valid_clips = []
     for c in clips:
         try:
             start, end = float(c["start"]), float(c["end"])
+            start, end = snap_to_segment_bounds(start, end, segments)
             duration = end - start
             if duration <= 0:
                 continue
-            if duration < MIN_CLIP_SECONDS or duration > MAX_CLIP_SECONDS:
+            if duration < low or duration > high:
                 continue
             valid_clips.append({
                 "start": start,
@@ -186,7 +216,7 @@ def select_clips(segments: list[dict], max_clips: int = 8, model: str = MODEL) -
         except (KeyError, ValueError, TypeError):
             continue
 
-    print(f"[select_clips] Got {len(valid_clips)} valid clip(s) from the local model.")
+    print(f"[select_clips] Got {len(valid_clips)} valid clip(s) from the model.")
     return valid_clips
 
 
@@ -204,10 +234,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("transcript_path", help="Path to transcript JSON from transcribe.py")
     parser.add_argument("--max-clips", type=int, default=8)
-    parser.add_argument("--model", default=MODEL, help="Ollama model tag to use")
+    parser.add_argument("--model", default=MODEL, help="Groq model name")
+    parser.add_argument("--min-duration", type=float, default=DEFAULT_MIN_DURATION,
+                         help="Target minimum clip length in seconds (default: 30)")
+    parser.add_argument("--max-duration", type=float, default=DEFAULT_MAX_DURATION,
+                         help="Target maximum clip length in seconds (default: 45)")
     args = parser.parse_args()
 
     segments = load_transcript(args.transcript_path)
-    clips = select_clips(segments, max_clips=args.max_clips, model=args.model)
+    clips = select_clips(
+        segments,
+        max_clips=args.max_clips,
+        model=args.model,
+        min_duration=args.min_duration,
+        max_duration=args.max_duration,
+    )
     video_stem = Path(args.transcript_path).stem
     save_plan(video_stem, clips)
