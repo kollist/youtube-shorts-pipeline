@@ -22,6 +22,7 @@ Usage:
 """
 
 import os
+import shutil
 import sys
 import json
 from pathlib import Path
@@ -113,6 +114,19 @@ def upload_short(
     return {"video_id": video_id, "url": url}
 
 
+def archive_uploaded_clip(meta_path: str, video_path: str):
+    """Moves a clip's .mp4/.srt/.json out of output/ into output/uploaded/
+    once it's live on YouTube, so output/ only ever shows pending clips."""
+    meta_path = Path(meta_path)
+    video_path = Path(video_path)
+    archive_dir = video_path.parent / "uploaded"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+
+    for path in (video_path, video_path.with_suffix(".srt"), meta_path):
+        if path.exists():
+            shutil.move(str(path), str(archive_dir / path.name))
+
+
 def upload_from_meta_file(meta_path: str, privacy_status: str = "public"):
     with open(meta_path, "r", encoding="utf-8") as f:
         meta = json.load(f)
@@ -128,6 +142,8 @@ def upload_from_meta_file(meta_path: str, privacy_status: str = "public"):
     meta["youtube_url"] = result["url"]
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
+
+    archive_uploaded_clip(meta_path, meta["video_path"])
 
     return result
 

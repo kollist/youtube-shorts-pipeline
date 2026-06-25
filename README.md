@@ -1,8 +1,12 @@
-# YouTube Shorts Pipeline (Claude + Whisper + ffmpeg)
+# YouTube Shorts Pipeline (Local AI + Whisper + ffmpeg)
 
-Long video in -> transcript -> Claude picks the best moments -> ffmpeg cuts
-vertical Shorts with burned-in captions -> uploaded to your channel via the
-YouTube Data API v3.
+Long video in -> transcript -> a local AI model picks the best moments ->
+ffmpeg cuts vertical Shorts with burned-in captions -> uploaded to your
+channel via the YouTube Data API v3.
+
+**Fully free.** Clip selection runs on a local open-weight model via Ollama
+(no API key, no per-call cost, runs entirely on your Mac). Transcription
+(Whisper) and video cutting (ffmpeg) were already free and local.
 
 **Important:** this runs on YOUR computer, not in this chat. The scripts need
 your video files and your YouTube OAuth login — neither of which Claude.ai
@@ -21,14 +25,21 @@ You also need `ffmpeg` installed and on your PATH:
 - Ubuntu/Debian: `sudo apt install ffmpeg`
 - Windows: download from ffmpeg.org and add to PATH
 
-## 2. Anthropic API key
+## 2. Ollama (local AI for clip selection — free, no account needed)
 
-Copy `.env.example` to `.env` and add your key from
-https://console.anthropic.com:
+```bash
+brew install ollama
+ollama pull qwen2.5:7b-instruct
+```
 
-```
-ANTHROPIC_API_KEY=sk-ant-...
-```
+Ollama runs as a background service after install. If a script says it
+can't connect to `localhost:11434`, run `ollama serve` in a separate
+terminal tab, or restart your Mac once after installing.
+
+This model runs comfortably on Apple Silicon (M1 and up). If you want
+higher-quality clip picks and have the RAM to spare, you can swap to a
+bigger model (e.g. `ollama pull qwen2.5:14b-instruct`) and pass
+`--model qwen2.5:14b-instruct` to `select_clips.py` / `pipeline.py`.
 
 ## 3. YouTube OAuth (one-time setup)
 
@@ -71,21 +82,22 @@ python queue_daily.py --target 20 --upload --spacing-minutes 20
 ```
 
 This splits the daily target across however many videos are in `input/`,
-caps Claude's clip count per video accordingly, and spaces uploads out
+caps the model's clip count per video accordingly, and spaces uploads out
 across the day instead of dumping 20 videos in one burst.
 
 ## 5. Quota math (why this is safe on the free tier)
 
-- Default free quota: 10,000 units/day.
+- Default free YouTube API quota: 10,000 units/day.
 - A `videos.insert` call now costs ~100 units (down from the old 1,600).
 - 20 uploads/day = ~2,000 units. Plenty of headroom left.
+- Clip selection costs $0 since it runs locally via Ollama.
 
 ## Pipeline files
 
 | File | Role |
 |---|---|
 | `transcribe.py` | Whisper transcription -> timestamped JSON |
-| `select_clips.py` | Sends transcript to Claude, gets back clip timestamps + titles/descriptions |
+| `select_clips.py` | Sends transcript to a local Ollama model, gets back clip timestamps + titles/descriptions |
 | `cut_clips.py` | ffmpeg: crops to 9:16, burns captions, exports clips |
 | `upload_youtube.py` | OAuth + `videos.insert` upload |
 | `pipeline.py` | Runs all of the above on one video |
@@ -96,13 +108,27 @@ across the day instead of dumping 20 videos in one burst.
 - **Whisper model size**: `small` is the default (fast). Use `medium` or
   `large-v3` for cleaner captions if your machine can handle it — pass via
   `--whisper-model`.
+- **Local model quality**: Qwen2.5 7B is solid but not as sharp as a
+  frontier model at judging "is this moment actually good." Expect to
+  occasionally need to manually skip a weak pick — review `clips/*_plan.json`
+  before uploading if quality matters more than speed.
 - **Privacy default is "public"** — change `--privacy unlisted` if you'd
   rather review on YouTube Studio before making clips public.
-- **Claude returns fewer clips than asked if the material is weak.** That's
-  intentional — `select_clips.py`'s prompt explicitly tells it to prioritize
-  quality over hitting a number.
+- **The model returns fewer clips than asked if the material is weak.**
+  That's intentional — the prompt explicitly asks it to prioritize quality
+  over hitting a number, though local models follow this instruction less
+  reliably than a frontier model would.
 - **YouTube's own automated systems still apply** (spam/abuse detection,
   Shorts eligibility heuristics). High-volume identical-sounding titles or
   very repetitive content style can still get flagged independent of API
   quota — that's a YouTube policy layer, not something this pipeline
   controls.
+
+## Switching back to the Anthropic API later
+
+If you ever want sharper clip-picking judgment, you can switch `select_clips.py`
+back to calling Claude via the Anthropic API instead of Ollama — the function
+signatures (`select_clips(segments, max_clips)`) are the same either way, so
+`pipeline.py` and `queue_daily.py` wouldn't need any changes. Just ask and I
+can restore that version.
+

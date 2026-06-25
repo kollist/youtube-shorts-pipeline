@@ -46,6 +46,18 @@ def build_srt_for_clip(segments: list[dict], clip_start: float, clip_end: float)
     return "\n".join(lines)
 
 
+# Subtitle force_style MUST set PlayResX/PlayResY to the real output frame
+# size. libass scales MarginV against its default script resolution (288px
+# tall) when PlayRes isn't set, so a "MarginV=120" meant as pixels near the
+# bottom of a 1920-tall frame actually lands ~6.7x higher up - this is what
+# was pushing captions into the middle of the video.
+SUBTITLE_STYLE = (
+    "FontName=Arial,FontSize=64,Bold=1,PrimaryColour=&HFFFFFF&,"
+    "OutlineColour=&H000000&,BorderStyle=3,Outline=3,Alignment=2,"
+    "MarginV=170,PlayResX=1080,PlayResY=1920"
+)
+
+
 def cut_clip(
     source_video,
     start: float,
@@ -57,29 +69,33 @@ def cut_clip(
     duration = end - start
     source = Path(source_video)
 
-    # Build the video filter chain:
-    # 1. Crop/scale to 9:16 vertical (center crop, then scale to 1080x1920)
-    # 2. Burn in subtitles if provided
-    filters = []
-    if vertical:
-        filters.append("scale=-2:1920,crop=1080:1920")
-    if srt_path:
-        filters.append(
-            f"subtitles='{srt_path}':force_style="
-            "'FontName=Arial,FontSize=14,PrimaryColour=&HFFFFFF&,"
-            "OutlineColour=&H000000&,BorderStyle=3,Outline=2,Alignment=2,MarginV=120'"
-        )
-
-    vf = ",".join(filters) if filters else None
-
     cmd = [
         "ffmpeg", "-y",
         "-ss", str(start),
         "-i", str(source),
         "-t", str(duration),
     ]
-    if vf:
-        cmd += ["-vf", vf]
+
+    if vertical:
+        # Center crop alone zoomed in and lost the edges of wide shots (the
+        # user's "not showing everything" complaint). Instead: fill the full
+        # 1080x1920 canvas with a blurred, cropped copy of the frame as a
+        # backdrop, then overlay the whole original frame scaled to fit
+        # without cropping on top, so no content is lost.
+        chain = (
+            "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,"
+            "crop=1080:1920,boxblur=20:2[bg];"
+            "[0:v]scale=1080:1920:force_original_aspect_ratio=decrease[fg];"
+            "[bg][fg]overlay=(W-w)/2:(H-h)/2[stacked]"
+        )
+        last_label = "stacked"
+        if srt_path:
+            chain += f";[stacked]subtitles='{srt_path}':force_style='{SUBTITLE_STYLE}'[capped]"
+            last_label = "capped"
+        cmd += ["-filter_complex", chain, "-map", f"[{last_label}]", "-map", "0:a?"]
+    elif srt_path:
+        cmd += ["-vf", f"subtitles='{srt_path}':force_style='{SUBTITLE_STYLE}'"]
+
     cmd += [
         "-c:v", "libx264", "-preset", "fast", "-crf", "20",
         "-c:a", "aac", "-b:a", "128k",

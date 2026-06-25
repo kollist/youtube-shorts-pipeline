@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# OS
+.DS_Store
+
+# Secrets / OAuth (never commit these)
+.env
+client_secret.json
+token.json
+
+# Generated/data dirs (re-creatable by running the pipeline)
+input/
+output/
+transcripts/
+clips/
+
+# Claude Code local-only settings
+.claude/settings.local.json
