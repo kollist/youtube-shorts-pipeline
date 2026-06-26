@@ -114,6 +114,11 @@ across the day instead of dumping 20 videos in one burst.
 - **Whisper model size**: `small` is the default (fast). Use `medium` or
   `large-v3` for cleaner captions if your machine can handle it — pass via
   `--whisper-model`.
+- **Long videos get chunked**: Groq's free tier caps `llama-3.3-70b-versatile`
+  at 12,000 tokens/minute per request. For long source videos, `select_clips.py`
+  automatically splits the transcript into ~7000-token chunks and pauses ~65s
+  between Groq calls to stay under that limit - so a multi-hour video will take
+  several extra minutes on this step alone. This is automatic, no flag needed.
 - **Clip length**: `--min-duration` / `--max-duration` (default 30-45s) control
   the target window. The model is instructed to only pick clips whose start/end
   land exactly on a transcript segment boundary, and `select_clips.py` snaps

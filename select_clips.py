@@ -26,6 +26,7 @@ Output:
 
 import os
 import json
+import time
 import argparse
 import urllib.request
 import urllib.error
@@ -43,6 +44,36 @@ DEFAULT_MIN_DURATION = 30
 DEFAULT_MAX_DURATION = 45
 DURATION_TOLERANCE = 8  # seconds of slack around the target window before a clip gets dropped
 SNAP_TOLERANCE = 1.5  # how far a timestamp may drift from a real segment edge and still snap to it
+
+# Groq's free tier caps llama-3.3-70b-versatile at 12,000 tokens/minute per request.
+# A full-length video transcript can easily blow past that in one request, so we
+# split it into chunks that comfortably fit, and pace requests across the minute.
+CHARS_PER_TOKEN = 4  # rough heuristic for English text
+MAX_INPUT_TOKENS_PER_CHUNK = 7000  # leaves headroom under 12,000 for system prompt + response
+CHUNK_COOLDOWN_SECONDS = 65  # let the tokens-per-minute budget fully reset between chunks
+
+
+def estimate_tokens(text: str) -> int:
+    return max(1, len(text) // CHARS_PER_TOKEN)
+
+
+def chunk_segments(segments: list[dict], max_tokens: int = MAX_INPUT_TOKENS_PER_CHUNK) -> list[list[dict]]:
+    """Split segments into groups that each stay under a rough per-request token
+    budget, so one long transcript doesn't blow past Groq's tokens-per-minute limit."""
+    chunks: list[list[dict]] = []
+    current: list[dict] = []
+    current_tokens = 0
+    for seg in segments:
+        seg_tokens = estimate_tokens(seg["text"]) + 8  # + a few tokens for timestamp formatting
+        if current and current_tokens + seg_tokens > max_tokens:
+            chunks.append(current)
+            current = []
+            current_tokens = 0
+        current.append(seg)
+        current_tokens += seg_tokens
+    if current:
+        chunks.append(current)
+    return chunks
 
 
 def build_system_prompt(min_duration: float, max_duration: float) -> str:
@@ -100,7 +131,10 @@ def load_transcript(transcript_path: str) -> list[dict]:
 
 
 def build_user_prompt(segments: list[dict], max_clips: int) -> str:
-    transcript_json = json.dumps(segments, ensure_ascii=False)
+    transcript_json = "\n".join(
+        f"{s['start']:.2f}|{s['end']:.2f}|{s['text']}"
+        for s in segments
+    )
     return (
         f"Find up to {max_clips} clips for YouTube Shorts from this transcript.\n\n"
         f"TRANSCRIPT:\n{transcript_json}"
@@ -129,6 +163,7 @@ def call_groq(prompt: str, system: str, model: str = MODEL) -> str:
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {GROQ_API_KEY}",
+            "User-Agent": "python-urllib/3.14",
         },
         method="POST",
     )
@@ -160,18 +195,16 @@ def snap_to_segment_bounds(start: float, end: float, segments: list[dict]) -> tu
     return start, end
 
 
-def select_clips(
+def _select_clips_for_chunk(
     segments: list[dict],
-    max_clips: int = 8,
-    model: str = MODEL,
-    min_duration: float = DEFAULT_MIN_DURATION,
-    max_duration: float = DEFAULT_MAX_DURATION,
+    max_clips: int,
+    model: str,
+    min_duration: float,
+    max_duration: float,
 ) -> list[dict]:
     user_prompt = build_user_prompt(segments, max_clips)
     system_prompt = build_system_prompt(min_duration, max_duration)
 
-    print(f"[select_clips] Asking '{model}' (via Groq) to pick up to {max_clips} clips, "
-          f"targeting {min_duration:.0f}-{max_duration:.0f}s each...")
     raw_text = call_groq(user_prompt, system_prompt, model=model).strip()
 
     # Defensive parsing in case the model wraps in fences despite instructions
@@ -216,8 +249,39 @@ def select_clips(
         except (KeyError, ValueError, TypeError):
             continue
 
-    print(f"[select_clips] Got {len(valid_clips)} valid clip(s) from the model.")
     return valid_clips
+
+
+def select_clips(
+    segments: list[dict],
+    max_clips: int = 8,
+    model: str = MODEL,
+    min_duration: float = DEFAULT_MIN_DURATION,
+    max_duration: float = DEFAULT_MAX_DURATION,
+) -> list[dict]:
+    chunks = chunk_segments(segments)
+    if not chunks:
+        return []
+
+    per_chunk_max = max(1, -(-max_clips // len(chunks)))  # ceil(max_clips / len(chunks))
+
+    print(f"[select_clips] Asking '{model}' (via Groq) to pick up to {max_clips} clips total, "
+          f"targeting {min_duration:.0f}-{max_duration:.0f}s each, "
+          f"across {len(chunks)} chunk(s)...")
+
+    all_clips: list[dict] = []
+    for i, chunk in enumerate(chunks, start=1):
+        if len(chunks) > 1:
+            print(f"[select_clips] Chunk {i}/{len(chunks)} ({len(chunk)} segments)...")
+        all_clips.extend(
+            _select_clips_for_chunk(chunk, per_chunk_max, model, min_duration, max_duration)
+        )
+        if i < len(chunks):
+            time.sleep(CHUNK_COOLDOWN_SECONDS)  # stay under the tokens-per-minute limit
+
+    all_clips = all_clips[:max_clips]
+    print(f"[select_clips] Got {len(all_clips)} valid clip(s) from the model.")
+    return all_clips
 
 
 def save_plan(video_stem: str, clips: list[dict], out_dir: str = "clips") -> str:
