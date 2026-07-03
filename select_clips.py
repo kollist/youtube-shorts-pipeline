@@ -25,6 +25,7 @@ Output:
 """
 
 import os
+import re
 import json
 import time
 import argparse
@@ -141,6 +142,15 @@ def build_user_prompt(segments: list[dict], max_clips: int) -> str:
     )
 
 
+def _parse_reset_seconds(header: str) -> float:
+    """Parse Groq's x-ratelimit-reset-tokens header (e.g. '1m5s', '8.5s') into seconds."""
+    total = sum(
+        float(v) * (60 if u.lower() == "m" else 1)
+        for v, u in re.findall(r"(\d+(?:\.\d+)?)([mMs])", header)
+    )
+    return total if total > 0 else 70.0  # safe fallback if header is missing or unparseable
+
+
 def call_groq(prompt: str, system: str, model: str = MODEL) -> str:
     if not GROQ_API_KEY:
         raise RuntimeError(
@@ -157,25 +167,30 @@ def call_groq(prompt: str, system: str, model: str = MODEL) -> str:
         "temperature": 0.4,
         "response_format": {"type": "json_object"},
     }
-    req = urllib.request.Request(
-        GROQ_URL,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {GROQ_API_KEY}",
-            "User-Agent": "python-urllib/3.14",
-        },
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            body = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        raise RuntimeError(f"Groq API error {e.code}: {e.read().decode('utf-8', 'ignore')}")
-    except urllib.error.URLError as e:
-        raise RuntimeError(f"Could not reach Groq API ({GROQ_URL}): {e}")
+    data = json.dumps(payload).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "User-Agent": "python-urllib/3.14",
+    }
 
-    return body["choices"][0]["message"]["content"]
+    for attempt in range(3):
+        req = urllib.request.Request(GROQ_URL, data=data, headers=headers, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                body = json.loads(resp.read().decode("utf-8"))
+            return body["choices"][0]["message"]["content"]
+        except urllib.error.HTTPError as e:
+            body_text = e.read().decode("utf-8", "ignore")
+            if e.code in (413, 429) and attempt < 2:
+                wait = _parse_reset_seconds(e.headers.get("x-ratelimit-reset-tokens", "")) + 5
+                print(f"[select_clips] Groq rate limit hit; waiting {wait:.0f}s then retrying "
+                      f"(attempt {attempt + 1}/3)...")
+                time.sleep(wait)
+                continue
+            raise RuntimeError(f"Groq API error {e.code}: {body_text}")
+        except urllib.error.URLError as e:
+            raise RuntimeError(f"Could not reach Groq API ({GROQ_URL}): {e}")
 
 
 def snap_to_segment_bounds(start: float, end: float, segments: list[dict]) -> tuple[float, float]:
@@ -228,26 +243,40 @@ def _select_clips_for_chunk(
 
     low = max(0.0, min_duration - DURATION_TOLERANCE)
     high = max_duration + DURATION_TOLERANCE
+    target_center = (min_duration + max_duration) / 2
 
-    valid_clips = []
+    valid_clips: list[dict] = []
+    fallback_clips: list[dict] = []  # outside range but otherwise usable
+
     for c in clips:
         try:
             start, end = float(c["start"]), float(c["end"])
             start, end = snap_to_segment_bounds(start, end, segments)
             duration = end - start
-            if duration <= 0:
-                continue
-            if duration < low or duration > high:
-                continue
-            valid_clips.append({
+            if duration < 5:
+                continue  # too short to be useful at all
+            entry = {
                 "start": start,
                 "end": end,
                 "title": c.get("title", "Untitled Short")[:100],
                 "description": c.get("description", "#Shorts"),
                 "reason": c.get("reason", ""),
-            })
+            }
+            if low <= duration <= high:
+                valid_clips.append(entry)
+            else:
+                fallback_clips.append(entry)
         except (KeyError, ValueError, TypeError):
             continue
+
+    if not valid_clips and fallback_clips:
+        # Duration filter wiped everything — use the clip closest to the target window
+        # rather than returning nothing from this chunk.
+        best = min(fallback_clips, key=lambda x: abs((x["end"] - x["start"]) - target_center))
+        dur = best["end"] - best["start"]
+        print(f"[select_clips] Warning: no clips in {min_duration:.0f}-{max_duration:.0f}s range "
+              f"for this chunk; using closest match ({dur:.0f}s).")
+        valid_clips = [best]
 
     return valid_clips
 
