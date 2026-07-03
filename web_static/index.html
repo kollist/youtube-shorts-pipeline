@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Shorts Pipeline</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>youtube-shorts-pipeline</h1>
+  <span id="status" class="status idle">idle</span>
+</header>
+
+<main>
+  <section class="panel" id="config-panel">
+    <h2>Run</h2>
+
+    <div class="field">
+      <label>Source</label>
+      <div class="source-tabs">
+        <button type="button" class="tab active" data-source="url">YouTube URL</button>
+        <button type="button" class="tab" data-source="file">Upload file</button>
+      </div>
+      <input id="url-input" type="text" placeholder="https://www.youtube.com/watch?v=..." />
+      <input id="file-input" type="file" accept="video/*" style="display:none" />
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="max-clips">Max clips</label>
+        <input id="max-clips" type="number" min="1" max="30" value="8" />
+      </div>
+      <div class="field">
+        <label for="whisper-model">Whisper model</label>
+        <select id="whisper-model">
+          <option value="tiny">tiny</option>
+          <option value="base">base</option>
+          <option value="small" selected>small</option>
+          <option value="medium">medium</option>
+          <option value="large-v3">large-v3</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="min-duration">Min duration (s)</label>
+        <input id="min-duration" type="number" min="5" value="30" />
+      </div>
+      <div class="field">
+        <label for="max-duration">Max duration (s)</label>
+        <input id="max-duration" type="number" min="5" value="45" />
+      </div>
+    </div>
+
+    <div class="field checkbox-field">
+      <label><input id="burn-captions" type="checkbox" checked /> Burn in captions</label>
+    </div>
+
+    <button id="run-btn" class="run-btn">Run pipeline</button>
+  </section>
+
+  <section class="panel" id="terminal-panel">
+    <h2>Output</h2>
+    <pre id="terminal"></pre>
+  </section>
+
+  <section class="panel" id="clips-panel">
+    <h2>Clips <span id="clip-count"></span></h2>
+    <div id="clips" class="clips-grid"></div>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

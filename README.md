@@ -83,6 +83,18 @@ Downloaded videos are saved to `input/` (gitignored) and reused on subsequent
 runs — if you run the same URL twice the download is skipped if the file is
 already there (transcript caching also kicks in).
 
+### Web UI
+
+Prefer a browser to the CLI? `server.py` serves a single-page dashboard:
+paste a URL (or upload a file), watch each pipeline step stream live, and
+upload finished clips to YouTube individually as they land in the clips
+panel.
+
+```bash
+python server.py
+# -> http://localhost:8000
+```
+
 ### Hitting ~20 shorts/day
 
 One long video rarely has 20 genuinely strong standalone moments — quality

@@ -58,6 +58,7 @@ def run_pipeline(
     burn_captions: bool = True,
     min_duration: float = DEFAULT_MIN_DURATION,
     max_duration: float = DEFAULT_MAX_DURATION,
+    on_clip=None,
 ):
     if _is_url(video_path):
         print(f"[pipeline] Downloading video from URL...")
@@ -92,6 +93,7 @@ def run_pipeline(
         plan_path,
         transcript_path=str(transcript_json_path),
         burn_captions=burn_captions,
+        on_clip=on_clip,
     )
 
     if do_upload:

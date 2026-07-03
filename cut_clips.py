@@ -114,6 +114,7 @@ def process_all_clips(
     transcript_path=None,
     out_dir="output",
     burn_captions: bool = True,
+    on_clip=None,
 ):
     source_video = Path(source_video)
     out_dir = Path(out_dir)
@@ -160,6 +161,8 @@ def process_all_clips(
             json.dump(meta, f, ensure_ascii=False, indent=2)
 
         produced.append(meta)
+        if on_clip:
+            on_clip(meta)
 
     print(f"[cut_clips] Produced {len(produced)} clip(s) in {out_dir}/")
     return produced
