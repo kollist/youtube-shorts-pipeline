@@ -60,21 +60,28 @@ approve. After that, `token.json` is cached and you won't be asked again.
 
 ## 4. Run it
 
-Drop a long video in `input/`, then:
+Paste a YouTube URL directly — the video is downloaded automatically:
 
 ```bash
-# Generate clips only (review before posting)
-python pipeline.py input/myvideo.mp4 --max-clips 8
+# Download + generate clips (review before posting)
+python pipeline.py https://www.youtube.com/watch?v=XXXX --max-clips 8
 
-# Same, but target longer clips (default is 30-45s)
-python pipeline.py input/myvideo.mp4 --max-clips 8 --min-duration 45 --max-duration 60
+# Download + generate + upload immediately
+python pipeline.py https://www.youtube.com/watch?v=XXXX --max-clips 8 --upload
 
-# Generate AND upload immediately as public Shorts
+# Target longer clips (default is 30-45s)
+python pipeline.py https://www.youtube.com/watch?v=XXXX --max-clips 8 --min-duration 45 --max-duration 60
+
+# Local file still works too
 python pipeline.py input/myvideo.mp4 --max-clips 8 --upload --privacy public
 
 # Upload everything sitting in output/ that hasn't been posted yet
 python pipeline.py --upload-only
 ```
+
+Downloaded videos are saved to `input/` (gitignored) and reused on subsequent
+runs — if you run the same URL twice the download is skipped if the file is
+already there (transcript caching also kicks in).
 
 ### Hitting ~20 shorts/day
 

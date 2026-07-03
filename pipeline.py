@@ -5,11 +5,14 @@ ffmpeg cutting -> YouTube upload.
 
 Usage examples:
 
-  # Full run on one video, up to 8 clips, upload as public immediately
+  # Pass a YouTube URL directly — video is downloaded automatically
+  python pipeline.py https://www.youtube.com/watch?v=XXXX --max-clips 8 --upload
+
+  # Or a local file as before
   python pipeline.py input/myvideo.mp4 --max-clips 8 --upload --privacy public
 
   # Just generate clips, review them yourself, upload later
-  python pipeline.py input/myvideo.mp4 --max-clips 8
+  python pipeline.py https://www.youtube.com/watch?v=XXXX --max-clips 8
 
   # Upload everything already sitting in output/ that hasn't been uploaded yet
   python pipeline.py --upload-only
@@ -27,6 +30,7 @@ import json
 import time
 from pathlib import Path
 
+from download import download_video
 from transcribe import transcribe, save_transcript
 from select_clips import (
     load_transcript,
@@ -41,6 +45,10 @@ from upload_youtube import upload_from_meta_file
 UPLOAD_DELAY_SECONDS = 5  # small pause between uploads, be gentle on quota/network
 
 
+def _is_url(s: str) -> bool:
+    return s.startswith(("http://", "https://", "www."))
+
+
 def run_pipeline(
     video_path: str,
     max_clips: int = 8,
@@ -51,6 +59,11 @@ def run_pipeline(
     min_duration: float = DEFAULT_MIN_DURATION,
     max_duration: float = DEFAULT_MAX_DURATION,
 ):
+    if _is_url(video_path):
+        print(f"[pipeline] Downloading video from URL...")
+        video_path = download_video(video_path)
+        print(f"[pipeline] Downloaded -> {video_path}")
+
     video_path = Path(video_path)
     stem = video_path.stem
 
@@ -117,7 +130,8 @@ def upload_only(output_dir: str = "output", privacy_status: str = "public"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("video_path", nargs="?", help="Path to the long-form source video")
+    parser.add_argument("video_path", nargs="?",
+                         help="YouTube URL or local path to the source video")
     parser.add_argument("--max-clips", type=int, default=8)
     parser.add_argument("--whisper-model", default="small")
     parser.add_argument("--upload", action="store_true", help="Upload clips to YouTube after cutting")
