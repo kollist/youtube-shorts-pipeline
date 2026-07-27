@@ -2,74 +2,217 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Shorts Pipeline</title>
+<title>T-Minus</title>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <header>
-  <h1>youtube-shorts-pipeline</h1>
-  <span id="status" class="status idle">idle</span>
+  <h1>T-Minus</h1>
+  <div class="header-right">
+    <div class="budget-widget">
+      <button id="budget-toggle" class="budget-toggle" type="button">
+        <span id="budget-summary-dot" class="budget-dot"></span>
+        <span id="budget-summary-text">Budget</span>
+      </button>
+      <div id="token-budget" class="token-budget-dropdown"></div>
+    </div>
+    <button id="stop-run-btn" class="pill-btn" style="display:none">Stop</button>
+    <span id="status" class="status idle">idle</span>
+  </div>
 </header>
 
+<nav class="page-tabs">
+  <a href="#run" class="page-tab" data-page="run">Run</a>
+  <a href="#discover" class="page-tab" data-page="discover">Discover</a>
+  <a href="#input" class="page-tab" data-page="input">Input</a>
+  <a href="#clips" class="page-tab" data-page="clips">Clips <span id="clip-count"></span></a>
+  <a href="#analytics" class="page-tab" data-page="analytics">Analytics</a>
+</nav>
+
 <main>
-  <section class="panel" id="config-panel">
-    <h2>Run</h2>
+  <div class="page" id="page-run">
+    <section class="panel" id="config-panel">
+      <h2>Run</h2>
 
-    <div class="field">
-      <label>Source</label>
-      <div class="source-tabs">
-        <button type="button" class="tab active" data-source="url">YouTube URL</button>
-        <button type="button" class="tab" data-source="file">Upload file</button>
+      <div class="field">
+        <label>Source</label>
+        <div class="source-tabs">
+          <button type="button" class="tab active" data-source="url">YouTube URL</button>
+          <button type="button" class="tab" data-source="file">Upload file</button>
+        </div>
+        <input id="url-input" type="text" placeholder="https://www.youtube.com/watch?v=..." />
+        <input id="file-input" type="file" accept="video/*" style="display:none" />
+        <div id="selected-input-label" class="field-hint" style="display:none;margin-top:6px"></div>
       </div>
-      <input id="url-input" type="text" placeholder="https://www.youtube.com/watch?v=..." />
-      <input id="file-input" type="file" accept="video/*" style="display:none" />
-    </div>
 
-    <div class="field-row">
-      <div class="field">
-        <label for="max-clips">Max clips</label>
-        <input id="max-clips" type="number" min="1" max="30" value="8" />
+      <div class="field-row">
+        <div class="field">
+          <label for="max-clips">Max clips</label>
+          <input id="max-clips" type="number" min="1" max="30" value="8" />
+        </div>
+        <div class="field">
+          <label for="whisper-model">Whisper model</label>
+          <select id="whisper-model">
+            <option value="tiny">tiny</option>
+            <option value="base">base</option>
+            <option value="small" selected>small</option>
+            <option value="medium">medium</option>
+            <option value="large-v3">large-v3</option>
+          </select>
+        </div>
       </div>
-      <div class="field">
-        <label for="whisper-model">Whisper model</label>
-        <select id="whisper-model">
-          <option value="tiny">tiny</option>
-          <option value="base">base</option>
-          <option value="small" selected>small</option>
-          <option value="medium">medium</option>
-          <option value="large-v3">large-v3</option>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="min-duration">Min duration (s)</label>
+          <input id="min-duration" type="number" min="5" value="30" />
+        </div>
+        <div class="field">
+          <label for="max-duration">Max duration (s)</label>
+          <input id="max-duration" type="number" min="5" value="45" />
+        </div>
+      </div>
+      <div class="field-hint">Soft targets - the model aims for this range but won't discard an otherwise strong clip just for landing outside it. Only YouTube's 180s Shorts ceiling is a hard cutoff.</div>
+
+      <div class="field checkbox-field">
+        <label><input id="burn-captions" type="checkbox" checked /> Burn in captions</label>
+      </div>
+
+      <div class="field checkbox-field">
+        <label><input id="auto-upload" type="checkbox" /> Auto-upload clips to YouTube</label>
+      </div>
+      <div class="field" id="auto-privacy-field" style="display:none">
+        <label for="auto-privacy">Privacy</label>
+        <select id="auto-privacy">
+          <option value="public" selected>public</option>
+          <option value="unlisted">unlisted</option>
+          <option value="private">private</option>
         </select>
       </div>
-    </div>
 
-    <div class="field-row">
+      <button id="run-btn" class="run-btn">Run pipeline</button>
+    </section>
+
+    <section class="panel" id="daily-queue-panel">
+      <h2>Daily Queue</h2>
+      <div class="field-hint">Runs every video already sitting in input/ in one go, splitting a total clip target across however many videos are there, then - if you turn on uploading - posts everything produced spaced out over the day so YouTube doesn't see a burst of uploads land in the same few minutes. Uses the Whisper model and duration targets above.</div>
+
       <div class="field">
-        <label for="min-duration">Min duration (s)</label>
-        <input id="min-duration" type="number" min="5" value="30" />
+        <label for="daily-target">Target clips (total, across all input/ videos)</label>
+        <input id="daily-target" type="number" min="1" max="100" value="20" />
       </div>
-      <div class="field">
-        <label for="max-duration">Max duration (s)</label>
-        <input id="max-duration" type="number" min="5" value="45" />
+
+      <div class="field checkbox-field">
+        <label><input id="daily-upload" type="checkbox" /> Upload everything produced, spaced out over the day</label>
       </div>
-    </div>
+      <div class="field-row" id="daily-upload-fields" style="display:none">
+        <div class="field">
+          <label for="daily-privacy">Privacy</label>
+          <select id="daily-privacy">
+            <option value="public" selected>public</option>
+            <option value="unlisted">unlisted</option>
+            <option value="private">private</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="daily-spacing">Spacing between uploads (min)</label>
+          <input id="daily-spacing" type="number" min="1" value="20" />
+        </div>
+      </div>
 
-    <div class="field checkbox-field">
-      <label><input id="burn-captions" type="checkbox" checked /> Burn in captions</label>
-    </div>
+      <button id="daily-queue-btn" class="run-btn">Run daily queue</button>
+    </section>
 
-    <button id="run-btn" class="run-btn">Run pipeline</button>
-  </section>
+    <section class="panel" id="terminal-panel">
+      <h2>Output</h2>
+      <pre id="terminal"></pre>
+    </section>
+  </div>
 
-  <section class="panel" id="terminal-panel">
-    <h2>Output</h2>
-    <pre id="terminal"></pre>
-  </section>
+  <div class="page" id="page-discover">
+    <section class="panel" id="discover-panel">
+      <h2>Discover <span id="discover-refresh-wrap"><button id="discover-refresh-btn" class="pill-btn">refresh</button></span></h2>
+      <div class="field-hint">Recent uploads from verified, rights-safe official channels, ranked by view velocity (views per day) and a model's read on Shorts potential.</div>
+      <div id="discover-content" class="discover-grid"></div>
+    </section>
+  </div>
 
-  <section class="panel" id="clips-panel">
-    <h2>Clips <span id="clip-count"></span></h2>
-    <div id="clips" class="clips-grid"></div>
-  </section>
+  <div class="page" id="page-input">
+    <section class="panel" id="input-panel">
+      <h2>Input <button id="input-refresh-btn" class="pill-btn">refresh</button></h2>
+      <div class="field-hint">Video files already sitting in input/ - from a past download, or dropped in manually - ready to run without fetching them again.</div>
+
+      <div class="field-row" style="margin-bottom:18px">
+        <div class="field" style="flex:1">
+          <label for="input-download-url">Paste a YouTube URL to download it into input/ (no processing yet)</label>
+          <input id="input-download-url" type="text" placeholder="https://www.youtube.com/watch?v=..." />
+        </div>
+        <button id="input-download-btn" class="upload-btn" style="flex:0 0 auto;align-self:flex-end;padding:8px 16px">Download</button>
+      </div>
+
+      <div id="input-content" class="discover-grid"></div>
+    </section>
+  </div>
+
+  <div class="page" id="page-clips">
+    <section class="panel" id="clips-panel">
+      <h2>
+        Clips
+        <div class="clips-header-actions">
+          <button id="clear-uploaded-btn" class="pill-btn">Clear uploaded</button>
+          <button id="clear-all-btn" class="pill-btn">Delete all</button>
+          <button id="upload-all-btn" class="upload-btn upload-all-btn">Upload all</button>
+        </div>
+      </h2>
+      <div id="clips" class="clips-grid"></div>
+    </section>
+  </div>
+
+  <div class="page" id="page-analytics">
+    <section class="panel" id="analytics-panel">
+      <h2>Analytics</h2>
+      <div id="analytics-content" class="analytics-content"></div>
+    </section>
+  </div>
 </main>
+
+<div id="input-detail-overlay" class="modal-overlay" style="display:none">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 id="input-detail-title"></h3>
+      <button id="input-detail-close" class="link-btn">Close</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-section">
+        <div class="detail-section-title">Transcript</div>
+        <div id="detail-transcript-area"></div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Prompt (for an outside model)</div>
+        <div class="field-hint">Built over the full transcript, no chunking - meant for a more capable model than our free-tier Groq chain. Tell it to respond as JSON, then paste the result below.</div>
+        <div class="field" style="margin:8px 0">
+          <label for="detail-max-clips">Max clips (baked into the prompt below)</label>
+          <input id="detail-max-clips" type="number" min="1" max="30" style="max-width:100px" />
+        </div>
+        <div id="detail-prompt-area"></div>
+        <textarea id="detail-paste-json" class="detail-textarea" placeholder="Paste the model's JSON response here..." style="display:none"></textarea>
+        <button id="detail-save-plan-btn" class="upload-btn" style="display:none;margin-top:8px">Validate &amp; save as plan</button>
+        <div id="detail-paste-status" class="field-hint"></div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Clip plan</div>
+        <div id="detail-plan-area"></div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Clips</div>
+        <div id="detail-clips-area" class="clips-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script src="/static/app.js"></script>
 </body>
