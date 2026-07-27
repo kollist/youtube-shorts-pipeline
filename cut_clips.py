@@ -17,6 +17,8 @@ import json
 import subprocess
 from pathlib import Path
 
+from run_control import check_cancelled
+
 
 def format_srt_timestamp(seconds: float) -> str:
     millis = int(round(seconds * 1000))
@@ -115,6 +117,7 @@ def process_all_clips(
     out_dir="output",
     burn_captions: bool = True,
     on_clip=None,
+    cancel_event=None,
 ):
     source_video = Path(source_video)
     out_dir = Path(out_dir)
@@ -131,6 +134,7 @@ def process_all_clips(
 
     produced = []
     for i, clip in enumerate(clips, start=1):
+        check_cancelled(cancel_event)
         clip_id = f"{stem}_clip{i:02d}"
         out_video = out_dir / f"{clip_id}.mp4"
         srt_path = None
@@ -155,6 +159,7 @@ def process_all_clips(
             "description": clip["description"],
             "start": clip["start"],
             "end": clip["end"],
+            "hook_mechanic": clip.get("hook_mechanic", "unknown"),
         }
         meta_path = out_dir / f"{clip_id}.json"
         with open(meta_path, "w", encoding="utf-8") as f:
