@@ -1,15 +1,528 @@
 const statusEl = document.getElementById("status");
 const terminalEl = document.getElementById("terminal");
 const runBtn = document.getElementById("run-btn");
+const stopRunBtn = document.getElementById("stop-run-btn");
+const dailyQueueBtn = document.getElementById("daily-queue-btn");
+const dailyUploadEl = document.getElementById("daily-upload");
+const dailyUploadFields = document.getElementById("daily-upload-fields");
 const clipsEl = document.getElementById("clips");
 const clipCountEl = document.getElementById("clip-count");
+
+// Both "start a run" buttons share one lock (the server enforces this too -
+// run_lock - but disabling both client-side avoids a pointless round trip
+// just to be told a run is already in progress).
+function setRunningUI(isRunning) {
+  runBtn.disabled = isRunning;
+  dailyQueueBtn.disabled = isRunning;
+  stopRunBtn.style.display = isRunning ? "" : "none";
+  stopRunBtn.disabled = false;
+  stopRunBtn.textContent = "Stop";
+}
+
+stopRunBtn.addEventListener("click", async () => {
+  stopRunBtn.disabled = true;
+  stopRunBtn.textContent = "Stopping...";
+  try {
+    const res = await fetch("/api/stop-run", { method: "POST" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      logLine(`[web] ${err.detail || "Could not stop the run."}`, "err");
+      stopRunBtn.disabled = false;
+      stopRunBtn.textContent = "Stop";
+    }
+    // On success, leave it disabled/"Stopping..." until the "stopped" message
+    // arrives and setRunningUI(false) resets it - the run can take a moment
+    // to reach its next safe checkpoint.
+  } catch (e) {
+    logLine("[web] Could not reach the server to stop the run.", "err");
+    stopRunBtn.disabled = false;
+    stopRunBtn.textContent = "Stop";
+  }
+});
+
+dailyUploadEl.addEventListener("change", () => {
+  dailyUploadFields.style.display = dailyUploadEl.checked ? "" : "none";
+});
+
+dailyQueueBtn.addEventListener("click", () => {
+  const config = {
+    action: "daily_queue",
+    target: parseInt(document.getElementById("daily-target").value, 10) || 20,
+    whisper_model: document.getElementById("whisper-model").value,
+    min_duration: parseFloat(document.getElementById("min-duration").value),
+    max_duration: parseFloat(document.getElementById("max-duration").value),
+    upload: dailyUploadEl.checked,
+    privacy: document.getElementById("daily-privacy").value,
+    spacing_minutes: parseFloat(document.getElementById("daily-spacing").value) || 20,
+  };
+
+  terminalEl.innerHTML = "";
+  clipsEl.innerHTML = "";
+  clipCount = 0;
+  clipCountEl.textContent = "";
+  autoUploadHalted = false;
+  setRunningUI(true);
+  setStatus("running", "running");
+
+  openRunSocket(config, false);
+});
 
 const urlInput = document.getElementById("url-input");
 const fileInput = document.getElementById("file-input");
 const tabs = document.querySelectorAll(".tab");
+const autoUploadEl = document.getElementById("auto-upload");
+const autoPrivacyEl = document.getElementById("auto-privacy");
+const autoPrivacyField = document.getElementById("auto-privacy-field");
+
+// --- Page routing (hash-based, client-side only - the live run's WebSocket
+// and in-progress state need to survive switching tabs, so this is plain
+// show/hide rather than separate server-rendered pages). ---
+const pageTabs = document.querySelectorAll(".page-tab");
+const pages = document.querySelectorAll(".page");
+const VALID_PAGES = new Set(["run", "discover", "input", "clips", "analytics"]);
+let discoverLoadedOnce = false;
+let inputLoadedOnce = false;
+
+function showPage(name) {
+  if (!VALID_PAGES.has(name)) name = "run";
+  pages.forEach((p) => p.classList.toggle("active", p.id === `page-${name}`));
+  pageTabs.forEach((t) => t.classList.toggle("active", t.dataset.page === name));
+  if (name === "discover" && !discoverLoadedOnce) loadDiscover();
+  if (name === "input" && !inputLoadedOnce) loadInputFiles();
+  if (name === "analytics") loadAnalytics();
+}
+
+window.addEventListener("hashchange", () => showPage(location.hash.slice(1)));
+// The initial showPage() call is deferred to the end of this file (not here)
+// - a loader like loadDiscover() touches its content element synchronously
+// (before its first await), so calling it this early would hit the element
+// reference's temporal dead zone if the page loads directly on that tab's hash.
 
 let source = "url";
+// A file already on the server (from input/), picked via the Input tab's
+// "Use" button - browsers won't let JS set a real <input type=file>'s value
+// for security reasons, so this bypasses the file picker/upload entirely and
+// tells the run to use this existing server-side path directly. Cleared
+// whenever the user actually interacts with the native file picker instead.
+let selectedInputPath = null;
 let clipCount = 0;
+let uploadQueue = Promise.resolve();
+const allClipEntries = []; // {card, uploadBtn, privacySelect, clip} for every not-yet-uploaded clip currently shown
+// YouTube's daily upload cap is account-wide, so once one auto-upload hits it,
+// every remaining clip in this run would fail the same way - stop trying
+// instead of showing a wall of identical failures.
+let autoUploadHalted = false;
+
+const tokenBudgetEl = document.getElementById("token-budget");
+const budgetToggle = document.getElementById("budget-toggle");
+const budgetSummaryDot = document.getElementById("budget-summary-dot");
+const budgetSummaryText = document.getElementById("budget-summary-text");
+
+budgetToggle.addEventListener("click", (e) => {
+  e.stopPropagation();
+  tokenBudgetEl.classList.toggle("open");
+});
+document.addEventListener("click", (e) => {
+  if (!tokenBudgetEl.contains(e.target) && e.target !== budgetToggle) {
+    tokenBudgetEl.classList.remove("open");
+  }
+});
+
+// Each Groq model has its own daily budget - the first model in the list is
+// the one actually in use; the rest are what the pipeline falls back to once
+// an earlier one runs out, so a single exhausted model doesn't stop the day.
+// The header just shows a compact summary (worst state + how many models
+// still have room); click it for the full per-model breakdown.
+async function refreshTokenBudget() {
+  try {
+    const res = await fetch("/api/token-budget");
+    if (!res.ok) return;
+    const { models } = await res.json();
+
+    tokenBudgetEl.innerHTML = "";
+    let available = 0;
+    let worstState = "good"; // good -> low -> critical, worst wins
+    models.forEach(({ model, used, cap, remaining }) => {
+      const exhausted = remaining <= 0;
+      if (!exhausted) available += 1;
+      const usedPct = Math.min(100, (used / cap) * 100);
+
+      let state = "good";
+      if (remaining < cap * 0.05) state = "critical";
+      else if (remaining < cap * 0.2) state = "low";
+      if (state === "critical") worstState = "critical";
+      else if (state === "low" && worstState !== "critical") worstState = "low";
+
+      const row = document.createElement("div");
+      row.className = `token-budget-row${exhausted ? " exhausted" : ""}`;
+      row.innerHTML = `
+        <div class="token-budget-label">
+          <span class="model-name">${escapeHtml(model)}</span>
+          <span class="figures">${used.toLocaleString()} / ${cap.toLocaleString()}</span>
+        </div>
+        <div class="token-budget-bar"><div class="token-budget-fill" style="width:${usedPct}%"></div></div>
+      `;
+      row.querySelector(".token-budget-fill").classList.toggle("critical", state === "critical");
+      row.querySelector(".token-budget-fill").classList.toggle("low", state === "low");
+      tokenBudgetEl.appendChild(row);
+    });
+
+    budgetSummaryDot.className = `budget-dot${worstState !== "good" ? ` ${worstState}` : ""}`;
+    budgetSummaryText.textContent = `${available}/${models.length} models`;
+  } catch (e) {
+    // Non-critical - budget display just stays at its last known value.
+  }
+}
+
+refreshTokenBudget();
+
+const discoverContentEl = document.getElementById("discover-content");
+const discoverRefreshBtn = document.getElementById("discover-refresh-btn");
+
+function useDiscoveredVideo(video) {
+  source = "url";
+  tabs.forEach((t) => t.classList.toggle("active", t.dataset.source === "url"));
+  urlInput.style.display = "";
+  fileInput.style.display = "none";
+  urlInput.value = video.url;
+  location.hash = "#run";
+  urlInput.focus();
+}
+
+function buildDiscoverCard(video) {
+  const card = document.createElement("div");
+  card.className = "discover-card";
+  const score = video.shorts_potential;
+  card.innerHTML = `
+    <img src="${video.thumbnail}" alt="">
+    <div class="discover-body">
+      <div class="discover-title">${escapeHtml(video.title)}</div>
+      <div class="discover-meta">
+        <span>${escapeHtml(video.channel)}</span>
+        <span>${video.view_velocity.toLocaleString()} views/day</span>
+        ${score != null ? `<span class="discover-score">${score}/10</span>` : ""}
+      </div>
+      ${video.reason ? `<div class="discover-reason">${escapeHtml(video.reason)}</div>` : ""}
+      <button class="discover-use-btn">Use</button>
+    </div>
+  `;
+  card.querySelector(".discover-use-btn").addEventListener("click", () => useDiscoveredVideo(video));
+  return card;
+}
+
+async function loadDiscover() {
+  discoverLoadedOnce = true;
+  discoverContentEl.innerHTML = `<div class="discover-loading">Loading...</div>`;
+  try {
+    const res = await fetch("/api/discover");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      discoverContentEl.innerHTML = `<div class="discover-empty">${escapeHtml(err.detail || "Could not load suggestions.")}</div>`;
+      return;
+    }
+    const { videos } = await res.json();
+    if (!videos.length) {
+      discoverContentEl.innerHTML = `<div class="discover-empty">No videos found.</div>`;
+      return;
+    }
+    discoverContentEl.innerHTML = "";
+    videos.forEach((v) => discoverContentEl.appendChild(buildDiscoverCard(v)));
+  } catch (e) {
+    discoverContentEl.innerHTML = `<div class="discover-empty">Could not load suggestions.</div>`;
+  }
+}
+
+discoverRefreshBtn.addEventListener("click", loadDiscover);
+
+const selectedInputLabelEl = document.getElementById("selected-input-label");
+
+function clearSelectedInput() {
+  selectedInputPath = null;
+  selectedInputLabelEl.style.display = "none";
+  selectedInputLabelEl.innerHTML = "";
+}
+
+function useInputFile(file) {
+  source = "file";
+  tabs.forEach((t) => t.classList.toggle("active", t.dataset.source === "file"));
+  urlInput.style.display = "none";
+  fileInput.style.display = "none"; // hidden while a server-side file is selected instead
+  fileInput.value = "";
+  selectedInputPath = file.path;
+  selectedInputLabelEl.innerHTML = `Using <strong>${escapeHtml(file.filename)}</strong> from input/ - <a href="#" id="clear-selected-input">choose a different file</a>`;
+  selectedInputLabelEl.style.display = "";
+  document.getElementById("clear-selected-input").addEventListener("click", (e) => {
+    e.preventDefault();
+    clearSelectedInput();
+    fileInput.style.display = "";
+  });
+  location.hash = "#run";
+}
+
+function buildInputCard(file) {
+  const card = document.createElement("div");
+  card.className = "discover-card";
+  const statusBits = [
+    file.has_transcript ? "Transcribed" : "Not transcribed",
+    file.plan_clip_count != null ? `${file.plan_clip_count} clip(s) planned` : "No plan yet",
+  ];
+  card.innerHTML = `
+    ${file.thumbnail ? `<img src="${file.thumbnail}" alt="">` : `<div class="discover-card-noimg"></div>`}
+    <div class="discover-body">
+      <div class="discover-title">${escapeHtml(file.filename)}</div>
+      <div class="discover-meta"><span>${file.size_mb} MB</span></div>
+      <div class="discover-meta">${statusBits.map(escapeHtml).join(" &middot; ")}</div>
+      <div class="input-card-actions">
+        <button class="discover-use-btn">Use</button>
+        <button class="pill-btn input-manage-btn">Manage</button>
+      </div>
+    </div>
+  `;
+  card.querySelector(".discover-use-btn").addEventListener("click", () => useInputFile(file));
+  card.querySelector(".input-manage-btn").addEventListener("click", () => openInputDetail(file));
+  return card;
+}
+
+const inputContentEl = document.getElementById("input-content");
+const inputRefreshBtn = document.getElementById("input-refresh-btn");
+
+async function loadInputFiles() {
+  inputLoadedOnce = true;
+  inputContentEl.innerHTML = `<div class="discover-loading">Loading...</div>`;
+  try {
+    const res = await fetch("/api/input-files");
+    if (!res.ok) {
+      inputContentEl.innerHTML = `<div class="discover-empty">Could not load input files.</div>`;
+      return;
+    }
+    const { files } = await res.json();
+    if (!files.length) {
+      inputContentEl.innerHTML = `<div class="discover-empty">No video files in input/ yet.</div>`;
+      return;
+    }
+    inputContentEl.innerHTML = "";
+    files.forEach((f) => inputContentEl.appendChild(buildInputCard(f)));
+  } catch (e) {
+    inputContentEl.innerHTML = `<div class="discover-empty">Could not load input files.</div>`;
+  }
+}
+
+inputRefreshBtn.addEventListener("click", loadInputFiles);
+
+const inputDownloadUrlEl = document.getElementById("input-download-url");
+const inputDownloadBtn = document.getElementById("input-download-btn");
+
+inputDownloadBtn.addEventListener("click", () => {
+  const url = inputDownloadUrlEl.value.trim();
+  if (!url) {
+    logLine("[web] Paste a YouTube URL first.", "err");
+    return;
+  }
+  terminalEl.innerHTML = "";
+  clipsEl.innerHTML = "";
+  clipCount = 0;
+  clipCountEl.textContent = "";
+  autoUploadHalted = false;
+  setRunningUI(true);
+  setStatus("running", "running");
+  location.hash = "#run";
+  openRunSocket({ action: "download", url }, false);
+  inputDownloadUrlEl.value = "";
+});
+
+// --- Per-input detail view: transcribe on demand, copy the prompt for an
+// outside model, paste its JSON result back as a real validated plan, cut
+// clips straight from an existing plan, and see/upload just this file's
+// clips - all without needing to run the whole pipeline over again. ---
+const inputDetailOverlay = document.getElementById("input-detail-overlay");
+const inputDetailTitle = document.getElementById("input-detail-title");
+const inputDetailClose = document.getElementById("input-detail-close");
+const detailTranscriptArea = document.getElementById("detail-transcript-area");
+const detailMaxClipsEl = document.getElementById("detail-max-clips");
+const detailPromptArea = document.getElementById("detail-prompt-area");
+const detailPasteJson = document.getElementById("detail-paste-json");
+const detailSavePlanBtn = document.getElementById("detail-save-plan-btn");
+const detailPasteStatus = document.getElementById("detail-paste-status");
+const detailPlanArea = document.getElementById("detail-plan-area");
+const detailClipsArea = document.getElementById("detail-clips-area");
+
+let currentDetailFile = null;
+
+function closeInputDetail() {
+  inputDetailOverlay.style.display = "none";
+  currentDetailFile = null;
+}
+inputDetailClose.addEventListener("click", closeInputDetail);
+inputDetailOverlay.addEventListener("click", (e) => {
+  if (e.target === inputDetailOverlay) closeInputDetail();
+});
+
+async function copyToClipboard(text, btn) {
+  try {
+    await navigator.clipboard.writeText(text);
+    const original = btn.textContent;
+    btn.textContent = "Copied!";
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  } catch (e) {
+    logLine(`[web] Could not copy to clipboard: ${e.message}`, "err");
+  }
+}
+
+// Reuses the exact same run pipeline (Run tab's terminal, RunState replay,
+// model fallback, etc.) for transcribing or cutting from a plan - these are
+// just different "actions" on the same worker, not a separate mini-workflow.
+function startInputAction(action, file, extra) {
+  closeInputDetail();
+  terminalEl.innerHTML = "";
+  clipsEl.innerHTML = "";
+  clipCount = 0;
+  clipCountEl.textContent = "";
+  autoUploadHalted = false;
+  setRunningUI(true);
+  setStatus("running", "running");
+  location.hash = "#run";
+  openRunSocket({ action, video_path: file.path, ...extra }, false);
+}
+
+async function openInputDetail(file) {
+  currentDetailFile = file;
+  inputDetailTitle.textContent = file.filename;
+  inputDetailOverlay.style.display = "flex";
+  detailPasteJson.style.display = "none";
+  detailSavePlanBtn.style.display = "none";
+  detailPasteStatus.textContent = "";
+
+  if (file.has_transcript) {
+    detailTranscriptArea.innerHTML = `<button class="pill-btn" id="detail-copy-transcript-btn">Copy transcript</button>`;
+    document.getElementById("detail-copy-transcript-btn").addEventListener("click", async (e) => {
+      try {
+        const res = await fetch(`/api/input-file/${encodeURIComponent(file.stem)}/transcript`);
+        const { text } = await res.json();
+        copyToClipboard(text, e.target);
+      } catch (err) {
+        logLine("[web] Could not load transcript.", "err");
+      }
+    });
+  } else {
+    detailTranscriptArea.innerHTML = `<button class="upload-btn" id="detail-transcribe-btn">Transcribe</button>`;
+    document.getElementById("detail-transcribe-btn").addEventListener("click", () => {
+      startInputAction("transcribe", file, { whisper_model: document.getElementById("whisper-model").value });
+    });
+  }
+
+  if (file.has_transcript) {
+    detailMaxClipsEl.style.display = "";
+    detailPromptArea.innerHTML = `
+      <button class="pill-btn" id="detail-copy-system-btn">Copy system prompt</button>
+      <button class="pill-btn" id="detail-copy-user-btn">Copy user prompt (transcript)</button>
+    `;
+    // Seeded from the Run tab's Max clips field so it starts at whatever
+    // you'd get from a full pipeline run, but it's a real, visible, editable
+    // field here - not a silently-inherited value the prompt just happens
+    // to bake in without you ever having set it for this file.
+    detailMaxClipsEl.value = document.getElementById("max-clips").value || "8";
+    const minDur = parseFloat(document.getElementById("min-duration").value) || 30;
+    const maxDur = parseFloat(document.getElementById("max-duration").value) || 45;
+    let cachedPrompt = null;
+    const getPrompt = async () => {
+      if (cachedPrompt) return cachedPrompt;
+      const maxClips = parseInt(detailMaxClipsEl.value, 10) || 8;
+      const promptUrl = `/api/input-file/${encodeURIComponent(file.stem)}/prompt?max_clips=${maxClips}&min_duration=${minDur}&max_duration=${maxDur}`;
+      const res = await fetch(promptUrl);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || typeof data.system !== "string" || typeof data.user !== "string") {
+        throw new Error(data.detail || "Could not build the prompt for this file.");
+      }
+      cachedPrompt = data;
+      return cachedPrompt;
+    };
+    detailMaxClipsEl.oninput = () => { cachedPrompt = null; };
+    document.getElementById("detail-copy-system-btn").addEventListener("click", async (e) => {
+      try {
+        copyToClipboard((await getPrompt()).system, e.target);
+      } catch (err) {
+        logLine(`[web] ${err.message}`, "err");
+      }
+    });
+    document.getElementById("detail-copy-user-btn").addEventListener("click", async (e) => {
+      try {
+        copyToClipboard((await getPrompt()).user, e.target);
+      } catch (err) {
+        logLine(`[web] ${err.message}`, "err");
+      }
+    });
+    detailPasteJson.style.display = "";
+    detailSavePlanBtn.style.display = "";
+    detailPasteJson.value = "";
+  } else {
+    detailMaxClipsEl.style.display = "none";
+    detailPromptArea.innerHTML = `<div class="analytics-empty">Transcribe this file first - the prompt needs the transcript.</div>`;
+  }
+
+  if (file.plan_clip_count != null) {
+    detailPlanArea.innerHTML = `
+      <div class="field-hint">${file.plan_clip_count} clip(s) planned.</div>
+      <button class="upload-btn" id="detail-cut-btn">Cut clips from plan</button>
+    `;
+    document.getElementById("detail-cut-btn").addEventListener("click", () => {
+      startInputAction("cut_plan", file, {
+        plan_path: `clips/${file.stem}_plan.json`,
+        transcript_path: file.has_transcript ? `transcripts/${file.stem}.json` : null,
+        burn_captions: document.getElementById("burn-captions").checked,
+      });
+    });
+  } else {
+    detailPlanArea.innerHTML = `<div class="analytics-empty">No plan yet - paste a model's JSON response above, or run the full pipeline on this file from the Run tab.</div>`;
+  }
+
+  detailClipsArea.innerHTML = `<div class="analytics-empty">Loading...</div>`;
+  try {
+    const res = await fetch(`/api/existing-clips?stem=${encodeURIComponent(file.stem)}`);
+    const { clips } = await res.json();
+    detailClipsArea.innerHTML = clips.length ? "" : `<div class="analytics-empty">No clips cut for this file yet.</div>`;
+    clips.forEach((clip) => detailClipsArea.appendChild(buildClipCard(clip, { track: false })));
+  } catch (e) {
+    detailClipsArea.innerHTML = `<div class="analytics-empty">Could not load clips.</div>`;
+  }
+}
+
+detailSavePlanBtn.addEventListener("click", async () => {
+  if (!currentDetailFile) return;
+  const raw = detailPasteJson.value;
+  if (!raw.trim()) {
+    detailPasteStatus.textContent = "Paste the model's JSON response first.";
+    return;
+  }
+  detailPasteStatus.textContent = "Validating...";
+  try {
+    const res = await fetch(`/api/input-file/${encodeURIComponent(currentDetailFile.stem)}/plan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ raw }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      detailPasteStatus.textContent = data.detail || "Could not validate the pasted plan.";
+      return;
+    }
+    detailPasteStatus.textContent = `Saved - ${data.clips.length} clip(s) validated.`;
+    currentDetailFile.plan_clip_count = data.clips.length;
+    openInputDetail(currentDetailFile); // refresh the plan/clips sections in place
+    loadInputFiles(); // refresh this file's card status badge in the background
+  } catch (e) {
+    detailPasteStatus.textContent = "Could not reach the server.";
+  }
+});
+
+autoUploadEl.addEventListener("change", () => {
+  autoPrivacyField.style.display = autoUploadEl.checked ? "" : "none";
+});
+
+fileInput.addEventListener("change", () => {
+  // The user picked a real file through the native picker - that takes over
+  // from whatever was selected via the Input tab's "Use" button, if anything.
+  if (fileInput.files[0]) clearSelectedInput();
+});
 
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -17,6 +530,7 @@ tabs.forEach((tab) => {
     tabs.forEach((t) => t.classList.toggle("active", t === tab));
     urlInput.style.display = source === "url" ? "" : "none";
     fileInput.style.display = source === "file" ? "" : "none";
+    clearSelectedInput();
   });
 });
 
@@ -33,26 +547,24 @@ function logLine(text, cls) {
   terminalEl.scrollTop = terminalEl.scrollHeight;
 }
 
-function addClipCard(clip) {
-  clipCount += 1;
-  clipCountEl.textContent = `(${clipCount})`;
-
+function buildClipCard(clip, { track = true } = {}) {
   const card = document.createElement("div");
   card.className = "clip-card";
 
   const durationSec = Math.round(clip.end - clip.start);
+  const alreadyUploaded = Boolean(clip.youtube_video_id);
   card.innerHTML = `
     <video src="${clip.url}" controls preload="metadata"></video>
     <div class="clip-body">
       <div class="clip-title">${escapeHtml(clip.title)}</div>
       <div class="clip-meta">${durationSec}s &middot; ${escapeHtml(clip.video_path.split("/").pop())}</div>
       <div class="clip-actions">
-        <select class="privacy-select">
+        <select class="privacy-select" ${alreadyUploaded ? "disabled" : ""}>
           <option value="public" selected>public</option>
           <option value="unlisted">unlisted</option>
           <option value="private">private</option>
         </select>
-        <button class="upload-btn">Upload</button>
+        <button class="upload-btn${alreadyUploaded ? " uploaded" : ""}">${alreadyUploaded ? "Uploaded" : "Upload"}</button>
       </div>
     </div>
   `;
@@ -60,42 +572,332 @@ function addClipCard(clip) {
   const uploadBtn = card.querySelector(".upload-btn");
   const privacySelect = card.querySelector(".privacy-select");
 
-  uploadBtn.addEventListener("click", async () => {
-    uploadBtn.disabled = true;
-    uploadBtn.textContent = "Uploading...";
-    try {
-      const res = await fetch("/api/upload-clip", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ meta_path: clip.meta_path, privacy: privacySelect.value }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || res.statusText);
-      }
-      const result = await res.json();
-      uploadBtn.textContent = "Uploaded";
-      uploadBtn.classList.add("uploaded");
-      uploadBtn.onclick = () => window.open(result.url, "_blank");
-      uploadBtn.disabled = false;
-      privacySelect.disabled = true;
-      // Server deletes the local file once it's live on YouTube.
-      const video = card.querySelector("video");
-      video.removeAttribute("src");
-      video.load();
-      const notice = document.createElement("div");
-      notice.className = "clip-meta";
-      notice.textContent = "Local file deleted (uploaded to YouTube)";
-      card.querySelector(".clip-body").insertBefore(notice, card.querySelector(".clip-actions"));
-    } catch (e) {
-      uploadBtn.textContent = "Failed - retry";
-      uploadBtn.classList.add("failed");
-      uploadBtn.disabled = false;
-      logLine(`[upload] ${clip.title}: ${e.message}`, "err");
-    }
-  });
+  if (alreadyUploaded) {
+    uploadBtn.onclick = () => window.open(`https://www.youtube.com/watch?v=${clip.youtube_video_id}`, "_blank");
+  } else {
+    uploadBtn.addEventListener("click", () => {
+      enqueueUpload(card, uploadBtn, privacySelect, clip);
+    });
+    // Tracked so "Upload all" (on the main Clips tab) can queue every
+    // not-yet-uploaded clip currently shown there, without needing to
+    // re-derive clip data from the DOM. A per-input detail view shows the
+    // same underlying clips too, but opts out (track: false) - otherwise
+    // the same clip would be queued twice, and the second attempt would
+    // fail (the file/meta are deleted after the first upload succeeds).
+    if (track) allClipEntries.push({ card, uploadBtn, privacySelect, clip });
+  }
 
+  return card;
+}
+
+function addClipCard(clip) {
+  clipCount += 1;
+  clipCountEl.textContent = `(${clipCount})`;
+
+  const card = buildClipCard(clip);
   clipsEl.appendChild(card);
+
+  if (autoUploadEl.checked && !autoUploadHalted) {
+    const uploadBtn = card.querySelector(".upload-btn");
+    const privacySelect = card.querySelector(".privacy-select");
+    privacySelect.value = autoPrivacyEl.value;
+    enqueueUpload(card, uploadBtn, privacySelect, clip);
+  }
+}
+
+// Clips already sitting in output/ from before this page was opened (a past
+// CLI run, or clips left over from before a server restart) - shown on load
+// so they don't need a fresh pipeline run just to be reviewed or uploaded.
+async function loadExistingClips() {
+  try {
+    const res = await fetch("/api/existing-clips");
+    if (!res.ok) return;
+    const { clips } = await res.json();
+    clips.forEach((clip) => {
+      clipCount += 1;
+      clipsEl.appendChild(buildClipCard(clip));
+    });
+    if (clipCount > 0) clipCountEl.textContent = `(${clipCount})`;
+  } catch (e) {
+    // Non-critical - existing clips just won't show until a run adds new ones.
+  }
+}
+
+loadExistingClips();
+
+const analyticsContentEl = document.getElementById("analytics-content");
+
+// Fixed categorical color per hook mechanic (matches select_clips.py's five
+// mechanics) - a stable identity color, not reassigned when a mechanic drops
+// out of view, and "unknown" gets no vivid hue since it's really an "Other"
+// bucket, not a named category.
+const MECHANIC_COLORS = {
+  open_loop: "var(--cat-1)",
+  contrarian: "var(--cat-2)",
+  stakes_or_numbers: "var(--cat-3)",
+  mid_action: "var(--cat-4)",
+  emotional_conflict: "var(--cat-5)",
+};
+function mechanicColor(mechanic) {
+  return MECHANIC_COLORS[mechanic] || "var(--cat-other)";
+}
+
+// Local upload log (title, hook_mechanic, duration - things only we know,
+// since YouTube has no concept of "hook_mechanic") enriched with real
+// view/retention numbers from the YouTube Analytics API wherever available.
+// Falls back to local-only counts if that API isn't enabled/authorized yet.
+async function loadAnalytics() {
+  try {
+    const res = await fetch("/api/analytics");
+    if (!res.ok) return;
+    const {
+      total_uploads, tracked_uploads, channel_count_available, live_data_available,
+      records_with_stats, mechanic_insight, best_clip, worst_clip, duration_insight,
+      title_insight, hook_mechanics, recent,
+    } = await res.json();
+
+    if (total_uploads === 0) {
+      analyticsContentEl.innerHTML = `<div class="analytics-empty">No uploads logged yet - this fills in as clips get uploaded to YouTube.</div>`;
+      return;
+    }
+
+    const hasLiveNumbers = hook_mechanics.some((h) => h.avg_views != null);
+    const barValue = (h) => (h.avg_views != null ? h.avg_views : h.count);
+    const maxBarValue = Math.max(...hook_mechanics.map(barValue));
+
+    const hookRows = [...hook_mechanics]
+      .sort((a, b) => barValue(b) - barValue(a))
+      .map((h) => {
+        const color = mechanicColor(h.hook_mechanic);
+        return `
+        <div class="hook-bar-row">
+          <div class="hook-bar-label">
+            <span class="mechanic-name"><span class="mechanic-dot" style="background:${color}"></span>${escapeHtml(h.hook_mechanic)} (n=${h.count})</span>
+            <span class="figures">${h.avg_views != null ? `${h.avg_view_percentage}% watched &middot; ${h.avg_views} views avg` : `${h.count} uploaded`}</span>
+          </div>
+          <div class="hook-bar-track"><div class="hook-bar-fill" style="width:${(barValue(h) / maxBarValue) * 100}%;background:${color}"></div></div>
+        </div>
+      `;
+      }).join("");
+
+    // Thumbnail straight from YouTube (i.ytimg.com's standard per-video path) -
+    // the local file is long gone by upload time (deleted right after a
+    // successful upload), so this is the only way to actually see the clip.
+    const recentCards = recent.map((r) => `
+      <a class="recent-card" href="${r.url}" target="_blank">
+        <img src="https://i.ytimg.com/vi/${r.video_id}/mqdefault.jpg" alt="" loading="lazy">
+        <div class="recent-card-body">
+          <div class="recent-card-title">${escapeHtml(r.title)}</div>
+          <div class="clip-meta">
+            <span class="mechanic-dot" style="background:${mechanicColor(r.hook_mechanic)}"></span>${escapeHtml(r.hook_mechanic || "unknown")} &middot; ${r.duration_sec}s${r.views != null ? ` &middot; ${r.views} views &middot; ${r.avg_view_percentage}% watched` : ""}
+          </div>
+        </div>
+      </a>
+    `).join("");
+
+    // The verdict - what to actually do with this data, not just a chart to
+    // eyeball. Needs real per-clip stats to say anything; below that bar it
+    // explains what's missing instead of showing an empty comparison.
+    let verdictHtml = "";
+    if (mechanic_insight) {
+      const mi = mechanic_insight;
+      verdictHtml += `
+        <div class="verdict-card">
+          <span class="mechanic-dot" style="background:${mechanicColor(mi.best_mechanic)}"></span>
+          Your strongest hook mechanic is <strong>${escapeHtml(mi.best_mechanic)}</strong>
+          at ${mi.best_pct}% avg retention - ${mi.gap} points ahead of
+          <strong>${escapeHtml(mi.worst_mechanic)}</strong> (${mi.worst_pct}%).
+        </div>`;
+    }
+    if (best_clip && worst_clip) {
+      verdictHtml += `
+        <div class="verdict-clips">
+          <div class="verdict-clip good">
+            <div class="verdict-clip-label">Best performing clip</div>
+            <a href="${best_clip.url}" target="_blank">${escapeHtml(best_clip.title)}</a>
+            <div class="clip-meta">${best_clip.avg_view_percentage}% watched &middot; ${best_clip.views} views</div>
+          </div>
+          <div class="verdict-clip bad">
+            <div class="verdict-clip-label">Worst performing clip</div>
+            <a href="${worst_clip.url}" target="_blank">${escapeHtml(worst_clip.title)}</a>
+            <div class="clip-meta">${worst_clip.avg_view_percentage}% watched &middot; ${worst_clip.views} views</div>
+          </div>
+        </div>`;
+    }
+    if (duration_insight) {
+      const di = duration_insight;
+      const shorterWins = di.shorter_avg_pct >= di.longer_avg_pct;
+      verdictHtml += `
+        <div class="verdict-card">
+          Your shorter clips (avg ${di.shorter_avg_duration}s) retain
+          <strong>${di.shorter_avg_pct}%</strong> on average vs
+          <strong>${di.longer_avg_pct}%</strong> for longer ones (avg ${di.longer_avg_duration}s) -
+          ${shorterWins ? "shorter is winning so far." : "longer is winning so far."}
+        </div>`;
+    }
+    if (title_insight) {
+      const ti = title_insight;
+      const numbersWin = ti.with_number_avg_pct >= ti.without_number_avg_pct;
+      verdictHtml += `
+        <div class="verdict-card">
+          Titles with a concrete number (n=${ti.with_number_count}) retain
+          <strong>${ti.with_number_avg_pct}%</strong> on average vs
+          <strong>${ti.without_number_avg_pct}%</strong> for titles without one (n=${ti.without_number_count}) -
+          ${numbersWin ? "specific numbers are winning so far." : "vaguer titles are winning so far, worth a look."}
+        </div>`;
+    }
+    if (!verdictHtml) {
+      const need = 2 - (records_with_stats || 0);
+      verdictHtml = `<div class="analytics-empty">Not enough clips with real view data yet to draw a conclusion (need at least ${Math.max(need, 2)} - YouTube can take a day or so to process new uploads).</div>`;
+    }
+
+    analyticsContentEl.innerHTML = `
+      <div>
+        <div class="analytics-total-label" style="margin-bottom:10px">Verdict</div>
+        ${verdictHtml}
+      </div>
+      <div>
+        <div class="analytics-total">${total_uploads.toLocaleString()}</div>
+        <div class="analytics-total-label">${channel_count_available ? "clips uploaded to your channel (all time)" : "clips logged (all time)"}</div>
+      </div>
+      <div>
+        <div class="analytics-total-label" style="margin-bottom:8px">By hook mechanic${channel_count_available ? ` (${tracked_uploads} of ${total_uploads} tracked)` : ""}</div>
+        ${hookRows}
+      </div>
+      <div>
+        <div class="analytics-total-label" style="margin-bottom:8px">Recent uploads</div>
+        <div class="recent-grid">${recentCards}</div>
+      </div>
+      ${channel_count_available ? `<div class="analytics-note">The hook-mechanic breakdown only covers clips uploaded through this pipeline since local tracking was added (${tracked_uploads} so far) - it has no way to know the hook mechanic of anything uploaded before that or through other means.</div>` : ""}
+      ${!live_data_available ? `<div class="analytics-note">Showing local upload history only - real view/retention numbers need the YouTube Analytics API enabled and authorized.</div>` : ""}
+      ${live_data_available && !hasLiveNumbers ? `<div class="analytics-note">YouTube Analytics API is connected, but no view data yet - it can take a day or so to process new uploads.</div>` : ""}
+    `;
+  } catch (e) {
+    // Non-critical - analytics panel just stays at its last known state.
+  }
+}
+
+loadAnalytics();
+
+// Uploads run one at a time (queued) so auto-upload doesn't fire off several
+// large resumable uploads in parallel and starve each other's bandwidth.
+function enqueueUpload(card, uploadBtn, privacySelect, clip) {
+  if (uploadBtn.disabled) return;
+  uploadBtn.disabled = true;
+  uploadBtn.textContent = "Queued...";
+  uploadQueue = uploadQueue.then(() => startUpload(card, uploadBtn, privacySelect, clip));
+}
+
+document.getElementById("upload-all-btn").addEventListener("click", () => {
+  // Same halt-on-quota-limit behavior as auto-upload: if one hits YouTube's
+  // daily cap mid-batch, stop queuing the rest instead of repeating the same
+  // failure for every remaining clip.
+  for (const { uploadBtn, privacySelect, clip, card } of allClipEntries) {
+    if (autoUploadHalted) break;
+    // Skip anything already queued/uploading (disabled) or already uploaded
+    // successfully - that button goes back to enabled afterward (it becomes
+    // a "view on YouTube" link), so disabled alone can't tell the two apart.
+    // "Failed - retry" ones are NOT skipped, they get a fresh attempt.
+    if (uploadBtn.disabled || uploadBtn.classList.contains("uploaded")) continue;
+    enqueueUpload(card, uploadBtn, privacySelect, clip);
+  }
+});
+
+document.getElementById("clear-uploaded-btn").addEventListener("click", () => {
+  // Just a view cleanup, nothing to delete - the local file/meta are already
+  // gone from disk (server deletes them right after a successful upload), so
+  // this only removes cards that are already marked "Uploaded" on screen.
+  const uploadedCards = [...clipsEl.querySelectorAll(".clip-card")].filter(
+    (card) => card.querySelector(".upload-btn")?.classList.contains("uploaded")
+  );
+  uploadedCards.forEach((card) => card.remove());
+
+  clipCount -= uploadedCards.length;
+  clipCountEl.textContent = clipCount > 0 ? `(${clipCount})` : "";
+
+  for (let i = allClipEntries.length - 1; i >= 0; i--) {
+    if (uploadedCards.includes(allClipEntries[i].card)) allClipEntries.splice(i, 1);
+  }
+});
+
+document.getElementById("clear-all-btn").addEventListener("click", async () => {
+  // Unlike "Clear uploaded" (a view-only cleanup - those files are already
+  // gone from disk), this one actually deletes the not-yet-uploaded clips
+  // sitting in output/ - the source video and clip plan are untouched, so
+  // they can still be re-cut later, but the cut .mp4 itself is gone for real.
+  const pendingCount = allClipEntries.filter(
+    (e) => !e.uploadBtn.disabled && !e.uploadBtn.classList.contains("uploaded")
+  ).length;
+  const uploadInFlight = allClipEntries.some(
+    (e) => e.uploadBtn.textContent === "Uploading..." || e.uploadBtn.textContent === "Queued..."
+  );
+  if (uploadInFlight) {
+    logLine("[web] An upload is in progress - wait for it to finish before deleting all clips.", "err");
+    return;
+  }
+  if (!confirm(
+    `Delete ${pendingCount} not-yet-uploaded clip(s) from disk? This can't be undone - `
+    + `you'd need to re-cut them from the plan to get them back.`
+  )) {
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/clips", { method: "DELETE" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      logLine(`[web] ${err.detail || "Could not delete clips."}`, "err");
+      return;
+    }
+    const { deleted } = await res.json();
+    clipsEl.innerHTML = "";
+    clipCount = 0;
+    clipCountEl.textContent = "";
+    allClipEntries.length = 0;
+    logLine(`[web] Deleted ${deleted} clip(s) from disk.`, "sys");
+  } catch (e) {
+    logLine("[web] Could not reach the server to delete clips.", "err");
+  }
+});
+
+async function startUpload(card, uploadBtn, privacySelect, clip) {
+  uploadBtn.textContent = "Uploading...";
+  try {
+    const res = await fetch("/api/upload-clip", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ meta_path: clip.meta_path, privacy: privacySelect.value }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 429) {
+        autoUploadHalted = true;
+        logLine(`[web] YouTube's daily upload limit was hit - skipping auto-upload for `
+          + `any remaining clips in this run (you can still upload manually once it resets).`, "err");
+      }
+      throw new Error(err.detail || res.statusText);
+    }
+    const result = await res.json();
+    uploadBtn.textContent = "Uploaded";
+    uploadBtn.classList.add("uploaded");
+    uploadBtn.onclick = () => window.open(result.url, "_blank");
+    uploadBtn.disabled = false;
+    privacySelect.disabled = true;
+    // Server deletes the local file once it's live on YouTube.
+    const video = card.querySelector("video");
+    video.removeAttribute("src");
+    video.load();
+    const notice = document.createElement("div");
+    notice.className = "clip-meta";
+    notice.textContent = "Local file deleted (uploaded to YouTube)";
+    card.querySelector(".clip-body").insertBefore(notice, card.querySelector(".clip-actions"));
+    loadAnalytics();
+  } catch (e) {
+    uploadBtn.textContent = "Failed - retry";
+    uploadBtn.classList.add("failed");
+    uploadBtn.disabled = false;
+    logLine(`[upload] ${clip.title}: ${e.message}`, "err");
+  }
 }
 
 function escapeHtml(s) {
@@ -115,6 +917,62 @@ async function uploadSourceFile(file) {
   return data.path;
 }
 
+// Shared by both a freshly-started run and a "watch" reconnect that's
+// replaying/following an already-active one, so the two paths can't drift.
+function handleRunMessage(msg) {
+  if (msg.type === "log") {
+    logLine(msg.line);
+  } else if (msg.type === "clip") {
+    addClipCard(msg.clip);
+  } else if (msg.type === "done") {
+    if (msg.video_path) {
+      logLine(`[web] Downloaded -> ${msg.video_path}`, "sys");
+    } else {
+      logLine(`[web] Done. ${msg.count} clip(s) produced.`, "sys");
+    }
+    setStatus("done", "done");
+    setRunningUI(false);
+    refreshTokenBudget();
+    loadAnalytics();
+    // A transcribe/cut_plan action (or a full run) can change a file's
+    // transcript/plan status - refresh the Input tab's cards so reopening
+    // "Manage" on that file doesn't show stale has_transcript/plan info.
+    if (inputLoadedOnce) loadInputFiles();
+  } else if (msg.type === "stopped") {
+    logLine("[web] Run stopped.", "sys");
+    setStatus("stopped", "idle");
+    setRunningUI(false);
+    refreshTokenBudget();
+    loadAnalytics();
+    if (inputLoadedOnce) loadInputFiles();
+  } else if (msg.type === "error") {
+    logLine(`[web] Error: ${msg.message}`, "err");
+    setStatus("error", "error");
+    setRunningUI(false);
+    refreshTokenBudget();
+    loadAnalytics();
+  }
+}
+
+function openRunSocket(config, watch) {
+  const proto = window.location.protocol === "https:" ? "wss" : "ws";
+  const ws = new WebSocket(`${proto}://${window.location.host}/ws/run`);
+
+  ws.addEventListener("open", () => ws.send(JSON.stringify(watch ? { watch: true } : config)));
+  ws.addEventListener("message", (event) => {
+    const msg = JSON.parse(event.data);
+    if (msg.type === "idle") return; // watched, but nothing turned out to be running
+    handleRunMessage(msg);
+  });
+  ws.addEventListener("close", () => {
+    if (statusEl.classList.contains("running")) setStatus("idle", "idle");
+    setRunningUI(false);
+  });
+  ws.addEventListener("error", () => {
+    logLine("[web] WebSocket connection error.", "err");
+  });
+}
+
 runBtn.addEventListener("click", async () => {
   let videoPath;
   if (source === "url") {
@@ -123,18 +981,22 @@ runBtn.addEventListener("click", async () => {
       logLine("[web] Enter a YouTube URL first.", "err");
       return;
     }
+  } else if (selectedInputPath) {
+    // Already on the server (picked via the Input tab) - use it directly,
+    // no browser upload needed.
+    videoPath = selectedInputPath;
   } else {
     const file = fileInput.files[0];
     if (!file) {
       logLine("[web] Choose a file first.", "err");
       return;
     }
-    runBtn.disabled = true;
+    setRunningUI(true);
     try {
       videoPath = await uploadSourceFile(file);
     } catch (e) {
       logLine(`[web] ${e.message}`, "err");
-      runBtn.disabled = false;
+      setRunningUI(false);
       return;
     }
   }
@@ -152,39 +1014,40 @@ runBtn.addEventListener("click", async () => {
   clipsEl.innerHTML = "";
   clipCount = 0;
   clipCountEl.textContent = "";
-  runBtn.disabled = true;
+  autoUploadHalted = false;
+  setRunningUI(true);
   setStatus("running", "running");
 
-  const proto = window.location.protocol === "https:" ? "wss" : "ws";
-  const ws = new WebSocket(`${proto}://${window.location.host}/ws/run`);
-
-  ws.addEventListener("open", () => ws.send(JSON.stringify(config)));
-
-  ws.addEventListener("message", (event) => {
-    const msg = JSON.parse(event.data);
-    if (msg.type === "log") {
-      logLine(msg.line);
-    } else if (msg.type === "clip") {
-      addClipCard(msg.clip);
-    } else if (msg.type === "done") {
-      logLine(`[web] Done. ${msg.count} clip(s) produced.`, "sys");
-      setStatus("done", "done");
-      runBtn.disabled = false;
-    } else if (msg.type === "error") {
-      logLine(`[web] Error: ${msg.message}`, "err");
-      setStatus("error", "error");
-      runBtn.disabled = false;
-    }
-  });
-
-  ws.addEventListener("close", () => {
-    if (statusEl.classList.contains("running")) {
-      setStatus("idle", "idle");
-    }
-    runBtn.disabled = false;
-  });
-
-  ws.addEventListener("error", () => {
-    logLine("[web] WebSocket connection error.", "err");
-  });
+  openRunSocket(config, false);
 });
+
+// A run started before this page loaded (an earlier reload, or another tab)
+// has no way to tell a brand-new page load about itself unless something
+// asks - so ask: replay whatever it's logged so far, then keep watching it
+// live, instead of just showing idle while the terminal quietly disagrees.
+async function resumeActiveRunIfAny() {
+  try {
+    const res = await fetch("/api/run-status");
+    if (!res.ok) return;
+    const { active, log } = await res.json();
+    if (!active) return;
+
+    terminalEl.innerHTML = "";
+    clipsEl.innerHTML = "";
+    clipCount = 0;
+    clipCountEl.textContent = "";
+    autoUploadHalted = false;
+    setRunningUI(true);
+    setStatus("running", "running");
+
+    log.forEach(handleRunMessage);
+    openRunSocket(null, true);
+  } catch (e) {
+    // Non-critical - worst case this page just shows idle until the next run.
+  }
+}
+resumeActiveRunIfAny();
+
+// Now that every element reference and loader function above is initialized,
+// it's safe to show whichever page the URL hash points to (or "run" if none).
+showPage(location.hash.slice(1) || "run");
