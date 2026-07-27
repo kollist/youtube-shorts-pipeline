@@ -1,67 +1,37 @@
 """
 upload_youtube.py
-Handles OAuth 2.0 login (one-time, cached after) and uploads a clip to your
-YouTube channel as a Short via the Data API v3 videos.insert endpoint.
-
-ONE-TIME SETUP (do this before running anything):
-1. Go to https://console.cloud.google.com/ -> create a project (or reuse one).
-2. APIs & Services -> Library -> enable "YouTube Data API v3".
-3. APIs & Services -> OAuth consent screen -> set up as "External" + add your
-   own Google account as a test user (you don't need Google's review for
-   personal use with test users).
-4. APIs & Services -> Credentials -> Create Credentials -> OAuth client ID
-   -> Application type: "Desktop app". Download the JSON.
-5. Save that file as client_secret.json in this project folder (or point
-   YOUTUBE_CLIENT_SECRET_FILE in .env at it).
-6. First time you run this script, a browser window will open asking you to
-   log in and grant access. After that, a token.json is cached and you won't
-   need to log in again until the token expires/is revoked.
+Uploads a clip to your YouTube channel as a Short via the Data API v3
+videos.insert endpoint. OAuth setup/login is shared with youtube_analytics.py -
+see google_auth.py's module docstring for the one-time setup steps.
 
 Usage:
     python upload_youtube.py output/myvideo_clip01.json
 """
 
-import os
 import sys
 import json
-from pathlib import Path
 
-from dotenv import load_dotenv
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
-load_dotenv()
+from clip_log import log_upload
+from google_auth import get_credentials
 
-SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
 
-CLIENT_SECRET_FILE = os.environ.get("YOUTUBE_CLIENT_SECRET_FILE", "client_secret.json")
-TOKEN_FILE = os.environ.get("YOUTUBE_TOKEN_FILE", "token.json")
+class YouTubeUploadLimitExceeded(RuntimeError):
+    """Raised when YouTube's own daily upload cap for this channel is hit -
+    an account-level limit (tighter for unverified/newer channels), not
+    something a retry or a code fix can work around. Phone-verifying the
+    channel (YouTube Studio -> Settings -> Channel -> Feature eligibility)
+    typically raises it; otherwise it resets on its own after some time."""
 
 
 def get_authenticated_service():
-    creds = None
-    if Path(TOKEN_FILE).exists():
-        creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
+    return build("youtube", "v3", credentials=get_credentials())
 
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            if not Path(CLIENT_SECRET_FILE).exists():
-                raise FileNotFoundError(
-                    f"Missing {CLIENT_SECRET_FILE}. Download OAuth client JSON "
-                    f"from Google Cloud Console first (see module docstring)."
-                )
-            flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRET_FILE, SCOPES)
-            creds = flow.run_local_server(port=0)
 
-        with open(TOKEN_FILE, "w") as f:
-            f.write(creds.to_json())
-
-    return build("youtube", "v3", credentials=creds)
+STATIC_HASHTAGS = ["#Shorts", "#Subscribe", "#Viral", "#fyp", "#Trending"]
 
 
 def upload_short(
@@ -76,9 +46,14 @@ def upload_short(
     """
     youtube = get_authenticated_service()
 
-    # Make sure #Shorts is present somewhere so YouTube reliably classifies it
-    if "#shorts" not in description.lower() and "#shorts" not in title.lower():
-        description = f"{description}\n#Shorts".strip()
+    # Always append a fixed set of hashtags (algorithm reach + subscribe CTA) on
+    # top of whatever clip-specific hashtags the description already has.
+    missing_tags = [
+        tag for tag in STATIC_HASHTAGS
+        if tag.lower() not in description.lower() and tag.lower() not in title.lower()
+    ]
+    if missing_tags:
+        description = f"{description}\n{' '.join(missing_tags)}".strip()
 
     body = {
         "snippet": {
@@ -101,11 +76,18 @@ def upload_short(
         media_body=media,
     )
 
-    response = None
-    while response is None:
-        status, response = request.next_chunk()
-        if status:
-            print(f"[upload]   ...{int(status.progress() * 100)}% uploaded")
+    try:
+        response = None
+        while response is None:
+            status, response = request.next_chunk()
+            if status:
+                print(f"[upload]   ...{int(status.progress() * 100)}% uploaded")
+    except HttpError as e:
+        if e.status_code == 400 and "uploadLimitExceeded" in str(e):
+            raise YouTubeUploadLimitExceeded(
+                f"YouTube's daily upload limit for this channel has been reached: {e}"
+            )
+        raise
 
     video_id = response["id"]
     url = f"https://youtube.com/shorts/{video_id}"
@@ -140,6 +122,15 @@ def upload_from_meta_file(meta_path: str, privacy_status: str = "public"):
     meta["youtube_url"] = result["url"]
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
+
+    log_upload({
+        "video_id": result["video_id"],
+        "url": result["url"],
+        "title": meta["title"],
+        "hook_mechanic": meta.get("hook_mechanic", "unknown"),
+        "duration_sec": round(meta["end"] - meta["start"], 1),
+        "privacy_status": privacy_status,
+    })
 
     delete_uploaded_clip(meta_path, meta["video_path"])
 
