@@ -17,6 +17,8 @@ input/
 output/
 transcripts/
 clips/
+.groq_usage.json
+upload_log.jsonl
 
 # Claude Code local-only settings
 .claude/settings.local.json
