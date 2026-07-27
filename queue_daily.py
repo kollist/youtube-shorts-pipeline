@@ -23,8 +23,10 @@ import time
 from pathlib import Path
 
 from pipeline import run_pipeline
-from upload_youtube import upload_from_meta_file
-from select_clips import DEFAULT_MIN_DURATION, DEFAULT_MAX_DURATION
+from upload_youtube import upload_from_meta_file, YouTubeUploadLimitExceeded
+from select_clips import DEFAULT_MIN_DURATION, DEFAULT_MAX_DURATION, MODEL_FALLBACK_CHAIN
+from token_budget import GroqBudgetExhausted, all_usage_today
+from run_control import RunCancelled, check_cancelled, interruptible_sleep
 
 INPUT_DIR = Path("input")
 SUPPORTED_EXTENSIONS = {".mp4", ".mov", ".mkv", ".webm"}
@@ -35,6 +37,93 @@ def find_source_videos():
         p for p in INPUT_DIR.glob("*")
         if p.suffix.lower() in SUPPORTED_EXTENSIONS
     )
+
+
+def run_daily_queue(
+    target: int = 20,
+    whisper_model: str = "small",
+    do_upload: bool = False,
+    privacy: str = "public",
+    spacing_minutes: float = 20.0,
+    min_duration: float = DEFAULT_MIN_DURATION,
+    max_duration: float = DEFAULT_MAX_DURATION,
+    on_clip=None,
+    cancel_event=None,
+) -> list[dict]:
+    """Process every video in input/ toward a daily clip target, then
+    (optionally) upload everything produced, spaced out over the day. Shared
+    by the CLI entry point below and the web UI's "Daily Queue" panel, which
+    streams this function's print() output the same way it does for a
+    single-video run."""
+    videos = find_source_videos()
+    if not videos:
+        print(f"[queue] No videos found in {INPUT_DIR}/. Drop .mp4/.mov/.mkv/.webm files there first.")
+        return []
+
+    per_video_cap = max(1, target // len(videos))
+    print(f"[queue] Found {len(videos)} source video(s). "
+          f"Targeting ~{per_video_cap} clips per video (target={target}).")
+
+    all_produced = []
+    for video in videos:
+        check_cancelled(cancel_event)
+        print(f"\n[queue] === Processing {video.name} ===")
+        try:
+            produced = run_pipeline(
+                str(video),
+                max_clips=per_video_cap,
+                whisper_model=whisper_model,
+                do_upload=False,  # we control upload pacing separately below
+                min_duration=min_duration,
+                max_duration=max_duration,
+                on_clip=on_clip,
+                cancel_event=cancel_event,
+            )
+        except GroqBudgetExhausted as e:
+            print(f"[queue] {e}\n"
+                  f"[queue] Stopping here rather than losing today's earlier results - "
+                  f"{video.name} and any remaining videos will need to wait for the quota to reset.")
+            break
+        except RunCancelled:
+            raise  # user hit Stop - don't treat it as "this video failed, try the next one"
+        except Exception as e:
+            print(f"[queue] {video.name} failed, skipping it and continuing with "
+                  f"the rest of today's videos: {e}")
+            continue
+        all_produced.extend(produced)
+
+    print(f"\n[queue] Total clips produced today: {len(all_produced)}")
+    usage = all_usage_today(MODEL_FALLBACK_CHAIN)
+    for m in MODEL_FALLBACK_CHAIN:
+        u = usage[m]
+        print(f"[queue] Groq budget used today ({m}): {u['used']:,}/{u['cap']:,} tokens "
+              f"({u['remaining']:,} remaining).")
+
+    if do_upload:
+        print(f"[queue] Uploading {len(all_produced)} clip(s), "
+              f"spaced {spacing_minutes} min apart...")
+        for i, meta in enumerate(all_produced):
+            check_cancelled(cancel_event)
+            meta_json_path = Path(meta["video_path"]).with_suffix(".json")
+            try:
+                upload_from_meta_file(str(meta_json_path), privacy_status=privacy)
+            except YouTubeUploadLimitExceeded as e:
+                print(f"[queue] {e}\n"
+                      f"[queue] Stopping uploads here - this is an account-level daily cap, "
+                      f"so every remaining upload would fail the same way. Clips not yet "
+                      f"uploaded are still sitting in output/, untouched.")
+                break
+            except Exception as e:
+                print(f"[queue] Upload failed for {meta_json_path}: {e}")
+
+            if i < len(all_produced) - 1:
+                print(f"[queue] Sleeping {spacing_minutes} min before next upload...")
+                interruptible_sleep(spacing_minutes * 60, cancel_event)
+    else:
+        print("[queue] Clips ready in output/. Review them, then run:\n"
+              "  python pipeline.py --upload-only")
+
+    return all_produced
 
 
 def main():
@@ -51,46 +140,15 @@ def main():
                          help="Target maximum clip length in seconds (default: 45)")
     args = parser.parse_args()
 
-    videos = find_source_videos()
-    if not videos:
-        print(f"[queue] No videos found in {INPUT_DIR}/. Drop .mp4/.mov/.mkv/.webm files there first.")
-        return
-
-    per_video_cap = max(1, args.target // len(videos))
-    print(f"[queue] Found {len(videos)} source video(s). "
-          f"Targeting ~{per_video_cap} clips per video (target={args.target}).")
-
-    all_produced = []
-    for video in videos:
-        print(f"\n[queue] === Processing {video.name} ===")
-        produced = run_pipeline(
-            str(video),
-            max_clips=per_video_cap,
-            whisper_model=args.whisper_model,
-            do_upload=False,  # we control upload pacing separately below
-            min_duration=args.min_duration,
-            max_duration=args.max_duration,
-        )
-        all_produced.extend(produced)
-
-    print(f"\n[queue] Total clips produced today: {len(all_produced)}")
-
-    if args.upload:
-        print(f"[queue] Uploading {len(all_produced)} clip(s), "
-              f"spaced {args.spacing_minutes} min apart...")
-        for i, meta in enumerate(all_produced):
-            meta_json_path = Path(meta["video_path"]).with_suffix(".json")
-            try:
-                upload_from_meta_file(str(meta_json_path), privacy_status=args.privacy)
-            except Exception as e:
-                print(f"[queue] Upload failed for {meta_json_path}: {e}")
-
-            if i < len(all_produced) - 1:
-                print(f"[queue] Sleeping {args.spacing_minutes} min before next upload...")
-                time.sleep(args.spacing_minutes * 60)
-    else:
-        print("[queue] Clips ready in output/. Review them, then run:\n"
-              "  python pipeline.py --upload-only")
+    run_daily_queue(
+        target=args.target,
+        whisper_model=args.whisper_model,
+        do_upload=args.upload,
+        privacy=args.privacy,
+        spacing_minutes=args.spacing_minutes,
+        min_duration=args.min_duration,
+        max_duration=args.max_duration,
+    )
 
 
 if __name__ == "__main__":
