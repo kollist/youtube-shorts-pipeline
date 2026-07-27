@@ -41,6 +41,7 @@ from select_clips import (
 )
 from cut_clips import process_all_clips
 from upload_youtube import upload_from_meta_file
+from run_control import check_cancelled, interruptible_sleep
 
 UPLOAD_DELAY_SECONDS = 5  # small pause between uploads, be gentle on quota/network
 
@@ -59,10 +60,12 @@ def run_pipeline(
     min_duration: float = DEFAULT_MIN_DURATION,
     max_duration: float = DEFAULT_MAX_DURATION,
     on_clip=None,
+    cancel_event=None,
 ):
     if _is_url(video_path):
+        check_cancelled(cancel_event)
         print(f"[pipeline] Downloading video from URL...")
-        video_path = download_video(video_path)
+        video_path = download_video(video_path, cancel_event=cancel_event)
         print(f"[pipeline] Downloaded -> {video_path}")
 
     video_path = Path(video_path)
@@ -72,7 +75,8 @@ def run_pipeline(
     if transcript_json_path.exists():
         print(f"[pipeline] Found existing transcript, skipping re-transcription: {transcript_json_path}")
     else:
-        segments = transcribe(str(video_path), whisper_model)
+        check_cancelled(cancel_event)
+        segments = transcribe(str(video_path), whisper_model, cancel_event=cancel_event)
         transcript_json_path = Path(save_transcript(str(video_path), segments))
 
     segments = load_transcript(str(transcript_json_path))
@@ -82,6 +86,7 @@ def run_pipeline(
         max_clips=max_clips,
         min_duration=min_duration,
         max_duration=max_duration,
+        cancel_event=cancel_event,
     )
     if not clips:
         print("[pipeline] Model did not return any confident clips. Stopping.")
@@ -94,16 +99,18 @@ def run_pipeline(
         transcript_path=str(transcript_json_path),
         burn_captions=burn_captions,
         on_clip=on_clip,
+        cancel_event=cancel_event,
     )
 
     if do_upload:
         for meta in produced:
+            check_cancelled(cancel_event)
             meta_json_path = Path(meta["video_path"]).with_suffix(".json")
             try:
                 upload_from_meta_file(str(meta_json_path), privacy_status=privacy_status)
             except Exception as e:
                 print(f"[pipeline] Upload failed for {meta_json_path}: {e}")
-            time.sleep(UPLOAD_DELAY_SECONDS)
+            interruptible_sleep(UPLOAD_DELAY_SECONDS, cancel_event)
 
     print(f"[pipeline] Finished. {len(produced)} clip(s) produced"
           f"{' and uploaded' if do_upload else ' (not uploaded - use --upload)'}.")
