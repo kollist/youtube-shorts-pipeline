@@ -25,6 +25,7 @@
   <a href="#run" class="page-tab" data-page="run">Run</a>
   <a href="#discover" class="page-tab" data-page="discover">Discover</a>
   <a href="#input" class="page-tab" data-page="input">Input</a>
+  <a href="#filler" class="page-tab" data-page="filler">Filler</a>
   <a href="#clips" class="page-tab" data-page="clips">Clips <span id="clip-count"></span></a>
   <a href="#analytics" class="page-tab" data-page="analytics">Analytics</a>
 </nav>
@@ -154,6 +155,45 @@
     </section>
   </div>
 
+  <div class="page" id="page-filler">
+    <section class="panel" id="filler-discover-panel">
+      <h2>Discover gameplay footage <button id="filler-discover-refresh-btn" class="pill-btn">refresh</button></h2>
+      <div class="field-hint">Keyword search, not a rights-verified curated list like the main Discover tab - showing up here isn't permission to use it. Check the source channel's own license before downloading anything.</div>
+      <div class="field-row" style="margin-bottom:14px">
+        <div class="field" style="flex:1">
+          <label for="filler-discover-query">Search</label>
+          <input id="filler-discover-query" type="text" value="minecraft parkour gameplay no copyright" />
+        </div>
+      </div>
+      <div id="filler-discover-content" class="discover-grid"></div>
+    </section>
+
+    <section class="panel" id="filler-panel">
+      <h2>Filler footage <button id="filler-refresh-btn" class="pill-btn">refresh</button></h2>
+      <div class="field-hint">Your own gameplay clips - used as the bottom half of the split-screen clip layout. Never sourced automatically; download a candidate above or upload your own.</div>
+
+      <div class="field-row" style="margin-bottom:10px">
+        <div class="field" style="flex:1">
+          <label for="filler-download-url">Paste a YouTube URL to download into filler/</label>
+          <input id="filler-download-url" type="text" placeholder="https://www.youtube.com/watch?v=..." />
+        </div>
+        <button id="filler-download-btn" class="upload-btn" style="flex:0 0 auto;align-self:flex-end;padding:8px 16px">Download</button>
+      </div>
+
+      <div class="field" style="margin-bottom:18px">
+        <label for="filler-file-input">Or upload a file from your computer</label>
+        <input id="filler-file-input" type="file" accept="video/*" />
+      </div>
+
+      <div id="filler-progress-wrap" style="display:none;margin-bottom:18px">
+        <div class="progress-bar"><div id="filler-progress-fill" class="progress-bar-fill" style="width:0%"></div></div>
+        <div id="filler-progress-status" class="field-hint"></div>
+      </div>
+
+      <div id="filler-content" class="discover-grid"></div>
+    </section>
+  </div>
+
   <div class="page" id="page-clips">
     <section class="panel" id="clips-panel">
       <h2>
@@ -161,6 +201,7 @@
         <div class="clips-header-actions">
           <button id="clear-uploaded-btn" class="pill-btn">Clear uploaded</button>
           <button id="clear-all-btn" class="pill-btn">Delete all</button>
+          <button id="split-all-btn" class="pill-btn">Split-screen all</button>
           <button id="upload-all-btn" class="upload-btn upload-all-btn">Upload all</button>
         </div>
       </h2>
