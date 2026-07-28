@@ -793,14 +793,27 @@ async function openInputDetail(file) {
   if (file.plan_clip_count != null) {
     detailPlanArea.innerHTML = `
       <div class="field-hint">${file.plan_clip_count} clip(s) planned.</div>
+      <div class="field checkbox-field">
+        <label><input id="detail-burn-captions" type="checkbox" /> Burn in captions (word-by-word karaoke style)</label>
+      </div>
+      <div class="field checkbox-field">
+        <label><input id="detail-add-voiceover" type="checkbox" /> Add AI voiceover intro</label>
+      </div>
       <button class="upload-btn" id="detail-cut-btn">Cut clips from plan</button>
     `;
+    // Seeded from the Run tab's checkboxes so this starts at whatever a full
+    // pipeline run would use, but it's a real, editable toggle here - not a
+    // silently-inherited value this one file is stuck with.
+    const detailBurnCaptionsEl = document.getElementById("detail-burn-captions");
+    const detailAddVoiceoverEl = document.getElementById("detail-add-voiceover");
+    detailBurnCaptionsEl.checked = document.getElementById("burn-captions").checked;
+    detailAddVoiceoverEl.checked = document.getElementById("add-voiceover").checked;
     document.getElementById("detail-cut-btn").addEventListener("click", () => {
       startInputAction("cut_plan", file, {
         plan_path: `clips/${file.stem}_plan.json`,
         transcript_path: file.has_transcript ? `transcripts/${file.stem}.json` : null,
-        burn_captions: document.getElementById("burn-captions").checked,
-        add_voiceover: document.getElementById("add-voiceover").checked,
+        burn_captions: detailBurnCaptionsEl.checked,
+        add_voiceover: detailAddVoiceoverEl.checked,
       });
     });
   } else {
