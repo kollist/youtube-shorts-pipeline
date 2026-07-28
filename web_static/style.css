@@ -154,6 +154,22 @@ header h1 {
 .token-budget-fill.low { background: var(--status-warning); }
 .token-budget-fill.critical { background: var(--status-critical); }
 
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--panel-raised);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
 .page-tabs {
   display: flex;
   gap: 4px;
@@ -385,6 +401,14 @@ input:focus, select:focus { outline: none; border-color: var(--accent-dim); }
   font-size: 11.5px;
   padding: 6px;
 }
+.split-screen-row { display: flex; gap: 6px; }
+.split-screen-row .filler-select {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  padding: 6px;
+}
+.split-screen-row .split-screen-btn { flex: 0 0 auto; white-space: nowrap; }
 .upload-btn {
   flex: 1;
   background: transparent;
