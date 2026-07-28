@@ -73,12 +73,27 @@ def run_pipeline(
     stem = video_path.stem
 
     transcript_json_path = Path("transcripts") / f"{stem}.json"
-    if transcript_json_path.exists():
-        print(f"[pipeline] Found existing transcript, skipping re-transcription: {transcript_json_path}")
-    else:
+    # A transcript saved before word-level timestamps were added has no
+    # "words" field, which forces the karaoke captions to fall back to the
+    # old full-sentence style for the clip body - reusing it as-is here
+    # would silently give you sentence captions on every clip cut from this
+    # video no matter how many times you re-run this, since burn_captions
+    # doesn't control transcription at all. Re-transcribe once to upgrade it.
+    needs_transcription = not transcript_json_path.exists()
+    if not needs_transcription and burn_captions:
+        with open(transcript_json_path, "r", encoding="utf-8") as f:
+            existing_segments = json.load(f)
+        if not any(seg.get("words") for seg in existing_segments):
+            print(f"[pipeline] Existing transcript predates word-level timestamps "
+                  f"(needed for karaoke captions) - re-transcribing: {transcript_json_path}")
+            needs_transcription = True
+
+    if needs_transcription:
         check_cancelled(cancel_event)
         segments = transcribe(str(video_path), whisper_model, cancel_event=cancel_event)
         transcript_json_path = Path(save_transcript(str(video_path), segments))
+    else:
+        print(f"[pipeline] Found existing transcript, skipping re-transcription: {transcript_json_path}")
 
     segments = load_transcript(str(transcript_json_path))
 

@@ -233,6 +233,19 @@ def _list_input_files() -> list[dict]:
             except (json.JSONDecodeError, OSError):
                 plan_clip_count = None
 
+        # A transcript saved before word-level timestamps were added has no
+        # "words" field - cutting straight from a plan (which never
+        # re-transcribes) would silently fall back to full-sentence captions
+        # for a file like that, so the Manage modal needs to know to warn
+        # about it rather than just going quiet on the karaoke style.
+        has_word_level_transcript = False
+        if transcript_path.exists():
+            try:
+                with open(transcript_path, "r", encoding="utf-8") as f:
+                    has_word_level_transcript = any(seg.get("words") for seg in json.load(f))
+            except (json.JSONDecodeError, OSError):
+                has_word_level_transcript = False
+
         files.append({
             "filename": path.name,
             "stem": path.stem,
@@ -240,6 +253,7 @@ def _list_input_files() -> list[dict]:
             "size_mb": round(path.stat().st_size / (1024 * 1024), 1),
             "thumbnail": thumbnail,
             "has_transcript": transcript_path.exists(),
+            "has_word_level_transcript": has_word_level_transcript,
             "plan_clip_count": plan_clip_count,
         })
     return files

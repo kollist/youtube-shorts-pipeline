@@ -793,11 +793,15 @@ async function openInputDetail(file) {
   }
 
   if (file.plan_clip_count != null) {
+    const staleTranscriptWarning = file.has_transcript && !file.has_word_level_transcript
+      ? `<div class="field-hint">This file's transcript predates word-by-word captions, and "Cut clips from plan" never re-transcribes - captions will burn in as full sentences until you hit Re-transcribe above.</div>`
+      : "";
     detailPlanArea.innerHTML = `
       <div class="field-hint">${file.plan_clip_count} clip(s) planned.</div>
       <div class="field checkbox-field">
         <label><input id="detail-burn-captions" type="checkbox" /> Burn in captions (word-by-word karaoke style)</label>
       </div>
+      ${staleTranscriptWarning}
       <div class="field checkbox-field">
         <label><input id="detail-add-voiceover" type="checkbox" /> Add AI voiceover intro</label>
       </div>
