@@ -800,6 +800,7 @@ async function openInputDetail(file) {
         plan_path: `clips/${file.stem}_plan.json`,
         transcript_path: file.has_transcript ? `transcripts/${file.stem}.json` : null,
         burn_captions: document.getElementById("burn-captions").checked,
+        add_voiceover: document.getElementById("add-voiceover").checked,
       });
     });
   } else {
@@ -1478,6 +1479,7 @@ runBtn.addEventListener("click", async () => {
     min_duration: parseFloat(document.getElementById("min-duration").value),
     max_duration: parseFloat(document.getElementById("max-duration").value),
     burn_captions: document.getElementById("burn-captions").checked,
+    add_voiceover: document.getElementById("add-voiceover").checked,
   };
 
   terminalEl.innerHTML = "";

@@ -860,6 +860,7 @@ async def ws_run(ws: WebSocket):
                     transcript_path=config.get("transcript_path"),
                     out_dir=str(OUTPUT_DIR),
                     burn_captions=bool(config.get("burn_captions", True)),
+                    add_voiceover=bool(config.get("add_voiceover", False)),
                     on_clip=on_clip,
                     cancel_event=cancel_event,
                 )
@@ -887,6 +888,7 @@ async def ws_run(ws: WebSocket):
                     whisper_model=config.get("whisper_model", "small"),
                     do_upload=False,
                     burn_captions=bool(config.get("burn_captions", True)),
+                    add_voiceover=bool(config.get("add_voiceover", False)),
                     min_duration=float(config.get("min_duration", DEFAULT_MIN_DURATION)),
                     max_duration=float(config.get("max_duration", DEFAULT_MAX_DURATION)),
                     on_clip=on_clip,

@@ -36,11 +36,10 @@ def transcribe(video_path: str, model_size: str = MODEL_SIZE, cancel_event=None)
 
     print(f"[transcribe] Transcribing {video_path.name} ... (this can take a while)")
     t0 = time.time()
-    # faster-whisper's `segments` is a lazy generator - each iteration below is
-    # where the actual per-segment decoding happens, so this is the one real
-    # checkpoint where a Stop can interrupt a transcription already in
-    # progress, instead of only being able to stop it before it starts.
-    segments, info = model.transcribe(str(video_path), word_timestamps=False)
+    # word_timestamps=True costs a bit more compute but is what makes the
+    # word-by-word karaoke-style burned-in captions in cut_clips.py possible -
+    # without per-word timing captions can only be shown a full sentence at a time.
+    segments, info = model.transcribe(str(video_path), word_timestamps=True)
 
     results = []
     for seg in segments:
@@ -49,6 +48,10 @@ def transcribe(video_path: str, model_size: str = MODEL_SIZE, cancel_event=None)
             "start": round(seg.start, 2),
             "end": round(seg.end, 2),
             "text": seg.text.strip(),
+            "words": [
+                {"start": round(w.start, 3), "end": round(w.end, 3), "text": w.word.strip()}
+                for w in (seg.words or [])
+            ],
         })
 
     print(f"[transcribe] Done in {time.time() - t0:.1f}s. "

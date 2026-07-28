@@ -40,7 +40,8 @@ def format_srt_timestamp(seconds: float) -> str:
 
 def build_srt_for_clip(segments: list[dict], clip_start: float, clip_end: float) -> str:
     """Build an SRT subtitle string for the portion of the transcript inside this clip,
-    with timestamps re-based to start at 0 for the clip itself."""
+    with timestamps re-based to start at 0 for the clip itself. Fallback path for
+    transcripts saved before word-level timestamps were added - see build_karaoke_ass_for_clip."""
     lines = []
     idx = 1
     for seg in segments:
@@ -56,6 +57,134 @@ def build_srt_for_clip(segments: list[dict], clip_start: float, clip_end: float)
         lines.append("")
         idx += 1
     return "\n".join(lines)
+
+
+# --- Word-by-word "karaoke" captions ----------------------------------
+# Groups transcript words into short on-screen chunks and emits one ASS
+# Dialogue line per word within each chunk, with that word colored/scaled up
+# while it's being spoken - the highlighted-word look most Shorts/TikTok
+# auto-captions use, instead of a full sentence sitting on screen at once.
+
+ASS_HEADER = """[Script Info]
+ScriptType: v4.00+
+PlayResX: {width}
+PlayResY: {height}
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,{font_size},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,3,3,0,2,40,40,{margin_v},1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
+
+# Opaque yellow in ASS's &HAABBGGRR order - the highlighted word's color.
+HIGHLIGHT_COLOR = "&H0000FFFF&"
+
+
+def _format_ass_timestamp(seconds: float) -> str:
+    centis = int(round(max(seconds, 0.0) * 100))
+    h, remainder = divmod(centis, 360_000)
+    m, remainder = divmod(remainder, 6_000)
+    s, cs = divmod(remainder, 100)
+    return f"{h:d}:{m:02d}:{s:02d}.{cs:02d}"
+
+
+def _sanitize_word(text: str) -> str:
+    # Strip characters that would be parsed as ASS override tags if they
+    # ended up in caption text verbatim.
+    return text.replace("{", "").replace("}", "").strip()
+
+
+def _group_words_into_chunks(
+    words: list[dict], max_words: int = 4, max_gap: float = 0.6, max_chunk_duration: float = 2.2
+) -> list[list[dict]]:
+    chunks = []
+    current = []
+    for w in words:
+        if current:
+            gap = w["start"] - current[-1]["end"]
+            duration = w["end"] - current[0]["start"]
+            if gap > max_gap or len(current) >= max_words or duration > max_chunk_duration:
+                chunks.append(current)
+                current = []
+        current.append(w)
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def _karaoke_dialogue_lines(words: list[dict]) -> list[str]:
+    lines = []
+    for chunk in _group_words_into_chunks(words):
+        texts = [_sanitize_word(w["text"]) for w in chunk]
+        if not any(texts):
+            continue
+        for i in range(len(chunk)):
+            start = chunk[i]["start"]
+            end = chunk[i + 1]["start"] if i + 1 < len(chunk) else chunk[i]["end"]
+            end = max(end, start + 0.05)
+            parts = []
+            for j, word_text in enumerate(texts):
+                if not word_text:
+                    continue
+                if j == i:
+                    parts.append(f"{{\\c{HIGHLIGHT_COLOR}\\fscx112\\fscy112}}{word_text}{{\\r}}")
+                else:
+                    parts.append(word_text)
+            lines.append(
+                f"Dialogue: 0,{_format_ass_timestamp(start)},{_format_ass_timestamp(end)},"
+                f"Default,,0,0,0,,{' '.join(parts)}"
+            )
+    return lines
+
+
+def build_karaoke_ass(words: list[dict], width: int, height: int, font_size: int, margin_v: int) -> str:
+    header = ASS_HEADER.format(width=width, height=height, font_size=font_size, margin_v=margin_v)
+    return header + "\n".join(_karaoke_dialogue_lines(words)) + "\n"
+
+
+def build_karaoke_ass_for_clip(
+    segments: list[dict], clip_start: float, clip_end: float, width: int, height: int, font_size: int, margin_v: int
+) -> str | None:
+    words = []
+    for seg in segments:
+        for w in seg.get("words") or []:
+            if w["end"] <= clip_start or w["start"] >= clip_end:
+                continue
+            words.append({
+                "start": max(w["start"], clip_start) - clip_start,
+                "end": min(w["end"], clip_end) - clip_start,
+                "text": w["text"],
+            })
+    if not words:
+        return None
+    return build_karaoke_ass(words, width, height, font_size, margin_v)
+
+
+def build_subtitle_file(
+    segments: list[dict], clip_start: float, clip_end: float, base_path: Path,
+    width: int, height: int, font_size: int, margin_v: int,
+) -> Path | None:
+    """Picks word-level karaoke captions (.ass) when the transcript has
+    per-word timing, falling back to plain sentence-level captions (.srt)
+    for transcripts saved before that was added."""
+    has_words = any(seg.get("words") for seg in segments)
+    if has_words:
+        ass_text = build_karaoke_ass_for_clip(segments, clip_start, clip_end, width, height, font_size, margin_v)
+        if not ass_text:
+            return None
+        path = base_path.with_suffix(".ass")
+        path.write_text(ass_text, encoding="utf-8")
+        return path
+
+    srt_text = build_srt_for_clip(segments, clip_start, clip_end)
+    if not srt_text.strip():
+        return None
+    path = base_path.with_suffix(".srt")
+    path.write_text(srt_text, encoding="utf-8")
+    return path
 
 
 # Subtitle force_style MUST set PlayResX/PlayResY to the real output frame
@@ -107,12 +236,36 @@ def _ffprobe_duration(path) -> float:
         raise RuntimeError(f"Could not read duration of filler clip {path}: {result.stderr[-500:]}")
 
 
+def _ffprobe_resolution(path) -> tuple[int, int]:
+    result = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0",
+         "-show_entries", "stream=width,height", "-of", "csv=s=x:p=0", str(path)],
+        capture_output=True, text=True,
+    )
+    try:
+        width_str, height_str = result.stdout.strip().split("x")
+        return int(width_str), int(height_str)
+    except ValueError:
+        raise RuntimeError(f"Could not read resolution of {path}: {result.stderr[-500:]}")
+
+
+def _subtitles_filter(subtitle_path: str, split: bool) -> str:
+    # A .ass file carries its own [V4+ Styles] section (incl. the per-word
+    # karaoke color/scale overrides), so force_style isn't needed - and would
+    # only add a redundant baseline style. The .srt fallback has no styling
+    # of its own, so force_style is what gives it a font/size/position at all.
+    if Path(subtitle_path).suffix.lower() == ".ass":
+        return f"subtitles='{subtitle_path}'"
+    style = SPLIT_SUBTITLE_STYLE if split else SUBTITLE_STYLE
+    return f"subtitles='{subtitle_path}':force_style='{style}'"
+
+
 def cut_clip(
     source_video,
     start: float,
     end: float,
     out_path,
-    srt_path=None,
+    subtitle_path=None,
     vertical: bool = True,
     filler_video=None,
 ):
@@ -148,8 +301,8 @@ def cut_clip(
             "[1:v]scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960,setsar=1[filler]"
         )
         last_label = "content_raw"
-        if srt_path:
-            chain += f";[content_raw]subtitles='{srt_path}':force_style='{SPLIT_SUBTITLE_STYLE}'[content]"
+        if subtitle_path:
+            chain += f";[content_raw]{_subtitles_filter(subtitle_path, split=True)}[content]"
             last_label = "content"
         chain += f";[{last_label}][filler]vstack=inputs=2[stacked]"
         # Only ever the content track's audio - the filler footage is muted.
@@ -167,12 +320,12 @@ def cut_clip(
             "[bg][fg]overlay=(W-w)/2:(H-h)/2[stacked]"
         )
         last_label = "stacked"
-        if srt_path:
-            chain += f";[stacked]subtitles='{srt_path}':force_style='{SUBTITLE_STYLE}'[capped]"
+        if subtitle_path:
+            chain += f";[stacked]{_subtitles_filter(subtitle_path, split=False)}[capped]"
             last_label = "capped"
         cmd += ["-filter_complex", chain, "-map", f"[{last_label}]", "-map", "0:a?"]
-    elif srt_path:
-        cmd += ["-vf", f"subtitles='{srt_path}':force_style='{SUBTITLE_STYLE}'"]
+    elif subtitle_path:
+        cmd += ["-vf", _subtitles_filter(subtitle_path, split=False)]
 
     cmd += [
         "-c:v", "libx264", "-preset", "fast", "-crf", "20",
@@ -186,12 +339,78 @@ def cut_clip(
         raise RuntimeError(f"ffmpeg failed for {out_path}:\n{result.stderr[-2000:]}")
 
 
+# --- Voiceover intro ---------------------------------------------------
+# Prepends a short AI-narrated hook line to an already-cut clip: a frozen
+# first frame + synthesized voiceover audio + its own karaoke captions,
+# concatenated in front of the clip's own (untouched) video+audio. See
+# voiceover.py for how the narration text and speech are generated.
+
+VOICEOVER_FONT_SIZE = 64
+VOICEOVER_MARGIN_V = 170
+
+
+def add_voiceover_intro(clip_path, audio_path, words: list[dict]) -> None:
+    clip_path = Path(clip_path)
+    width, height = _ffprobe_resolution(clip_path)
+    audio_duration = _ffprobe_duration(audio_path)
+
+    tmp_frame = clip_path.with_suffix(".vo_frame.png")
+    tmp_ass = clip_path.with_suffix(".vo_intro.ass")
+    tmp_intro = clip_path.with_suffix(".vo_intro.mp4")
+    tmp_final = clip_path.with_suffix(".vo_final.mp4")
+
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-y", "-i", str(clip_path), "-vframes", "1", str(tmp_frame)],
+            capture_output=True, text=True,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(f"ffmpeg failed extracting a frame for the voiceover intro:\n{result.stderr[-2000:]}")
+
+        ass_text = build_karaoke_ass(words, width, height, VOICEOVER_FONT_SIZE, VOICEOVER_MARGIN_V)
+        tmp_ass.write_text(ass_text, encoding="utf-8")
+
+        intro_cmd = [
+            "ffmpeg", "-y",
+            "-loop", "1", "-i", str(tmp_frame),
+            "-i", str(audio_path),
+            "-t", f"{audio_duration:.2f}",
+            "-vf", f"scale={width}:{height},subtitles='{tmp_ass}'",
+            "-r", "30",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+            "-c:a", "aac", "-b:a", "128k",
+            str(tmp_intro),
+        ]
+        result = subprocess.run(intro_cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"ffmpeg failed building the voiceover intro:\n{result.stderr[-2000:]}")
+
+        concat_cmd = [
+            "ffmpeg", "-y",
+            "-i", str(tmp_intro), "-i", str(clip_path),
+            "-filter_complex", "[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1[v][a]",
+            "-map", "[v]", "-map", "[a]",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+            "-c:a", "aac", "-b:a", "128k",
+            str(tmp_final),
+        ]
+        result = subprocess.run(concat_cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"ffmpeg failed prepending the voiceover intro:\n{result.stderr[-2000:]}")
+
+        tmp_final.replace(clip_path)
+    finally:
+        for tmp in (tmp_frame, tmp_ass, tmp_intro, tmp_final):
+            tmp.unlink(missing_ok=True)
+
+
 def process_all_clips(
     source_video,
     plan_path,
     transcript_path=None,
     out_dir="output",
     burn_captions: bool = True,
+    add_voiceover: bool = False,
     on_clip=None,
     cancel_event=None,
 ):
@@ -204,7 +423,7 @@ def process_all_clips(
         clips = json.load(f)
 
     segments = None
-    if burn_captions and transcript_path:
+    if (burn_captions or add_voiceover) and transcript_path:
         with open(transcript_path, "r", encoding="utf-8") as f:
             segments = json.load(f)
 
@@ -213,20 +432,20 @@ def process_all_clips(
         check_cancelled(cancel_event)
         clip_id = f"{stem}_clip{i:02d}"
         out_video = out_dir / f"{clip_id}.mp4"
-        srt_path = None
+        subtitle_path = None
 
-        if segments is not None:
-            srt_text = build_srt_for_clip(segments, clip["start"], clip["end"])
-            if srt_text.strip():
-                srt_path = out_dir / f"{clip_id}.srt"
-                srt_path.write_text(srt_text, encoding="utf-8")
+        if burn_captions and segments is not None:
+            subtitle_path = build_subtitle_file(
+                segments, clip["start"], clip["end"], out_dir / clip_id,
+                width=1080, height=1920, font_size=64, margin_v=170,
+            )
 
         cut_clip(
             source_video,
             clip["start"],
             clip["end"],
             out_video,
-            srt_path=str(srt_path) if srt_path else None,
+            subtitle_path=str(subtitle_path) if subtitle_path else None,
         )
 
         meta = {
@@ -238,6 +457,23 @@ def process_all_clips(
             "hook_mechanic": clip.get("hook_mechanic", "unknown"),
             "format": "normal",
         }
+
+        if add_voiceover:
+            try:
+                from voiceover import generate_voiceover_for_clip
+
+                clip_text = ""
+                if segments is not None:
+                    clip_text = " ".join(
+                        seg["text"] for seg in segments
+                        if seg["end"] > clip["start"] and seg["start"] < clip["end"]
+                    )
+                vo = generate_voiceover_for_clip(clip, clip_text, str(out_dir), clip_id)
+                add_voiceover_intro(out_video, vo["audio_path"], vo["words"])
+                meta["voiceover_text"] = vo["text"]
+            except Exception as e:
+                print(f"[cut_clips] Voiceover failed for {clip_id}, keeping clip without it: {e}")
+
         meta_path = out_dir / f"{clip_id}.json"
         with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(meta, f, ensure_ascii=False, indent=2)
@@ -298,14 +534,14 @@ def make_split_screen_variant(
 
     out_dir = Path(out_dir)
     transcript_path = Path(transcripts_dir) / f"{stem}.json"
-    srt_path = None
+    subtitle_path = None
     if transcript_path.exists():
         with open(transcript_path, "r", encoding="utf-8") as f:
             segments = json.load(f)
-        srt_text = build_srt_for_clip(segments, meta["start"], meta["end"])
-        if srt_text.strip():
-            srt_path = out_dir / f"{clip_id}_split.srt"
-            srt_path.write_text(srt_text, encoding="utf-8")
+        subtitle_path = build_subtitle_file(
+            segments, meta["start"], meta["end"], out_dir / f"{clip_id}_split",
+            width=1080, height=960, font_size=52, margin_v=60,
+        )
 
     out_video = out_dir / f"{clip_id}_split.mp4"
     cut_clip(
@@ -313,7 +549,7 @@ def make_split_screen_variant(
         meta["start"],
         meta["end"],
         out_video,
-        srt_path=str(srt_path) if srt_path else None,
+        subtitle_path=str(subtitle_path) if subtitle_path else None,
         filler_video=str(filler_video),
     )
 

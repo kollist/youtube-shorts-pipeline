@@ -57,6 +57,7 @@ def run_pipeline(
     do_upload: bool = False,
     privacy_status: str = "public",
     burn_captions: bool = True,
+    add_voiceover: bool = False,
     min_duration: float = DEFAULT_MIN_DURATION,
     max_duration: float = DEFAULT_MAX_DURATION,
     on_clip=None,
@@ -98,6 +99,7 @@ def run_pipeline(
         plan_path,
         transcript_path=str(transcript_json_path),
         burn_captions=burn_captions,
+        add_voiceover=add_voiceover,
         on_clip=on_clip,
         cancel_event=cancel_event,
     )
@@ -147,6 +149,7 @@ if __name__ == "__main__":
     parser.add_argument("--upload-only", action="store_true", help="Skip processing, just upload pending clips in output/")
     parser.add_argument("--privacy", default="public", choices=["public", "unlisted", "private"])
     parser.add_argument("--no-captions", action="store_true", help="Disable burned-in captions")
+    parser.add_argument("--voiceover", action="store_true", help="Add an AI-narrated voiceover intro to each clip")
     parser.add_argument("--min-duration", type=float, default=DEFAULT_MIN_DURATION,
                          help="Target minimum clip length in seconds (default: 30)")
     parser.add_argument("--max-duration", type=float, default=DEFAULT_MAX_DURATION,
@@ -165,6 +168,7 @@ if __name__ == "__main__":
             do_upload=args.upload,
             privacy_status=args.privacy,
             burn_captions=not args.no_captions,
+            add_voiceover=args.voiceover,
             min_duration=args.min_duration,
             max_duration=args.max_duration,
         )

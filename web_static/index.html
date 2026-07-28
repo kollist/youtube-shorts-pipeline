@@ -76,8 +76,13 @@
       <div class="field-hint">Soft targets - the model aims for this range but won't discard an otherwise strong clip just for landing outside it. Only YouTube's 180s Shorts ceiling is a hard cutoff.</div>
 
       <div class="field checkbox-field">
-        <label><input id="burn-captions" type="checkbox" checked /> Burn in captions</label>
+        <label><input id="burn-captions" type="checkbox" checked /> Burn in captions (word-by-word karaoke style)</label>
       </div>
+
+      <div class="field checkbox-field">
+        <label><input id="add-voiceover" type="checkbox" /> Add AI voiceover intro</label>
+      </div>
+      <div class="field-hint">Generates a short spoken hook line per clip (Groq for the script, free edge-tts for the voice) and plays it before the clip's own audio - adds a few seconds per clip and needs an internet connection.</div>
 
       <div class="field checkbox-field">
         <label><input id="auto-upload" type="checkbox" /> Auto-upload clips to YouTube</label>
