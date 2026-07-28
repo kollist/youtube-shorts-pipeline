@@ -37,11 +37,11 @@ from select_clips import (
     validate_clips,
 )
 from transcribe import transcribe as run_transcribe, save_transcript
-from cut_clips import process_all_clips
+from cut_clips import make_split_screen_variant, process_all_clips
 from upload_youtube import upload_from_meta_file, YouTubeUploadLimitExceeded
 from token_budget import all_usage_today
 from clip_log import read_log
-from discover import discover
+from discover import discover, discover_filler_candidates
 from youtube_analytics import fetch_video_stats, get_channel_stats
 from queue_daily import SUPPORTED_EXTENSIONS, run_daily_queue
 from download import download_video
@@ -52,16 +52,21 @@ INPUT_DIR = BASE_DIR / "input"
 OUTPUT_DIR = BASE_DIR / "output"
 TRANSCRIPTS_DIR = BASE_DIR / "transcripts"
 CLIPS_DIR = BASE_DIR / "clips"
+FILLER_DIR = BASE_DIR / "filler"
 INPUT_THUMB_DIR = INPUT_DIR / ".thumbnails"
+FILLER_THUMB_DIR = FILLER_DIR / ".thumbnails"
 INPUT_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
 TRANSCRIPTS_DIR.mkdir(exist_ok=True)
 CLIPS_DIR.mkdir(exist_ok=True)
+FILLER_DIR.mkdir(exist_ok=True)
 INPUT_THUMB_DIR.mkdir(exist_ok=True)
+FILLER_THUMB_DIR.mkdir(exist_ok=True)
 
 app = FastAPI()
 app.mount("/media/output", StaticFiles(directory=OUTPUT_DIR), name="output-media")
 app.mount("/media/input-thumbnails", StaticFiles(directory=INPUT_THUMB_DIR), name="input-thumbnails")
+app.mount("/media/filler-thumbnails", StaticFiles(directory=FILLER_THUMB_DIR), name="filler-thumbnails")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "web_static"), name="static")
 
 run_lock = threading.Lock()
@@ -123,11 +128,11 @@ async def index():
     return FileResponse(BASE_DIR / "web_static" / "index.html")
 
 
-def _ensure_thumbnail(video_path: Path) -> str:
-    """Fast-seek a frame out of a local input video and cache it, so the
-    Input tab doesn't re-run ffmpeg on every request - only for files that
-    don't have a cached thumbnail yet, or whose source file changed since."""
-    thumb_path = INPUT_THUMB_DIR / f"{video_path.stem}.jpg"
+def _ensure_thumbnail(video_path: Path, thumb_dir: Path = INPUT_THUMB_DIR) -> str:
+    """Fast-seek a frame out of a local video and cache it, so the Input/Filler
+    tabs don't re-run ffmpeg on every request - only for files that don't have
+    a cached thumbnail yet, or whose source file changed since."""
+    thumb_path = thumb_dir / f"{video_path.stem}.jpg"
     if thumb_path.exists() and thumb_path.stat().st_mtime >= video_path.stat().st_mtime:
         return thumb_path.name
 
@@ -185,6 +190,69 @@ async def input_files():
     loop = asyncio.get_event_loop()
     files = await loop.run_in_executor(None, _list_input_files)
     return {"files": files}
+
+
+def _list_filler_files() -> list[dict]:
+    files = []
+    for path in sorted(FILLER_DIR.glob("*"), key=lambda p: p.stat().st_mtime, reverse=True):
+        if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+            continue
+        try:
+            thumb_name = _ensure_thumbnail(path, thumb_dir=FILLER_THUMB_DIR)
+            thumbnail = f"/media/filler-thumbnails/{thumb_name}"
+        except Exception as e:
+            print(f"[server] Could not generate thumbnail for {path.name}: {e}")
+            thumbnail = None
+        files.append({
+            "filename": path.name,
+            "size_mb": round(path.stat().st_size / (1024 * 1024), 1),
+            "thumbnail": thumbnail,
+        })
+    return files
+
+
+@app.get("/api/filler-files")
+async def filler_files():
+    """Gameplay/background clips sitting in filler/ - your own footage, used
+    as the bottom half of the split-screen clip layout (see cut_clips.py's
+    make_split_screen_variant). Never auto-populated from the internet."""
+    loop = asyncio.get_event_loop()
+    files = await loop.run_in_executor(None, _list_filler_files)
+    return {"files": files}
+
+
+@app.post("/api/upload-filler")
+async def upload_filler(file: UploadFile = File(...)):
+    dest = FILLER_DIR / Path(file.filename).name  # strip any directory components
+    with dest.open("wb") as f:
+        shutil.copyfileobj(file.file, f)
+    return {"path": str(dest)}
+
+
+@app.delete("/api/filler-files/{filename}")
+async def delete_filler_file(filename: str):
+    path = FILLER_DIR / Path(filename).name  # strip any directory components
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="File not found.")
+    path.unlink()
+    thumb_path = FILLER_THUMB_DIR / f"{path.stem}.jpg"
+    if thumb_path.exists():
+        thumb_path.unlink()
+    return {"deleted": filename}
+
+
+@app.get("/api/discover-filler")
+async def discover_filler(q: str = "minecraft parkour gameplay no copyright"):
+    """Search results for filler/background footage candidates - NOT
+    rights-verified like the main Discover tab's curated channels. Showing up
+    here isn't permission to use it; check the source channel's own license
+    before downloading anything."""
+    loop = asyncio.get_event_loop()
+    try:
+        videos = await loop.run_in_executor(None, lambda: discover_filler_candidates(q))
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"videos": videos}
 
 
 @app.get("/api/input-file/{stem}/transcript")
@@ -395,6 +463,22 @@ async def analytics():
                 "without_number_count": len(without_number),
             }
 
+    # The actual verdict for the split-screen experiment: real retention for
+    # the split-screen variant vs the normal layout, so switching the whole
+    # channel over (or not) is a decision backed by this channel's own data
+    # instead of a guess. Older records predate the "format" field, so they
+    # default to "normal" rather than silently vanishing from the comparison.
+    format_insight = None
+    split_screen = [r for r in records_with_stats if r.get("format") == "split_screen"]
+    normal = [r for r in records_with_stats if r.get("format", "normal") == "normal"]
+    if split_screen and normal:
+        format_insight = {
+            "split_screen_avg_pct": round(sum(r["avg_view_percentage"] for r in split_screen) / len(split_screen), 1),
+            "split_screen_count": len(split_screen),
+            "normal_avg_pct": round(sum(r["avg_view_percentage"] for r in normal) / len(normal), 1),
+            "normal_count": len(normal),
+        }
+
     return {
         "total_uploads": channel_video_count if channel_video_count is not None else len(records),
         "tracked_uploads": len(records),
@@ -406,6 +490,7 @@ async def analytics():
         "worst_clip": worst_clip,
         "duration_insight": duration_insight,
         "title_insight": title_insight,
+        "format_insight": format_insight,
         "hook_mechanics": hook_mechanics,
         "recent": recent,
     }
@@ -457,6 +542,50 @@ async def existing_clips(stem: str | None = None):
             "url": f"/media/output/{video_path.name}",
         })
     return {"clips": clips}
+
+
+@app.post("/api/clips/split-screen")
+async def create_split_screen_variant(payload: dict):
+    """Re-cuts an already-produced clip with a split-screen layout (the real
+    content + captions on top, looping gameplay footage on the bottom)
+    instead of the normal blurred-backdrop one - a separate clip sitting
+    alongside the original, meant to be uploaded and compared against it via
+    the Analytics tab rather than committing the whole channel to the new
+    look on a guess. Needs at least one clip in filler/ to draw from, unless
+    filler_filename picks one explicitly."""
+    meta_path = payload.get("meta_path")
+    if not meta_path:
+        raise HTTPException(status_code=400, detail="meta_path is required")
+
+    filler_filename = payload.get("filler_filename")
+    # Strip any directory components - this is a user-facing filename, not a
+    # trusted path, and filler/ is the only place it should ever resolve to.
+    filler_path = str(FILLER_DIR / Path(filler_filename).name) if filler_filename else None
+
+    loop = asyncio.get_event_loop()
+    try:
+        new_meta = await loop.run_in_executor(
+            None,
+            lambda: make_split_screen_variant(
+                meta_path,
+                input_dir=str(INPUT_DIR),
+                transcripts_dir=str(TRANSCRIPTS_DIR),
+                out_dir=str(OUTPUT_DIR),
+                filler_path=filler_path,
+            ),
+        )
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    video_path = Path(new_meta["video_path"])
+    new_meta_path = Path(meta_path).parent / f"{Path(meta_path).stem}_split.json"
+    return {
+        **new_meta,
+        "meta_path": str(new_meta_path),
+        "url": f"/media/output/{video_path.name}",
+    }
 
 
 @app.delete("/api/clips")
@@ -584,10 +713,18 @@ async def ws_run(ws: WebSocket):
                     {"type": "done", "count": 0, "transcript_path": transcript_path},
                 )
             elif action == "download":
-                # Just fetches a YouTube URL into input/ - no transcription/
-                # selection/cutting - so it can be queued up ahead of time and
-                # run later from the Input tab.
-                video_path = download_video(config["url"], cancel_event=cancel_event)
+                # Just fetches a YouTube URL into input/ (or filler/, for
+                # background gameplay footage) - no transcription/selection/
+                # cutting - so it can be queued up ahead of time and run
+                # later from the Input tab.
+                target_dir = FILLER_DIR if config.get("target") == "filler" else INPUT_DIR
+
+                def on_progress(percent):
+                    loop.call_soon_threadsafe(run_state.push, {"type": "download_progress", "percent": percent})
+
+                video_path = download_video(
+                    config["url"], out_dir=str(target_dir), cancel_event=cancel_event, on_progress=on_progress,
+                )
                 loop.call_soon_threadsafe(
                     run_state.push,
                     {"type": "done", "count": 0, "video_path": video_path},
