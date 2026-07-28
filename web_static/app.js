@@ -194,6 +194,21 @@ function useDiscoveredVideo(video) {
   urlInput.focus();
 }
 
+// Fetches the video straight into input/ (same "download" run action the
+// Input tab's own URL field uses) without running the pipeline on it yet -
+// for queuing up something discovered here to process later from Input.
+function downloadDiscoveredVideo(url) {
+  terminalEl.innerHTML = "";
+  clipsEl.innerHTML = "";
+  clipCount = 0;
+  clipCountEl.textContent = "";
+  autoUploadHalted = false;
+  setRunningUI(true);
+  setStatus("running", "running");
+  location.hash = "#run";
+  openRunSocket({ action: "download", url }, false);
+}
+
 function buildDiscoverCard(video) {
   const card = document.createElement("div");
   card.className = "discover-card";
@@ -208,10 +223,14 @@ function buildDiscoverCard(video) {
         ${score != null ? `<span class="discover-score">${score}/10</span>` : ""}
       </div>
       ${video.reason ? `<div class="discover-reason">${escapeHtml(video.reason)}</div>` : ""}
-      <button class="discover-use-btn">Use</button>
+      <div class="input-card-actions">
+        <button class="discover-use-btn">Use</button>
+        <button class="pill-btn discover-download-btn">Download</button>
+      </div>
     </div>
   `;
   card.querySelector(".discover-use-btn").addEventListener("click", () => useDiscoveredVideo(video));
+  card.querySelector(".discover-download-btn").addEventListener("click", () => downloadDiscoveredVideo(video.url));
   return card;
 }
 
@@ -280,11 +299,29 @@ function buildInputCard(file) {
       <div class="input-card-actions">
         <button class="discover-use-btn">Use</button>
         <button class="pill-btn input-manage-btn">Manage</button>
+        <button class="pill-btn input-delete-btn">Delete</button>
       </div>
     </div>
   `;
   card.querySelector(".discover-use-btn").addEventListener("click", () => useInputFile(file));
   card.querySelector(".input-manage-btn").addEventListener("click", () => openInputDetail(file));
+  card.querySelector(".input-delete-btn").addEventListener("click", async () => {
+    if (!confirm(`Delete ${file.filename} from input/? Its transcript and clip plan (if any) go with it. This can't be undone.`)) return;
+    try {
+      const res = await fetch(`/api/input-files/${encodeURIComponent(file.filename)}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        logLine(`[web] ${err.detail || "Could not delete this file."}`, "err");
+        return;
+      }
+      card.remove();
+      if (!inputContentEl.querySelector(".discover-card")) {
+        inputContentEl.innerHTML = `<div class="discover-empty">No video files in input/ yet.</div>`;
+      }
+    } catch (e) {
+      logLine("[web] Could not reach the server to delete this file.", "err");
+    }
+  });
   return card;
 }
 
@@ -313,6 +350,23 @@ async function loadInputFiles() {
 }
 
 inputRefreshBtn.addEventListener("click", loadInputFiles);
+
+document.getElementById("input-delete-all-btn").addEventListener("click", async () => {
+  const count = inputContentEl.querySelectorAll(".discover-card").length;
+  if (!count) return;
+  if (!confirm(`Delete all ${count} video(s) from input/, plus their transcripts and clip plans? This can't be undone.`)) return;
+  try {
+    const res = await fetch("/api/input-files", { method: "DELETE" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      logLine(`[web] ${err.detail || "Could not delete input files."}`, "err");
+      return;
+    }
+    inputContentEl.innerHTML = `<div class="discover-empty">No video files in input/ yet.</div>`;
+  } catch (e) {
+    logLine("[web] Could not reach the server to delete input files.", "err");
+  }
+});
 
 const inputDownloadUrlEl = document.getElementById("input-download-url");
 const inputDownloadBtn = document.getElementById("input-download-btn");

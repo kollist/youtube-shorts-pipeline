@@ -11,17 +11,25 @@ Usage:
 
 import asyncio
 import json
+import os
 import re
+import secrets
 import shutil
 import subprocess
 import sys
 import threading
 import traceback
+from base64 import b64decode
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
+load_dotenv()
 
 from pipeline import run_pipeline
 from select_clips import (
@@ -63,7 +71,61 @@ FILLER_DIR.mkdir(exist_ok=True)
 INPUT_THUMB_DIR.mkdir(exist_ok=True)
 FILLER_THUMB_DIR.mkdir(exist_ok=True)
 
+# HTTP Basic Auth for the whole app - there's otherwise no login of any kind,
+# and this server is meant to also be reachable through a public tunnel (see
+# run_public_tunnel.sh), so it can't be left wide open to anyone with the
+# link. Credentials persist in .env (gitignored) so they survive restarts;
+# generated once on first run if not already set.
+WEB_UI_USERNAME = os.environ.get("WEB_UI_USERNAME", "admin")
+WEB_UI_PASSWORD = os.environ.get("WEB_UI_PASSWORD")
+if not WEB_UI_PASSWORD:
+    WEB_UI_PASSWORD = secrets.token_urlsafe(9)
+    with (BASE_DIR / ".env").open("a") as f:
+        f.write(f"\nWEB_UI_USERNAME={WEB_UI_USERNAME}\nWEB_UI_PASSWORD={WEB_UI_PASSWORD}\n")
+    print(f"[server] Generated web UI login - username: {WEB_UI_USERNAME}  password: {WEB_UI_PASSWORD}")
+    print("[server] Saved to .env - reuse these to log back in next time.")
+
+
+class BasicAuthMiddleware:
+    """Raw ASGI (not BaseHTTPMiddleware) so it can also gate the /ws
+    WebSocket handshake, not just regular HTTP requests."""
+
+    def __init__(self, app, username: str, password: str):
+        self.app = app
+        self.username = username
+        self.password = password
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] not in ("http", "websocket"):
+            await self.app(scope, receive, send)
+            return
+        headers = dict(scope.get("headers") or [])
+        if self._is_valid(headers.get(b"authorization")):
+            await self.app(scope, receive, send)
+            return
+        if scope["type"] == "http":
+            response = Response(
+                "Authentication required",
+                status_code=401,
+                headers={"WWW-Authenticate": 'Basic realm="Shorts Pipeline"'},
+            )
+            await response(scope, receive, send)
+        else:
+            await receive()  # consume websocket.connect before closing
+            await send({"type": "websocket.close", "code": 4401})
+
+    def _is_valid(self, auth_header) -> bool:
+        if not auth_header or not auth_header.startswith(b"Basic "):
+            return False
+        try:
+            username, _, password = b64decode(auth_header[6:]).decode().partition(":")
+        except Exception:
+            return False
+        return secrets.compare_digest(username, self.username) and secrets.compare_digest(password, self.password)
+
+
 app = FastAPI()
+app.add_middleware(BasicAuthMiddleware, username=WEB_UI_USERNAME, password=WEB_UI_PASSWORD)
 app.mount("/media/output", StaticFiles(directory=OUTPUT_DIR), name="output-media")
 app.mount("/media/input-thumbnails", StaticFiles(directory=INPUT_THUMB_DIR), name="input-thumbnails")
 app.mount("/media/filler-thumbnails", StaticFiles(directory=FILLER_THUMB_DIR), name="filler-thumbnails")
@@ -190,6 +252,48 @@ async def input_files():
     loop = asyncio.get_event_loop()
     files = await loop.run_in_executor(None, _list_input_files)
     return {"files": files}
+
+
+def _delete_input_file(path: Path) -> None:
+    """Removes a video from input/ along with everything keyed off its stem -
+    the cached thumbnail, transcript, and clip plan - since none of those mean
+    anything once the source video is gone. Clips already cut to output/ are
+    left alone, same as clear_all_clips leaves the source video untouched the
+    other way around."""
+    stem = path.stem
+    path.unlink()
+    thumb_path = INPUT_THUMB_DIR / f"{stem}.jpg"
+    if thumb_path.exists():
+        thumb_path.unlink()
+    transcript_path = TRANSCRIPTS_DIR / f"{stem}.json"
+    if transcript_path.exists():
+        transcript_path.unlink()
+    plan_path = CLIPS_DIR / f"{stem}_plan.json"
+    if plan_path.exists():
+        plan_path.unlink()
+
+
+@app.delete("/api/input-files/{filename}")
+async def delete_input_file(filename: str):
+    path = INPUT_DIR / Path(filename).name  # strip any directory components
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="File not found.")
+    _delete_input_file(path)
+    return {"deleted": filename}
+
+
+@app.delete("/api/input-files")
+async def delete_all_input_files():
+    """Clears out every video in input/ at once, along with each one's
+    thumbnail/transcript/plan - for starting a clean slate rather than
+    deleting a long list one at a time."""
+    deleted = []
+    for path in sorted(INPUT_DIR.glob("*")):
+        if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+            continue
+        _delete_input_file(path)
+        deleted.append(path.name)
+    return {"deleted": deleted}
 
 
 def _list_filler_files() -> list[dict]:
