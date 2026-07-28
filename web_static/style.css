@@ -202,6 +202,7 @@ main {
 
 #page-run { grid-template-columns: 320px 1fr; gap: 16px; }
 #page-discover, #page-clips, #page-analytics { grid-template-columns: 1fr; }
+#page-filler, #page-input { grid-template-columns: 1fr; align-content: start; gap: 18px; }
 
 .panel {
   background: var(--panel);
@@ -224,6 +225,38 @@ main {
 }
 
 #terminal-panel { min-height: 0; }
+
+.panel-collapse-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.panel-collapse-toggle:hover { color: var(--text-secondary); }
+.panel-collapse-toggle .chevron-icon { flex: none; transition: transform 0.15s ease; }
+
+.collapsible-panel { transition: padding 0.15s ease; }
+.collapsible-panel.collapsed {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  padding: 9px 18px;
+  border-radius: 999px;
+  overflow: visible;
+}
+.collapsible-panel.collapsed h2 { margin: 0; }
+.collapsible-panel.collapsed .panel-collapse-toggle .chevron-icon { transform: rotate(-90deg); }
+.collapsible-panel.collapsed .pill-btn,
+.collapsible-panel.collapsed .panel-collapsible-body { display: none; }
 
 .link-btn {
   background: none;

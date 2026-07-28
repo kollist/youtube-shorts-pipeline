@@ -139,16 +139,24 @@
   </div>
 
   <div class="page" id="page-input">
-    <section class="panel" id="input-discover-panel">
-      <h2>Search YouTube <button id="input-discover-search-btn" class="pill-btn">search</button></h2>
-      <div class="field-hint">Keyword search, not a rights-verified curated list like the main Discover tab - showing up here isn't permission to use it. Check the source's own license before using or downloading anything.</div>
-      <div class="field-row" style="margin-bottom:14px">
-        <div class="field" style="flex:1">
-          <label for="input-discover-query">Search</label>
-          <input id="input-discover-query" type="text" placeholder="Search YouTube..." />
+    <section class="panel collapsible-panel" id="input-discover-panel">
+      <h2>
+        <button id="input-discover-collapse-btn" class="panel-collapse-toggle" type="button" aria-expanded="true" aria-controls="input-discover-body">
+          <svg class="chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          <span>Search YouTube</span>
+        </button>
+        <button id="input-discover-search-btn" class="pill-btn">search</button>
+      </h2>
+      <div id="input-discover-body" class="panel-collapsible-body">
+        <div class="field-hint">Keyword search, not a rights-verified curated list like the main Discover tab - showing up here isn't permission to use it. Check the source's own license before using or downloading anything.</div>
+        <div class="field-row" style="margin-bottom:14px">
+          <div class="field" style="flex:1">
+            <label for="input-discover-query">Search</label>
+            <input id="input-discover-query" type="text" placeholder="Search YouTube..." />
+          </div>
         </div>
+        <div id="input-discover-content" class="discover-grid"><div class="discover-empty">Search for a video to use or download.</div></div>
       </div>
-      <div id="input-discover-content" class="discover-grid"><div class="discover-empty">Search for a video to use or download.</div></div>
     </section>
 
     <section class="panel" id="input-panel">
@@ -179,16 +187,24 @@
   </div>
 
   <div class="page" id="page-filler">
-    <section class="panel" id="filler-discover-panel">
-      <h2>Discover gameplay footage <button id="filler-discover-refresh-btn" class="pill-btn">refresh</button></h2>
-      <div class="field-hint">Keyword search, not a rights-verified curated list like the main Discover tab - showing up here isn't permission to use it. Check the source channel's own license before downloading anything.</div>
-      <div class="field-row" style="margin-bottom:14px">
-        <div class="field" style="flex:1">
-          <label for="filler-discover-query">Search</label>
-          <input id="filler-discover-query" type="text" value="minecraft parkour gameplay no copyright" />
+    <section class="panel collapsible-panel" id="filler-discover-panel">
+      <h2>
+        <button id="filler-discover-collapse-btn" class="panel-collapse-toggle" type="button" aria-expanded="true" aria-controls="filler-discover-body">
+          <svg class="chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          <span>Discover gameplay footage</span>
+        </button>
+        <button id="filler-discover-refresh-btn" class="pill-btn">refresh</button>
+      </h2>
+      <div id="filler-discover-body" class="panel-collapsible-body">
+        <div class="field-hint">Keyword search, not a rights-verified curated list like the main Discover tab - showing up here isn't permission to use it. Check the source channel's own license before downloading anything.</div>
+        <div class="field-row" style="margin-bottom:14px">
+          <div class="field" style="flex:1">
+            <label for="filler-discover-query">Search</label>
+            <input id="filler-discover-query" type="text" value="minecraft parkour gameplay no copyright" />
+          </div>
         </div>
+        <div id="filler-discover-content" class="discover-grid"></div>
       </div>
-      <div id="filler-discover-content" class="discover-grid"></div>
     </section>
 
     <section class="panel" id="filler-panel">

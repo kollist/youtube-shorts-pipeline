@@ -471,6 +471,13 @@ inputDiscoverQueryEl.addEventListener("keydown", (e) => {
   if (e.key === "Enter") loadInputDiscover();
 });
 
+const inputDiscoverPanel = document.getElementById("input-discover-panel");
+const inputDiscoverCollapseBtn = document.getElementById("input-discover-collapse-btn");
+inputDiscoverCollapseBtn.addEventListener("click", () => {
+  const collapsed = inputDiscoverPanel.classList.toggle("collapsed");
+  inputDiscoverCollapseBtn.setAttribute("aria-expanded", String(!collapsed));
+});
+
 // --- Filler tab: your own gameplay/background footage for the split-screen
 // clip layout - a keyword-search "Discover" (not rights-verified like the
 // main Discover tab's curated channels), a URL downloader with a visible
@@ -581,6 +588,13 @@ async function loadFillerDiscover() {
 fillerDiscoverRefreshBtn.addEventListener("click", loadFillerDiscover);
 fillerDiscoverQueryEl.addEventListener("keydown", (e) => {
   if (e.key === "Enter") loadFillerDiscover();
+});
+
+const fillerDiscoverPanel = document.getElementById("filler-discover-panel");
+const fillerDiscoverCollapseBtn = document.getElementById("filler-discover-collapse-btn");
+fillerDiscoverCollapseBtn.addEventListener("click", () => {
+  const collapsed = fillerDiscoverPanel.classList.toggle("collapsed");
+  fillerDiscoverCollapseBtn.setAttribute("aria-expanded", String(!collapsed));
 });
 
 fillerDownloadBtn.addEventListener("click", () => {
