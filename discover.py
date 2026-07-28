@@ -151,6 +151,49 @@ preamble:
     return videos
 
 
+def _search_videos(query: str, max_results: int = 15) -> list[dict]:
+    """A plain keyword search (search.list), unlike _recent_uploads which is
+    scoped to one curated channel - used for filler/background gameplay
+    footage, where there's no single "official" channel to point at the way
+    NASA's is for space content. Costs 100 quota units per call (YouTube
+    Data API's search endpoint is expensive relative to a 10,000/day default
+    quota), so callers should not hit this on every page load."""
+    data = _api_get(
+        "search", part="snippet", type="video", q=query,
+        order="viewCount", maxResults=max_results, safeSearch="strict",
+    )
+    videos = []
+    for item in data.get("items", []):
+        snippet = item["snippet"]
+        videos.append({
+            "video_id": item["id"]["videoId"],
+            "title": snippet["title"],
+            "channel": snippet.get("channelTitle", ""),
+            "published_at": snippet["publishedAt"],
+            "thumbnail": snippet.get("thumbnails", {}).get("medium", {}).get("url", ""),
+        })
+    return videos
+
+
+def discover_filler_candidates(
+    query: str = "minecraft parkour gameplay no copyright",
+    max_results: int = 15,
+) -> list[dict]:
+    """Candidate background/filler footage (e.g. Minecraft parkour) via a
+    keyword search, for the split-screen clip layout - NOT rights-verified
+    the way CURATED_CHANNELS is. A search result showing up here is not
+    permission to use it; check the channel's own description/license before
+    downloading anything into filler/ (many "no copyright gameplay" channels
+    explicitly grant reuse, but not all - "no copyright" in a title isn't a
+    guarantee)."""
+    videos = _search_videos(query, max_results=max_results)
+    for v in videos:
+        v["url"] = f"https://www.youtube.com/watch?v={v['video_id']}"
+    videos = _attach_stats(videos)
+    videos.sort(key=lambda v: v["view_count"], reverse=True)
+    return videos
+
+
 def discover(max_results_per_channel: int = 15) -> list[dict]:
     all_videos = []
     for channel_name, channel_id in CURATED_CHANNELS.items():
