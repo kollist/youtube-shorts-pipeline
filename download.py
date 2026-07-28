@@ -18,17 +18,23 @@ import yt_dlp
 from run_control import RunCancelled
 
 
-def download_video(url: str, out_dir: str = "input", cancel_event=None) -> str:
-    """Download a video from url into out_dir, return the local file path."""
+def download_video(url: str, out_dir: str = "input", cancel_event=None, on_progress=None) -> str:
+    """Download a video from url into out_dir, return the local file path.
+    on_progress(percent) is called periodically during the download (percent
+    is None if yt-dlp can't report a total size yet, e.g. right at the start)."""
     Path(out_dir).mkdir(parents=True, exist_ok=True)
 
-    def _check_cancel(_status: dict) -> None:
+    def _hook(status: dict) -> None:
         # yt-dlp calls progress_hooks repeatedly during a download; raising
         # its own DownloadCancelled here is the supported way to abort a
         # download cleanly mid-flight instead of leaving a partial file and
         # internal state in a weird spot.
         if cancel_event is not None and cancel_event.is_set():
             raise yt_dlp.utils.DownloadCancelled("Run stopped by user.")
+        if on_progress and status.get("status") == "downloading":
+            total = status.get("total_bytes") or status.get("total_bytes_estimate")
+            percent = round(status.get("downloaded_bytes", 0) / total * 100, 1) if total else None
+            on_progress(percent)
 
     ydl_opts = {
         "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
@@ -39,7 +45,7 @@ def download_video(url: str, out_dir: str = "input", cancel_event=None) -> str:
         # only enables "deno" by default, which usually isn't installed. Fall back
         # to node (commonly already present) to avoid 403s on the video/audio formats.
         "js_runtimes": {"deno": {}, "node": {}},
-        "progress_hooks": [_check_cancel],
+        "progress_hooks": [_hook],
     }
 
     try:
