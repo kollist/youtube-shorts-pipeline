@@ -47,6 +47,8 @@ def run_daily_queue(
     spacing_minutes: float = 20.0,
     min_duration: float = DEFAULT_MIN_DURATION,
     max_duration: float = DEFAULT_MAX_DURATION,
+    burn_captions: bool = True,
+    add_voiceover: bool = False,
     on_clip=None,
     cancel_event=None,
 ) -> list[dict]:
@@ -76,6 +78,8 @@ def run_daily_queue(
                 do_upload=False,  # we control upload pacing separately below
                 min_duration=min_duration,
                 max_duration=max_duration,
+                burn_captions=burn_captions,
+                add_voiceover=add_voiceover,
                 on_clip=on_clip,
                 cancel_event=cancel_event,
             )
@@ -138,6 +142,8 @@ def main():
                          help="Target minimum clip length in seconds (default: 30)")
     parser.add_argument("--max-duration", type=float, default=DEFAULT_MAX_DURATION,
                          help="Target maximum clip length in seconds (default: 45)")
+    parser.add_argument("--no-captions", action="store_true", help="Disable burned-in captions")
+    parser.add_argument("--voiceover", action="store_true", help="Add an AI-narrated voiceover intro to each clip")
     args = parser.parse_args()
 
     run_daily_queue(
@@ -148,6 +154,8 @@ def main():
         spacing_minutes=args.spacing_minutes,
         min_duration=args.min_duration,
         max_duration=args.max_duration,
+        burn_captions=not args.no_captions,
+        add_voiceover=args.voiceover,
     )
 
 

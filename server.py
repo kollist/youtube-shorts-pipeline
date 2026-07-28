@@ -877,6 +877,8 @@ async def ws_run(ws: WebSocket):
                     spacing_minutes=float(config.get("spacing_minutes", 20.0)),
                     min_duration=float(config.get("min_duration", DEFAULT_MIN_DURATION)),
                     max_duration=float(config.get("max_duration", DEFAULT_MAX_DURATION)),
+                    burn_captions=bool(config.get("burn_captions", True)),
+                    add_voiceover=bool(config.get("add_voiceover", False)),
                     on_clip=on_clip,
                     cancel_event=cancel_event,
                 )

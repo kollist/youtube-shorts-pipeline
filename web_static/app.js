@@ -51,6 +51,8 @@ dailyQueueBtn.addEventListener("click", () => {
     whisper_model: document.getElementById("whisper-model").value,
     min_duration: parseFloat(document.getElementById("min-duration").value),
     max_duration: parseFloat(document.getElementById("max-duration").value),
+    burn_captions: document.getElementById("burn-captions").checked,
+    add_voiceover: document.getElementById("add-voiceover").checked,
     upload: dailyUploadEl.checked,
     privacy: document.getElementById("daily-privacy").value,
     spacing_minutes: parseFloat(document.getElementById("daily-spacing").value) || 20,
