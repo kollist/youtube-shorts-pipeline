@@ -130,6 +130,7 @@ def upload_from_meta_file(meta_path: str, privacy_status: str = "public"):
         "hook_mechanic": meta.get("hook_mechanic", "unknown"),
         "duration_sec": round(meta["end"] - meta["start"], 1),
         "privacy_status": privacy_status,
+        "format": meta.get("format", "normal"),
     })
 
     delete_uploaded_clip(meta_path, meta["video_path"])
