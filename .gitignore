@@ -20,5 +20,9 @@ clips/
 .groq_usage.json
 upload_log.jsonl
 
+# User-supplied gameplay/filler footage for the split-screen clip layout -
+# yours, not something the pipeline generates or this repo should ship.
+filler/
+
 # Claude Code local-only settings
 .claude/settings.local.json
