@@ -79,9 +79,10 @@ const autoPrivacyField = document.getElementById("auto-privacy-field");
 // show/hide rather than separate server-rendered pages). ---
 const pageTabs = document.querySelectorAll(".page-tab");
 const pages = document.querySelectorAll(".page");
-const VALID_PAGES = new Set(["run", "discover", "input", "clips", "analytics"]);
+const VALID_PAGES = new Set(["run", "discover", "input", "filler", "clips", "analytics"]);
 let discoverLoadedOnce = false;
 let inputLoadedOnce = false;
+let fillerLoadedOnce = false;
 
 function showPage(name) {
   if (!VALID_PAGES.has(name)) name = "run";
@@ -89,6 +90,10 @@ function showPage(name) {
   pageTabs.forEach((t) => t.classList.toggle("active", t.dataset.page === name));
   if (name === "discover" && !discoverLoadedOnce) loadDiscover();
   if (name === "input" && !inputLoadedOnce) loadInputFiles();
+  if (name === "filler" && !fillerLoadedOnce) {
+    loadFillerFiles();
+    loadFillerDiscover();
+  }
   if (name === "analytics") loadAnalytics();
 }
 
@@ -330,6 +335,167 @@ inputDownloadBtn.addEventListener("click", () => {
   inputDownloadUrlEl.value = "";
 });
 
+// --- Filler tab: your own gameplay/background footage for the split-screen
+// clip layout - a keyword-search "Discover" (not rights-verified like the
+// main Discover tab's curated channels), a URL downloader with a visible
+// progress bar, a manual upload, and delete. ---
+const fillerContentEl = document.getElementById("filler-content");
+const fillerRefreshBtn = document.getElementById("filler-refresh-btn");
+const fillerDiscoverContentEl = document.getElementById("filler-discover-content");
+const fillerDiscoverRefreshBtn = document.getElementById("filler-discover-refresh-btn");
+const fillerDiscoverQueryEl = document.getElementById("filler-discover-query");
+const fillerDownloadUrlEl = document.getElementById("filler-download-url");
+const fillerDownloadBtn = document.getElementById("filler-download-btn");
+const fillerFileInputEl = document.getElementById("filler-file-input");
+const fillerProgressWrap = document.getElementById("filler-progress-wrap");
+const fillerProgressFill = document.getElementById("filler-progress-fill");
+const fillerProgressStatus = document.getElementById("filler-progress-status");
+
+function buildFillerCard(file) {
+  const card = document.createElement("div");
+  card.className = "discover-card";
+  card.innerHTML = `
+    ${file.thumbnail ? `<img src="${file.thumbnail}" alt="">` : `<div class="discover-card-noimg"></div>`}
+    <div class="discover-body">
+      <div class="discover-title">${escapeHtml(file.filename)}</div>
+      <div class="discover-meta"><span>${file.size_mb} MB</span></div>
+      <button class="pill-btn filler-delete-btn">Delete</button>
+    </div>
+  `;
+  card.querySelector(".filler-delete-btn").addEventListener("click", async () => {
+    if (!confirm(`Delete ${file.filename} from filler/? This can't be undone.`)) return;
+    try {
+      const res = await fetch(`/api/filler-files/${encodeURIComponent(file.filename)}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        logLine(`[web] ${err.detail || "Could not delete this file."}`, "err");
+        return;
+      }
+      card.remove();
+    } catch (e) {
+      logLine("[web] Could not reach the server to delete this file.", "err");
+    }
+  });
+  return card;
+}
+
+async function loadFillerFiles() {
+  fillerLoadedOnce = true;
+  fillerContentEl.innerHTML = `<div class="discover-loading">Loading...</div>`;
+  try {
+    const res = await fetch("/api/filler-files");
+    if (!res.ok) {
+      fillerContentEl.innerHTML = `<div class="discover-empty">Could not load filler files.</div>`;
+      return;
+    }
+    const { files } = await res.json();
+    if (!files.length) {
+      fillerContentEl.innerHTML = `<div class="discover-empty">No filler footage in filler/ yet - download or upload some above.</div>`;
+      return;
+    }
+    fillerContentEl.innerHTML = "";
+    files.forEach((f) => fillerContentEl.appendChild(buildFillerCard(f)));
+  } catch (e) {
+    fillerContentEl.innerHTML = `<div class="discover-empty">Could not load filler files.</div>`;
+  }
+}
+
+fillerRefreshBtn.addEventListener("click", loadFillerFiles);
+
+function buildFillerDiscoverCard(video) {
+  const card = document.createElement("div");
+  card.className = "discover-card";
+  card.innerHTML = `
+    <img src="${video.thumbnail}" alt="">
+    <div class="discover-body">
+      <div class="discover-title">${escapeHtml(video.title)}</div>
+      <div class="discover-meta">
+        <span>${escapeHtml(video.channel)}</span>
+        <span>${video.view_count.toLocaleString()} views</span>
+      </div>
+      <button class="discover-use-btn">Download</button>
+    </div>
+  `;
+  card.querySelector(".discover-use-btn").addEventListener("click", () => startFillerDownload(video.url));
+  return card;
+}
+
+async function loadFillerDiscover() {
+  fillerDiscoverContentEl.innerHTML = `<div class="discover-loading">Loading...</div>`;
+  try {
+    const q = fillerDiscoverQueryEl.value.trim() || "minecraft parkour gameplay no copyright";
+    const res = await fetch(`/api/discover-filler?q=${encodeURIComponent(q)}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      fillerDiscoverContentEl.innerHTML = `<div class="discover-empty">${escapeHtml(err.detail || "Could not load suggestions.")}</div>`;
+      return;
+    }
+    const { videos } = await res.json();
+    if (!videos.length) {
+      fillerDiscoverContentEl.innerHTML = `<div class="discover-empty">No videos found.</div>`;
+      return;
+    }
+    fillerDiscoverContentEl.innerHTML = "";
+    videos.forEach((v) => fillerDiscoverContentEl.appendChild(buildFillerDiscoverCard(v)));
+  } catch (e) {
+    fillerDiscoverContentEl.innerHTML = `<div class="discover-empty">Could not load suggestions.</div>`;
+  }
+}
+
+fillerDiscoverRefreshBtn.addEventListener("click", loadFillerDiscover);
+fillerDiscoverQueryEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") loadFillerDiscover();
+});
+
+// Downloads straight into filler/ with a visible progress bar, without
+// navigating to the Run tab - unlike the Input tab's downloader, there's
+// nothing to review in the terminal that matters more than watching this
+// fill up. Still goes through the same run_lock/cancel machinery as any
+// other run (only one at a time), so the Stop button works on it too.
+function startFillerDownload(url) {
+  if (runBtn.disabled) {
+    logLine("[web] A run is already in progress - wait for it to finish first.", "err");
+    return;
+  }
+  fillerProgressWrap.style.display = "";
+  fillerProgressFill.style.width = "0%";
+  fillerProgressStatus.textContent = "Starting download...";
+  setRunningUI(true);
+  setStatus("running", "running");
+  openRunSocket({ action: "download", url, target: "filler" }, false);
+}
+
+fillerDownloadBtn.addEventListener("click", () => {
+  const url = fillerDownloadUrlEl.value.trim();
+  if (!url) {
+    logLine("[web] Paste a YouTube URL first.", "err");
+    return;
+  }
+  startFillerDownload(url);
+  fillerDownloadUrlEl.value = "";
+});
+
+fillerFileInputEl.addEventListener("change", async () => {
+  const file = fillerFileInputEl.files[0];
+  if (!file) return;
+  fillerProgressWrap.style.display = "";
+  fillerProgressFill.style.width = "100%";
+  fillerProgressStatus.textContent = `Uploading ${file.name}...`;
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/upload-filler", { method: "POST", body: form });
+    if (!res.ok) throw new Error("Upload failed");
+    fillerProgressStatus.textContent = "Uploaded.";
+    loadFillerFiles();
+  } catch (e) {
+    fillerProgressStatus.textContent = "";
+    fillerProgressWrap.style.display = "none";
+    logLine(`[web] ${e.message}`, "err");
+  }
+  fillerFileInputEl.value = "";
+});
+
 // --- Per-input detail view: transcribe on demand, copy the prompt for an
 // outside model, paste its JSON result back as a real validated plan, cut
 // clips straight from an existing plan, and see/upload just this file's
@@ -553,11 +719,12 @@ function buildClipCard(clip, { track = true } = {}) {
 
   const durationSec = Math.round(clip.end - clip.start);
   const alreadyUploaded = Boolean(clip.youtube_video_id);
+  const isSplitScreen = clip.format === "split_screen";
   card.innerHTML = `
     <video src="${clip.url}" controls preload="metadata"></video>
     <div class="clip-body">
       <div class="clip-title">${escapeHtml(clip.title)}</div>
-      <div class="clip-meta">${durationSec}s &middot; ${escapeHtml(clip.video_path.split("/").pop())}</div>
+      <div class="clip-meta">${durationSec}s &middot; ${escapeHtml(clip.video_path.split("/").pop())}${isSplitScreen ? " &middot; Split-screen" : ""}</div>
       <div class="clip-actions">
         <select class="privacy-select" ${alreadyUploaded ? "disabled" : ""}>
           <option value="public" selected>public</option>
@@ -566,6 +733,12 @@ function buildClipCard(clip, { track = true } = {}) {
         </select>
         <button class="upload-btn${alreadyUploaded ? " uploaded" : ""}">${alreadyUploaded ? "Uploaded" : "Upload"}</button>
       </div>
+      ${!isSplitScreen && !alreadyUploaded
+        ? `<div class="split-screen-row" style="margin-top:8px">
+             <select class="filler-select"><option value="">Loading filler clips...</option></select>
+             <button class="pill-btn split-screen-btn">Make split-screen version</button>
+           </div>`
+        : ""}
     </div>
   `;
 
@@ -587,8 +760,104 @@ function buildClipCard(clip, { track = true } = {}) {
     if (track) allClipEntries.push({ card, uploadBtn, privacySelect, clip });
   }
 
+  // Split-tests the Minecraft-style split-screen layout against the normal
+  // one on just this clip, instead of committing the whole channel to it -
+  // the filler clip itself is chosen from the dropdown, but the start point
+  // within it is always random, so reusing the same filler clip still gives
+  // a different background each time.
+  const splitBtn = card.querySelector(".split-screen-btn");
+  const fillerSelect = card.querySelector(".filler-select");
+  if (fillerSelect) {
+    fetch("/api/filler-files")
+      .then((r) => r.json())
+      .then(({ files }) => {
+        if (!files || !files.length) {
+          fillerSelect.innerHTML = `<option value="">No filler clips - add some in the Filler tab</option>`;
+          fillerSelect.disabled = true;
+          splitBtn.disabled = true;
+          return;
+        }
+        fillerSelect.innerHTML = files
+          .map((f) => `<option value="${escapeHtml(f.filename)}">${escapeHtml(f.filename)}</option>`)
+          .join("");
+      })
+      .catch(() => {
+        fillerSelect.innerHTML = `<option value="">Could not load filler clips</option>`;
+        fillerSelect.disabled = true;
+        splitBtn.disabled = true;
+      });
+  }
+  if (splitBtn) {
+    splitBtn.addEventListener("click", () => makeSplitScreenVersion(card, splitBtn, fillerSelect, clip, track));
+  }
+
   return card;
 }
+
+// Shared by a single card's "Make split-screen version" button and the
+// Clips tab's "Split-screen all" bulk button, so the two can't drift -
+// returns true/false so a bulk caller can tell success from failure without
+// needing to inspect button state itself.
+async function makeSplitScreenVersion(card, splitBtn, fillerSelect, clip, track) {
+  splitBtn.disabled = true;
+  splitBtn.textContent = "Making split-screen version...";
+  try {
+    const res = await fetch("/api/clips/split-screen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ meta_path: clip.meta_path, filler_filename: fillerSelect.value }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || "Could not make a split-screen version.");
+    card.querySelector(".split-screen-row").remove();
+    const newCard = buildClipCard(data, { track });
+    card.insertAdjacentElement("afterend", newCard);
+    if (track) {
+      clipCount += 1;
+      clipCountEl.textContent = `(${clipCount})`;
+    }
+    return true;
+  } catch (e) {
+    logLine(`[web] ${e.message}`, "err");
+    splitBtn.disabled = false;
+    splitBtn.textContent = "Make split-screen version";
+    return false;
+  }
+}
+
+document.getElementById("split-all-btn").addEventListener("click", async () => {
+  // A fixed snapshot taken now - newly-created split-screen variants get
+  // pushed into allClipEntries too (for their own "Upload all" tracking),
+  // but iterating a snapshot instead of the live array means this loop
+  // never picks up its own output and tries to split it again.
+  const targets = allClipEntries.filter(
+    ({ clip, uploadBtn }) => clip.format !== "split_screen" && !uploadBtn.classList.contains("uploaded")
+  );
+  if (!targets.length) {
+    logLine("[web] No clips available to split-screen (already split-screen, or already uploaded).", "err");
+    return;
+  }
+
+  const splitAllBtn = document.getElementById("split-all-btn");
+  splitAllBtn.disabled = true;
+  let done = 0;
+  for (const { card, clip } of targets) {
+    splitAllBtn.textContent = `Split-screen all (${done}/${targets.length})...`;
+    const splitBtn = card.querySelector(".split-screen-btn");
+    const fillerSelect = card.querySelector(".filler-select");
+    if (splitBtn && !splitBtn.disabled && fillerSelect && fillerSelect.value) {
+      // One at a time, not all at once - the same reasoning as uploadQueue:
+      // several ffmpeg encodes running concurrently would hit CPU much
+      // harder than doing them in sequence.
+      await makeSplitScreenVersion(card, splitBtn, fillerSelect, clip, true);
+    } else if (fillerSelect && !fillerSelect.value) {
+      logLine(`[web] Skipped "${clip.title}" - no filler clip selected/available yet.`, "err");
+    }
+    done += 1;
+  }
+  splitAllBtn.disabled = false;
+  splitAllBtn.textContent = "Split-screen all";
+});
 
 function addClipCard(clip) {
   clipCount += 1;
@@ -653,7 +922,7 @@ async function loadAnalytics() {
     const {
       total_uploads, tracked_uploads, channel_count_available, live_data_available,
       records_with_stats, mechanic_insight, best_clip, worst_clip, duration_insight,
-      title_insight, hook_mechanics, recent,
+      title_insight, format_insight, hook_mechanics, recent,
     } = await res.json();
 
     if (total_uploads === 0) {
@@ -744,6 +1013,17 @@ async function loadAnalytics() {
           <strong>${ti.with_number_avg_pct}%</strong> on average vs
           <strong>${ti.without_number_avg_pct}%</strong> for titles without one (n=${ti.without_number_count}) -
           ${numbersWin ? "specific numbers are winning so far." : "vaguer titles are winning so far, worth a look."}
+        </div>`;
+    }
+    if (format_insight) {
+      const fi = format_insight;
+      const splitWins = fi.split_screen_avg_pct >= fi.normal_avg_pct;
+      verdictHtml += `
+        <div class="verdict-card">
+          Split-screen clips (n=${fi.split_screen_count}) retain
+          <strong>${fi.split_screen_avg_pct}%</strong> on average vs
+          <strong>${fi.normal_avg_pct}%</strong> for the normal format (n=${fi.normal_count}) -
+          ${splitWins ? "split-screen is winning so far, might be worth making the default." : "the normal format is still winning - not worth switching yet."}
         </div>`;
     }
     if (!verdictHtml) {
@@ -924,6 +1204,11 @@ function handleRunMessage(msg) {
     logLine(msg.line);
   } else if (msg.type === "clip") {
     addClipCard(msg.clip);
+  } else if (msg.type === "download_progress") {
+    if (fillerProgressWrap.style.display !== "none") {
+      fillerProgressFill.style.width = `${msg.percent != null ? msg.percent : 0}%`;
+      fillerProgressStatus.textContent = msg.percent != null ? `Downloading... ${msg.percent}%` : "Downloading...";
+    }
   } else if (msg.type === "done") {
     if (msg.video_path) {
       logLine(`[web] Downloaded -> ${msg.video_path}`, "sys");
@@ -938,6 +1223,11 @@ function handleRunMessage(msg) {
     // transcript/plan status - refresh the Input tab's cards so reopening
     // "Manage" on that file doesn't show stale has_transcript/plan info.
     if (inputLoadedOnce) loadInputFiles();
+    if (fillerLoadedOnce && fillerProgressWrap.style.display !== "none") {
+      fillerProgressStatus.textContent = "Done.";
+      fillerProgressWrap.style.display = "none";
+      loadFillerFiles();
+    }
   } else if (msg.type === "stopped") {
     logLine("[web] Run stopped.", "sys");
     setStatus("stopped", "idle");
@@ -945,12 +1235,14 @@ function handleRunMessage(msg) {
     refreshTokenBudget();
     loadAnalytics();
     if (inputLoadedOnce) loadInputFiles();
+    fillerProgressWrap.style.display = "none";
   } else if (msg.type === "error") {
     logLine(`[web] Error: ${msg.message}`, "err");
     setStatus("error", "error");
     setRunningUI(false);
     refreshTokenBudget();
     loadAnalytics();
+    fillerProgressWrap.style.display = "none";
   }
 }
 
