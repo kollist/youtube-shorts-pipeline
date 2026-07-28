@@ -18,7 +18,8 @@ from pathlib import Path
 
 import edge_tts
 
-from select_clips import call_groq, GroqGenerationError
+import token_budget
+from select_clips import call_groq, GroqGenerationError, MODEL_FALLBACK_CHAIN
 
 DEFAULT_VOICE = "en-US-ChristopherNeural"
 
@@ -29,6 +30,11 @@ NARRATION_SYSTEM_PROMPT = (
     "never say things like 'in this clip' or 'this video shows'. 6-14 words, "
     "casual spoken tone, no hashtags or emoji. Respond as JSON: {\"line\": \"...\"}."
 )
+
+# Generous estimate for one narration call (short prompt, tiny completion) -
+# just enough to skip a model that's clearly out of budget before spending a
+# request on it, same idea as select_clips.py's per-chunk estimate.
+NARRATION_TOKEN_ESTIMATE = 500
 
 
 def build_narration_prompt(title: str, description: str, clip_text: str) -> str:
@@ -42,14 +48,32 @@ def build_narration_prompt(title: str, description: str, clip_text: str) -> str:
 
 def generate_narration_line(title: str, description: str, clip_text: str) -> str:
     prompt = build_narration_prompt(title, description, clip_text)
-    raw = call_groq(prompt, NARRATION_SYSTEM_PROMPT)
-    try:
-        line = json.loads(raw)["line"].strip()
-    except (json.JSONDecodeError, KeyError, TypeError, AttributeError) as e:
-        raise GroqGenerationError(f"Narration model returned unexpected output: {raw[:300]}") from e
-    if not line:
-        raise GroqGenerationError("Narration model returned an empty line.")
-    return line
+
+    # Clip selection (select_clips.py) and this narration call draw from the
+    # same per-model Groq daily budgets, so a video that already used up the
+    # primary model's budget just picking clips would otherwise always fail
+    # here - falling through the same MODEL_FALLBACK_CHAIN, like select_clips
+    # does, means it only fails once every model in the chain is out.
+    last_error = None
+    for model in MODEL_FALLBACK_CHAIN:
+        if token_budget.remaining_budget(model) < NARRATION_TOKEN_ESTIMATE:
+            continue
+        try:
+            raw = call_groq(prompt, NARRATION_SYSTEM_PROMPT, model=model)
+        except (token_budget.GroqBudgetExhausted, GroqGenerationError) as e:
+            last_error = e
+            continue
+        try:
+            line = json.loads(raw)["line"].strip()
+        except (json.JSONDecodeError, KeyError, TypeError, AttributeError) as e:
+            raise GroqGenerationError(f"Narration model returned unexpected output: {raw[:300]}") from e
+        if not line:
+            raise GroqGenerationError("Narration model returned an empty line.")
+        return line
+
+    raise last_error or token_budget.GroqBudgetExhausted(
+        "No Groq model in today's fallback chain has budget left for a voiceover narration line."
+    )
 
 
 async def _synthesize(text: str, out_path: Path, voice: str) -> list[dict]:
