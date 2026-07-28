@@ -316,6 +316,35 @@ inputRefreshBtn.addEventListener("click", loadInputFiles);
 
 const inputDownloadUrlEl = document.getElementById("input-download-url");
 const inputDownloadBtn = document.getElementById("input-download-btn");
+const inputProgressWrap = document.getElementById("input-progress-wrap");
+const inputProgressFill = document.getElementById("input-progress-fill");
+const inputProgressStatus = document.getElementById("input-progress-status");
+
+// Which of the Input/Filler tabs' progress bars a "download" run's messages
+// should update - both share the same download action/run_lock, so only one
+// can ever be active, but the UI still needs to know which bar to drive.
+let activeDownloadTarget = null; // 'input' | 'filler'
+
+// Shared by the Input tab's own downloader, its search results' "Download"
+// button, and the Filler tab's downloader/search - keeps the download running
+// in-place on whichever tab started it (no navigating to Run) with a visible
+// progress bar, same run_lock/cancel machinery as any other run.
+function startDownload(url, target) {
+  if (runBtn.disabled) {
+    logLine("[web] A run is already in progress - wait for it to finish first.", "err");
+    return;
+  }
+  activeDownloadTarget = target;
+  const wrap = target === "filler" ? fillerProgressWrap : inputProgressWrap;
+  const fill = target === "filler" ? fillerProgressFill : inputProgressFill;
+  const status = target === "filler" ? fillerProgressStatus : inputProgressStatus;
+  wrap.style.display = "";
+  fill.style.width = "0%";
+  status.textContent = "Starting download...";
+  setRunningUI(true);
+  setStatus("running", "running");
+  openRunSocket({ action: "download", url, target }, false);
+}
 
 inputDownloadBtn.addEventListener("click", () => {
   const url = inputDownloadUrlEl.value.trim();
@@ -323,16 +352,69 @@ inputDownloadBtn.addEventListener("click", () => {
     logLine("[web] Paste a YouTube URL first.", "err");
     return;
   }
-  terminalEl.innerHTML = "";
-  clipsEl.innerHTML = "";
-  clipCount = 0;
-  clipCountEl.textContent = "";
-  autoUploadHalted = false;
-  setRunningUI(true);
-  setStatus("running", "running");
-  location.hash = "#run";
-  openRunSocket({ action: "download", url }, false);
+  startDownload(url, "input");
   inputDownloadUrlEl.value = "";
+});
+
+// --- Input tab search: a keyword search (same underlying YouTube search as
+// the Filler tab's Discover, not the rights-verified curated Discover tab) -
+// each result offers "Use" (send straight to the Run tab, no download needed)
+// or "Download" (fetch into input/ with the progress bar above). ---
+const inputDiscoverContentEl = document.getElementById("input-discover-content");
+const inputDiscoverSearchBtn = document.getElementById("input-discover-search-btn");
+const inputDiscoverQueryEl = document.getElementById("input-discover-query");
+
+function buildInputDiscoverCard(video) {
+  const card = document.createElement("div");
+  card.className = "discover-card";
+  card.innerHTML = `
+    <img src="${video.thumbnail}" alt="">
+    <div class="discover-body">
+      <div class="discover-title">${escapeHtml(video.title)}</div>
+      <div class="discover-meta">
+        <span>${escapeHtml(video.channel)}</span>
+        <span>${video.view_count.toLocaleString()} views</span>
+      </div>
+      <div class="input-card-actions">
+        <button class="discover-use-btn">Use</button>
+        <button class="pill-btn input-discover-download-btn">Download</button>
+      </div>
+    </div>
+  `;
+  card.querySelector(".discover-use-btn").addEventListener("click", () => useDiscoveredVideo(video));
+  card.querySelector(".input-discover-download-btn").addEventListener("click", () => startDownload(video.url, "input"));
+  return card;
+}
+
+async function loadInputDiscover() {
+  const q = inputDiscoverQueryEl.value.trim();
+  if (!q) {
+    inputDiscoverContentEl.innerHTML = `<div class="discover-empty">Type something to search for.</div>`;
+    return;
+  }
+  inputDiscoverContentEl.innerHTML = `<div class="discover-loading">Loading...</div>`;
+  try {
+    const res = await fetch(`/api/discover-input?q=${encodeURIComponent(q)}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      inputDiscoverContentEl.innerHTML = `<div class="discover-empty">${escapeHtml(err.detail || "Could not load results.")}</div>`;
+      return;
+    }
+    const { videos } = await res.json();
+    if (!videos.length) {
+      inputDiscoverContentEl.innerHTML = `<div class="discover-empty">No videos found.</div>`;
+      return;
+    }
+    inputDiscoverContentEl.innerHTML = "";
+    videos.forEach((v) => inputDiscoverContentEl.appendChild(buildInputDiscoverCard(v)));
+  } catch (e) {
+    inputDiscoverContentEl.innerHTML = `<div class="discover-empty">Could not load results.</div>`;
+  }
+}
+
+inputDiscoverSearchBtn.addEventListener("click", loadInputDiscover);
+inputDiscoverQueryEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") loadInputDiscover();
 });
 
 // --- Filler tab: your own gameplay/background footage for the split-screen
@@ -416,7 +498,7 @@ function buildFillerDiscoverCard(video) {
       <button class="discover-use-btn">Download</button>
     </div>
   `;
-  card.querySelector(".discover-use-btn").addEventListener("click", () => startFillerDownload(video.url));
+  card.querySelector(".discover-use-btn").addEventListener("click", () => startDownload(video.url, "filler"));
   return card;
 }
 
@@ -447,31 +529,13 @@ fillerDiscoverQueryEl.addEventListener("keydown", (e) => {
   if (e.key === "Enter") loadFillerDiscover();
 });
 
-// Downloads straight into filler/ with a visible progress bar, without
-// navigating to the Run tab - unlike the Input tab's downloader, there's
-// nothing to review in the terminal that matters more than watching this
-// fill up. Still goes through the same run_lock/cancel machinery as any
-// other run (only one at a time), so the Stop button works on it too.
-function startFillerDownload(url) {
-  if (runBtn.disabled) {
-    logLine("[web] A run is already in progress - wait for it to finish first.", "err");
-    return;
-  }
-  fillerProgressWrap.style.display = "";
-  fillerProgressFill.style.width = "0%";
-  fillerProgressStatus.textContent = "Starting download...";
-  setRunningUI(true);
-  setStatus("running", "running");
-  openRunSocket({ action: "download", url, target: "filler" }, false);
-}
-
 fillerDownloadBtn.addEventListener("click", () => {
   const url = fillerDownloadUrlEl.value.trim();
   if (!url) {
     logLine("[web] Paste a YouTube URL first.", "err");
     return;
   }
-  startFillerDownload(url);
+  startDownload(url, "filler");
   fillerDownloadUrlEl.value = "";
 });
 
@@ -550,6 +614,17 @@ function startInputAction(action, file, extra) {
   openRunSocket({ action, video_path: file.path, ...extra }, false);
 }
 
+// Clones the Run tab's Whisper model <select> (same options, single source
+// of truth) so the Manage modal can pick a model for this one file without
+// touching - or being silently overridden by - whatever's chosen on Run.
+function buildWhisperModelSelect(id) {
+  const source = document.getElementById("whisper-model");
+  const clone = source.cloneNode(true);
+  clone.id = id;
+  clone.value = source.value; // cloneNode only copies the HTML-default selection, not the live one
+  return clone;
+}
+
 async function openInputDetail(file) {
   currentDetailFile = file;
   inputDetailTitle.textContent = file.filename;
@@ -559,7 +634,16 @@ async function openInputDetail(file) {
   detailPasteStatus.textContent = "";
 
   if (file.has_transcript) {
-    detailTranscriptArea.innerHTML = `<button class="pill-btn" id="detail-copy-transcript-btn">Copy transcript</button>`;
+    detailTranscriptArea.innerHTML = `
+      <button class="pill-btn" id="detail-copy-transcript-btn">Copy transcript</button>
+      <div class="field-row" style="margin-top:10px;align-items:flex-end">
+        <div class="field" style="flex:0 0 auto;min-width:140px">
+          <label for="detail-whisper-model">Re-transcribe with a different model</label>
+          <span id="detail-whisper-model-slot"></span>
+        </div>
+        <button class="pill-btn" id="detail-retranscribe-btn">Re-transcribe</button>
+      </div>
+    `;
     document.getElementById("detail-copy-transcript-btn").addEventListener("click", async (e) => {
       try {
         const res = await fetch(`/api/input-file/${encodeURIComponent(file.stem)}/transcript`);
@@ -569,10 +653,23 @@ async function openInputDetail(file) {
         logLine("[web] Could not load transcript.", "err");
       }
     });
+    const modelSelect = buildWhisperModelSelect("detail-whisper-model");
+    document.getElementById("detail-whisper-model-slot").replaceWith(modelSelect);
+    document.getElementById("detail-retranscribe-btn").addEventListener("click", () => {
+      startInputAction("transcribe", file, { whisper_model: modelSelect.value });
+    });
   } else {
-    detailTranscriptArea.innerHTML = `<button class="upload-btn" id="detail-transcribe-btn">Transcribe</button>`;
+    detailTranscriptArea.innerHTML = `
+      <div class="field" style="max-width:200px">
+        <label for="detail-whisper-model">Transcription model</label>
+        <span id="detail-whisper-model-slot"></span>
+      </div>
+      <button class="upload-btn" id="detail-transcribe-btn" style="margin-top:10px">Transcribe</button>
+    `;
+    const modelSelect = buildWhisperModelSelect("detail-whisper-model");
+    document.getElementById("detail-whisper-model-slot").replaceWith(modelSelect);
     document.getElementById("detail-transcribe-btn").addEventListener("click", () => {
-      startInputAction("transcribe", file, { whisper_model: document.getElementById("whisper-model").value });
+      startInputAction("transcribe", file, { whisper_model: modelSelect.value });
     });
   }
 
@@ -1205,9 +1302,12 @@ function handleRunMessage(msg) {
   } else if (msg.type === "clip") {
     addClipCard(msg.clip);
   } else if (msg.type === "download_progress") {
-    if (fillerProgressWrap.style.display !== "none") {
+    if (activeDownloadTarget === "filler" && fillerProgressWrap.style.display !== "none") {
       fillerProgressFill.style.width = `${msg.percent != null ? msg.percent : 0}%`;
       fillerProgressStatus.textContent = msg.percent != null ? `Downloading... ${msg.percent}%` : "Downloading...";
+    } else if (activeDownloadTarget === "input" && inputProgressWrap.style.display !== "none") {
+      inputProgressFill.style.width = `${msg.percent != null ? msg.percent : 0}%`;
+      inputProgressStatus.textContent = msg.percent != null ? `Downloading... ${msg.percent}%` : "Downloading...";
     }
   } else if (msg.type === "done") {
     if (msg.video_path) {
@@ -1223,11 +1323,17 @@ function handleRunMessage(msg) {
     // transcript/plan status - refresh the Input tab's cards so reopening
     // "Manage" on that file doesn't show stale has_transcript/plan info.
     if (inputLoadedOnce) loadInputFiles();
-    if (fillerLoadedOnce && fillerProgressWrap.style.display !== "none") {
+    if (fillerLoadedOnce && activeDownloadTarget === "filler" && fillerProgressWrap.style.display !== "none") {
       fillerProgressStatus.textContent = "Done.";
       fillerProgressWrap.style.display = "none";
       loadFillerFiles();
     }
+    if (activeDownloadTarget === "input" && inputProgressWrap.style.display !== "none") {
+      inputProgressStatus.textContent = "Done.";
+      inputProgressWrap.style.display = "none";
+      loadInputFiles();
+    }
+    activeDownloadTarget = null;
   } else if (msg.type === "stopped") {
     logLine("[web] Run stopped.", "sys");
     setStatus("stopped", "idle");
@@ -1236,6 +1342,8 @@ function handleRunMessage(msg) {
     loadAnalytics();
     if (inputLoadedOnce) loadInputFiles();
     fillerProgressWrap.style.display = "none";
+    inputProgressWrap.style.display = "none";
+    activeDownloadTarget = null;
   } else if (msg.type === "error") {
     logLine(`[web] Error: ${msg.message}`, "err");
     setStatus("error", "error");
@@ -1243,6 +1351,8 @@ function handleRunMessage(msg) {
     refreshTokenBudget();
     loadAnalytics();
     fillerProgressWrap.style.display = "none";
+    inputProgressWrap.style.display = "none";
+    activeDownloadTarget = null;
   }
 }
 

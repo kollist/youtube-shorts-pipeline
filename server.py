@@ -255,6 +255,23 @@ async def discover_filler(q: str = "minecraft parkour gameplay no copyright"):
     return {"videos": videos}
 
 
+@app.get("/api/discover-input")
+async def discover_input(q: str):
+    """Plain keyword search for source videos to bring into input/ - same
+    underlying YouTube search as the Filler tab's Discover (not the
+    rights-verified curated Discover tab), just without a filler-specific
+    default query. Showing up here isn't permission to use it; check the
+    source's own license before using or downloading anything."""
+    if not q.strip():
+        raise HTTPException(status_code=400, detail="Enter something to search for.")
+    loop = asyncio.get_event_loop()
+    try:
+        videos = await loop.run_in_executor(None, lambda: discover_filler_candidates(q))
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"videos": videos}
+
+
 @app.get("/api/input-file/{stem}/transcript")
 async def get_input_transcript(stem: str):
     transcript_path = TRANSCRIPTS_DIR / f"{stem}.json"

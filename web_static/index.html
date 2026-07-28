@@ -139,16 +139,33 @@
   </div>
 
   <div class="page" id="page-input">
+    <section class="panel" id="input-discover-panel">
+      <h2>Search YouTube <button id="input-discover-search-btn" class="pill-btn">search</button></h2>
+      <div class="field-hint">Keyword search, not a rights-verified curated list like the main Discover tab - showing up here isn't permission to use it. Check the source's own license before using or downloading anything.</div>
+      <div class="field-row" style="margin-bottom:14px">
+        <div class="field" style="flex:1">
+          <label for="input-discover-query">Search</label>
+          <input id="input-discover-query" type="text" placeholder="Search YouTube..." />
+        </div>
+      </div>
+      <div id="input-discover-content" class="discover-grid"><div class="discover-empty">Search for a video to use or download.</div></div>
+    </section>
+
     <section class="panel" id="input-panel">
       <h2>Input <button id="input-refresh-btn" class="pill-btn">refresh</button></h2>
       <div class="field-hint">Video files already sitting in input/ - from a past download, or dropped in manually - ready to run without fetching them again.</div>
 
-      <div class="field-row" style="margin-bottom:18px">
+      <div class="field-row" style="margin-bottom:10px">
         <div class="field" style="flex:1">
           <label for="input-download-url">Paste a YouTube URL to download it into input/ (no processing yet)</label>
           <input id="input-download-url" type="text" placeholder="https://www.youtube.com/watch?v=..." />
         </div>
         <button id="input-download-btn" class="upload-btn" style="flex:0 0 auto;align-self:flex-end;padding:8px 16px">Download</button>
+      </div>
+
+      <div id="input-progress-wrap" style="display:none;margin-bottom:18px">
+        <div class="progress-bar"><div id="input-progress-fill" class="progress-bar-fill" style="width:0%"></div></div>
+        <div id="input-progress-status" class="field-hint"></div>
       </div>
 
       <div id="input-content" class="discover-grid"></div>
