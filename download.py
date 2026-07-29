@@ -10,12 +10,22 @@ Requires yt-dlp:
     pip install yt-dlp
 """
 
+import subprocess
 import sys
 from pathlib import Path
 
 import yt_dlp
 
 from run_control import RunCancelled
+
+
+def _has_audio_stream(path: str) -> bool:
+    result = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries", "stream=index",
+         "-of", "csv=p=0", path],
+        capture_output=True, text=True,
+    )
+    return bool(result.stdout.strip())
 
 
 def download_video(url: str, out_dir: str = "input", cancel_event=None, on_progress=None) -> str:
@@ -37,7 +47,13 @@ def download_video(url: str, out_dir: str = "input", cancel_event=None, on_progr
             on_progress(percent)
 
     ydl_opts = {
-        "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+        # bestvideo*+bestaudio (vs. restricting to ext=mp4/m4a) matches far
+        # more codec pairings before falling back to "best" - a video with no
+        # combined-format option above ~1080p (common for 4K YouTube uploads)
+        # would otherwise fail that stricter pair and "best" would silently
+        # resolve to a video-only stream, since ffmpeg then has nothing to mux
+        # the missing audio track from.
+        "format": "bestvideo*+bestaudio/best",
         "outtmpl": str(Path(out_dir) / "%(title)s.%(ext)s"),
         "merge_output_format": "mp4",
         "restrictfilenames": True,  # sanitise title so it's safe as a filename
@@ -56,9 +72,24 @@ def download_video(url: str, out_dir: str = "input", cancel_event=None, on_progr
 
     downloads = info.get("requested_downloads", [])
     if downloads and "filepath" in downloads[0]:
-        return downloads[0]["filepath"]
-    # fallback: reconstruct expected path from template
-    return ydl.prepare_filename(info).rsplit(".", 1)[0] + ".mp4"
+        video_path = downloads[0]["filepath"]
+    else:
+        # fallback: reconstruct expected path from template
+        video_path = ydl.prepare_filename(info).rsplit(".", 1)[0] + ".mp4"
+
+    # A video+audio merge that silently didn't happen (out of disk space,
+    # ffmpeg missing, a postprocessor error) leaves yt-dlp's separate
+    # video-only fragment sitting at this same "final" path instead of a
+    # merged file - transcription would otherwise fail on it much later with
+    # an opaque error deep inside faster-whisper's audio decoding.
+    if not _has_audio_stream(video_path):
+        raise RuntimeError(
+            f"Downloaded '{Path(video_path).name}' has no audio track - the video+audio "
+            f"merge likely failed (check disk space and that ffmpeg is on PATH). Delete "
+            f"this file and try the download again."
+        )
+
+    return video_path
 
 
 if __name__ == "__main__":
