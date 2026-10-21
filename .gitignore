@@ -26,3 +26,31 @@ filler/
 
 # Claude Code local-only settings
 .claude/settings.local.json
+
+# Story-to-video: the local image models (~25 GB) and everything generated per episode.
+# Tracked: each series.json, each episode's story.json, credit.txt and posted.json (the scripts + licence credits).
+# Ignored: pictures, videos, audio and build folders (all re-creatable).
+models/
+stories/**/images/
+stories/**/build/
+stories/**/build_horror/
+stories/**/motion/
+stories/**/*.mp4
+stories/**/*.mp3
+stories/**/*.wav
+stories/**/*.m4a
+stories/**/*.png
+
+# Social posting: logins that refresh, and the log of non-YouTube posts
+social_tokens.json
+social_log.jsonl
+venv-mlx/
+
+# YouTube login cookies for yt-dlp (grant access to your account - never commit)
+youtube_cookies.txt
+
+# Generated test videos and retired outputs, caches, backups
+archive/outputs/
+data/caption_history.json
+*.bak
+.DS_Store

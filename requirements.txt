@@ -5,6 +5,10 @@ google-auth-oauthlib==1.2.1
 google-auth-httplib2==0.2.0
 python-dotenv==1.0.1
 yt-dlp
+numpy
 fastapi
 uvicorn[standard]
 python-multipart
+requests
+beautifulsoup4
+pillow
