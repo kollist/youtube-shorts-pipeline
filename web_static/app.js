@@ -44,8 +44,25 @@ dailyUploadEl.addEventListener("change", () => {
   dailyUploadFields.style.display = dailyUploadEl.checked ? "" : "none";
 });
 
+const runModeEl = document.getElementById("run-mode");
+const streamerFieldEl = document.getElementById("streamer-field");
+const streamModeHintEl = document.getElementById("stream-mode-hint");
+runModeEl.addEventListener("change", () => {
+  const isStream = runModeEl.value === "stream";
+  streamerFieldEl.style.display = isStream ? "" : "none";
+  streamModeHintEl.style.display = isStream ? "" : "none";
+});
+
+function streamSettings() {
+  return {
+    mode: runModeEl.value,
+    streamer: document.getElementById("streamer-name").value.trim() || null,
+  };
+}
+
 dailyQueueBtn.addEventListener("click", () => {
   const config = {
+    ...streamSettings(),
     action: "daily_queue",
     target: parseInt(document.getElementById("daily-target").value, 10) || 20,
     whisper_model: document.getElementById("whisper-model").value,
@@ -54,11 +71,12 @@ dailyQueueBtn.addEventListener("click", () => {
     burn_captions: document.getElementById("burn-captions").checked,
     add_voiceover: document.getElementById("add-voiceover").checked,
     upload: dailyUploadEl.checked,
+    platforms: selectedPlatforms(),
     privacy: document.getElementById("daily-privacy").value,
     spacing_minutes: parseFloat(document.getElementById("daily-spacing").value) || 20,
   };
 
-  terminalEl.innerHTML = "";
+  resetOutput();
   clipsEl.innerHTML = "";
   clipCount = 0;
   clipCountEl.textContent = "";
@@ -81,7 +99,7 @@ const autoPrivacyField = document.getElementById("auto-privacy-field");
 // show/hide rather than separate server-rendered pages). ---
 const pageTabs = document.querySelectorAll(".page-tab");
 const pages = document.querySelectorAll(".page");
-const VALID_PAGES = new Set(["run", "discover", "input", "filler", "clips", "analytics"]);
+const VALID_PAGES = new Set(["run", "discover", "input", "filler", "clips", "series", "analytics"]);
 let discoverLoadedOnce = false;
 let inputLoadedOnce = false;
 let fillerLoadedOnce = false;
@@ -97,6 +115,7 @@ function showPage(name) {
     loadFillerDiscover();
   }
   if (name === "analytics") loadAnalytics();
+  if (name === "series" && typeof loadSeries === "function") loadSeries();
 }
 
 window.addEventListener("hashchange", () => showPage(location.hash.slice(1)));
@@ -200,7 +219,7 @@ function useDiscoveredVideo(video) {
 // Input tab's own URL field uses) without running the pipeline on it yet -
 // for queuing up something discovered here to process later from Input.
 function downloadDiscoveredVideo(url) {
-  terminalEl.innerHTML = "";
+  resetOutput();
   clipsEl.innerHTML = "";
   clipCount = 0;
   clipCountEl.textContent = "";
@@ -236,29 +255,99 @@ function buildDiscoverCard(video) {
   return card;
 }
 
-async function loadDiscover() {
+// --- Discover: long streams from IShowSpeed and Kai Cenat ---
+const discoverStreamersEl = document.getElementById("discover-streamers");
+const discoverSortEl = document.getElementById("discover-sort");
+let discoverStreamer = "all";
+let discoverVideos = [];
+
+function formatStreamLength(sec) {
+  const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60);
+  return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`;
+}
+function timeAgo(iso) {
+  const days = (Date.now() - new Date(iso).getTime()) / 86400000;
+  return days < 1 ? "today" : days < 2 ? "yesterday" : `${Math.floor(days)} days ago`;
+}
+
+// Loads the stream into the Run tab ready to clip: Livestream mode, the streamer's name filled in.
+function clipStream(video) {
+  useDiscoveredVideo(video);
+  const mode = document.getElementById("run-mode");
+  mode.value = "stream";
+  mode.dispatchEvent(new Event("change"));
+  document.getElementById("streamer-name").value = video.streamer;
+}
+
+function buildStreamCard(v) {
+  const card = document.createElement("div");
+  card.className = "discover-card stream-card";
+  card.innerHTML = `
+    <div class="stream-thumb">
+      <img src="${escapeHtml(v.thumbnail)}" alt="" loading="lazy">
+      <span class="stream-badge">${formatStreamLength(v.duration_sec)}</span>
+      <span class="stream-who">${escapeHtml(v.streamer)}</span>
+    </div>
+    <div class="discover-body">
+      <div class="discover-title">${escapeHtml(v.title)}</div>
+      <div class="discover-meta">
+        <span>${timeAgo(v.published_at)}</span>
+        <span>${v.view_count.toLocaleString()} views</span>
+        <span>${v.view_velocity.toLocaleString()}/day</span>
+      </div>
+      <div class="input-card-actions">
+        <button class="discover-use-btn primary-cta">Clip it</button>
+        <button class="pill-btn discover-download-btn">Download</button>
+      </div>
+    </div>`;
+  card.querySelector(".discover-use-btn").addEventListener("click", () => clipStream(v));
+  card.querySelector(".discover-download-btn").addEventListener("click", () => downloadDiscoveredVideo(v.url));
+  return card;
+}
+
+function renderDiscoverStreams() {
+  const sorts = {
+    new: (a, b) => new Date(b.published_at) - new Date(a.published_at),
+    hot: (a, b) => b.view_velocity - a.view_velocity,
+    long: (a, b) => b.duration_sec - a.duration_sec,
+  };
+  const list = [...discoverVideos].sort(sorts[discoverSortEl.value] || sorts.new);
+  discoverContentEl.innerHTML = "";
+  if (!list.length) {
+    discoverContentEl.innerHTML = `<div class="discover-empty">No long streams found for this filter.</div>`;
+    return;
+  }
+  list.forEach((v) => discoverContentEl.appendChild(buildStreamCard(v)));
+}
+
+async function loadDiscover(force = false) {
   discoverLoadedOnce = true;
-  discoverContentEl.innerHTML = `<div class="discover-loading">Loading...</div>`;
+  discoverContentEl.innerHTML = `<div class="discover-loading">Loading streams...</div>`;
   try {
-    const res = await fetch("/api/discover");
+    const res = await fetch(`/api/discover?streamer=${encodeURIComponent(discoverStreamer)}${force === true ? "&refresh=true" : ""}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      discoverContentEl.innerHTML = `<div class="discover-empty">${escapeHtml(err.detail || "Could not load suggestions.")}</div>`;
+      discoverContentEl.innerHTML = `<div class="discover-empty">${escapeHtml(err.detail || "Could not load streams.")}</div>`;
       return;
     }
-    const { videos } = await res.json();
-    if (!videos.length) {
-      discoverContentEl.innerHTML = `<div class="discover-empty">No videos found.</div>`;
-      return;
-    }
-    discoverContentEl.innerHTML = "";
-    videos.forEach((v) => discoverContentEl.appendChild(buildDiscoverCard(v)));
+    const data = await res.json();
+    discoverVideos = data.videos;
+    discoverStreamersEl.innerHTML = ["all", ...data.streamers].map((s) =>
+      `<button class="discover-pill ${s === discoverStreamer ? "on" : ""}" data-streamer="${escapeHtml(s)}">${s === "all" ? "All" : escapeHtml(s)}</button>`).join("");
+    renderDiscoverStreams();
   } catch (e) {
-    discoverContentEl.innerHTML = `<div class="discover-empty">Could not load suggestions.</div>`;
+    discoverContentEl.innerHTML = `<div class="discover-empty">Could not load streams.</div>`;
   }
 }
 
-discoverRefreshBtn.addEventListener("click", loadDiscover);
+discoverStreamersEl.addEventListener("click", (e) => {
+  const pill = e.target.closest("[data-streamer]");
+  if (!pill) return;
+  discoverStreamer = pill.dataset.streamer;
+  loadDiscover();
+});
+discoverSortEl.addEventListener("change", renderDiscoverStreams);
+discoverRefreshBtn.addEventListener("click", () => loadDiscover(true));
 
 const selectedInputLabelEl = document.getElementById("selected-input-label");
 
@@ -657,14 +746,66 @@ inputDetailOverlay.addEventListener("click", (e) => {
   if (e.target === inputDetailOverlay) closeInputDetail();
 });
 
-async function copyToClipboard(text, btn) {
+// `source` is the text, or a promise of it. Pass the promise (not an awaited
+// result): browsers only allow clipboard writes right after a click, and Safari
+// rejects one that comes after a slow fetch. Handing the clipboard a promise
+// keeps the click's permission alive while the text loads. If copying still
+// fails, the text is shown in a box to copy by hand - the Run tab's terminal
+// (where logLine writes) is hidden behind this modal, so an error logged only
+// there looks like the button did nothing.
+async function copyToClipboard(source, btn) {
+  const original = btn.dataset.originalLabel || btn.textContent;
+  btn.dataset.originalLabel = original;
+  const flash = (label) => {
+    btn.textContent = label;
+    setTimeout(() => { btn.textContent = original; }, 1800);
+  };
   try {
-    await navigator.clipboard.writeText(text);
-    const original = btn.textContent;
-    btn.textContent = "Copied!";
-    setTimeout(() => { btn.textContent = original; }, 1500);
+    if (navigator.clipboard && window.ClipboardItem) {
+      const blob = Promise.resolve(source).then((t) => new Blob([t], { type: "text/plain" }));
+      await navigator.clipboard.write([new ClipboardItem({ "text/plain": blob })]);
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(await source);
+    } else {
+      throw new Error("clipboard access needs http://localhost (or https)");
+    }
+    flash("Copied!");
   } catch (e) {
-    logLine(`[web] Could not copy to clipboard: ${e.message}`, "err");
+    let text;
+    try { text = await source; } catch (loadErr) {
+      flash("Couldn't load");
+      logLine(`[web] ${loadErr.message}`, "err");
+      return;
+    }
+    // The browser said no - the server runs on this same machine, so ask it
+    // to put the text on the system clipboard instead.
+    try {
+      const res = await fetch("/api/copy-to-clipboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (res.ok) {
+        flash("Copied!");
+        return;
+      }
+    } catch (serverErr) {
+      // fall through to the manual box below
+    }
+    let box = btn.parentElement.querySelector(".copy-fallback");
+    if (!box) {
+      box = document.createElement("textarea");
+      box.className = "copy-fallback";
+      box.readOnly = true;
+      box.rows = 4;
+      box.style.cssText = "display:block;width:100%;margin-top:8px";
+      btn.parentElement.appendChild(box);
+    }
+    box.value = text;
+    box.focus();
+    box.select();
+    flash("Select & copy below");
+    logLine(`[web] Could not copy to clipboard automatically: ${e.message}`, "err");
   }
 }
 
@@ -673,7 +814,7 @@ async function copyToClipboard(text, btn) {
 // just different "actions" on the same worker, not a separate mini-workflow.
 function startInputAction(action, file, extra) {
   closeInputDetail();
-  terminalEl.innerHTML = "";
+  resetOutput();
   clipsEl.innerHTML = "";
   clipCount = 0;
   clipCountEl.textContent = "";
@@ -714,14 +855,16 @@ async function openInputDetail(file) {
         <button class="pill-btn" id="detail-retranscribe-btn">Re-transcribe</button>
       </div>
     `;
-    document.getElementById("detail-copy-transcript-btn").addEventListener("click", async (e) => {
-      try {
-        const res = await fetch(`/api/input-file/${encodeURIComponent(file.stem)}/transcript`);
-        const { text } = await res.json();
-        copyToClipboard(text, e.target);
-      } catch (err) {
-        logLine("[web] Could not load transcript.", "err");
-      }
+    document.getElementById("detail-copy-transcript-btn").addEventListener("click", (e) => {
+      copyToClipboard(
+        fetch(`/api/input-file/${encodeURIComponent(file.stem)}/transcript`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (typeof data.text !== "string") throw new Error(data.detail || "Could not load transcript.");
+            return data.text;
+          }),
+        e.currentTarget,
+      );
     });
     const modelSelect = buildWhisperModelSelect("detail-whisper-model");
     document.getElementById("detail-whisper-model-slot").replaceWith(modelSelect);
@@ -770,19 +913,11 @@ async function openInputDetail(file) {
       return cachedPrompt;
     };
     detailMaxClipsEl.oninput = () => { cachedPrompt = null; };
-    document.getElementById("detail-copy-system-btn").addEventListener("click", async (e) => {
-      try {
-        copyToClipboard((await getPrompt()).system, e.target);
-      } catch (err) {
-        logLine(`[web] ${err.message}`, "err");
-      }
+    document.getElementById("detail-copy-system-btn").addEventListener("click", (e) => {
+      copyToClipboard(getPrompt().then((p) => p.system), e.currentTarget);
     });
-    document.getElementById("detail-copy-user-btn").addEventListener("click", async (e) => {
-      try {
-        copyToClipboard((await getPrompt()).user, e.target);
-      } catch (err) {
-        logLine(`[web] ${err.message}`, "err");
-      }
+    document.getElementById("detail-copy-user-btn").addEventListener("click", (e) => {
+      copyToClipboard(getPrompt().then((p) => p.user), e.currentTarget);
     });
     detailPasteJson.style.display = "";
     detailSavePlanBtn.style.display = "";
@@ -849,7 +984,7 @@ detailSavePlanBtn.addEventListener("click", async () => {
     const res = await fetch(`/api/input-file/${encodeURIComponent(currentDetailFile.stem)}/plan`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ raw }),
+      body: JSON.stringify({ raw, streamer: document.getElementById("streamer-name").value.trim() || null }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -890,12 +1025,19 @@ function setStatus(text, cls) {
   statusEl.className = `status ${cls}`;
 }
 
+// A new job starts: clear the raw log and restart the Activity card.
+function resetOutput() {
+  terminalEl.innerHTML = "";
+  Activity.reset();
+}
+
 function logLine(text, cls) {
   const line = document.createElement("div");
   if (cls) line.className = cls;
   line.textContent = text;
   terminalEl.appendChild(line);
   terminalEl.scrollTop = terminalEl.scrollHeight;
+  Activity.feed(text, cls);        // the readable version: a headline, a progress bar, steps
 }
 
 function buildClipCard(clip, { track = true } = {}) {
@@ -994,12 +1136,13 @@ async function makeSplitScreenVersion(card, splitBtn, fillerSelect, clip, track)
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.detail || "Could not make a split-screen version.");
-    card.querySelector(".split-screen-row").remove();
     const newCard = buildClipCard(data, { track });
-    card.insertAdjacentElement("afterend", newCard);
-    if (track) {
-      clipCount += 1;
-      clipCountEl.textContent = `(${clipCount})`;
+    if (data.deleted_original) {
+      card.replaceWith(newCard);            // the split version replaces the original - one version, not two
+    } else {
+      card.querySelector(".split-screen-row").remove();
+      card.insertAdjacentElement("afterend", newCard);
+      if (track) { clipCount += 1; clipCountEl.textContent = `(${clipCount})`; }
     }
     return true;
   } catch (e) {
@@ -1107,7 +1250,7 @@ async function loadAnalytics() {
     const {
       total_uploads, tracked_uploads, channel_count_available, live_data_available,
       records_with_stats, mechanic_insight, best_clip, worst_clip, duration_insight,
-      title_insight, format_insight, hook_mechanics, recent,
+      title_insight, format_insight, breakdowns, hook_mechanics, recent,
     } = await res.json();
 
     if (total_uploads === 0) {
@@ -1216,6 +1359,29 @@ async function loadAnalytics() {
       verdictHtml = `<div class="analytics-empty">Not enough clips with real view data yet to draw a conclusion (need at least ${Math.max(need, 2)} - YouTube can take a day or so to process new uploads).</div>`;
     }
 
+    // One table per thing you can change (streamer, layout, length, posting
+    // time...), best median views first. Median, not average, so one viral
+    // clip can't make a whole group look better than it usually is.
+    const breakdownHtml = (breakdowns || []).map((d) => {
+      const leader = d.rows.find((r) => !r.low_confidence);
+      const rows = d.rows.map((r) => `
+        <tr class="${leader === r ? "leader" : ""}${r.low_confidence ? " low-confidence" : ""}">
+          <td>${escapeHtml(r.label)}</td>
+          <td>${r.n}${r.low_confidence ? " *" : ""}</td>
+          <td>${r.median_views.toLocaleString()}</td>
+          <td>${r.avg_retention}%</td>
+          <td>${r.subs_gained}</td>
+        </tr>`).join("");
+      return `
+        <div>
+          <div class="analytics-total-label" style="margin-bottom:8px">${escapeHtml(d.title)}</div>
+          <table class="breakdown-table">
+            <thead><tr><th>Group</th><th>Clips</th><th>Median views</th><th>Watched</th><th>Subs gained</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }).join("");
+
     analyticsContentEl.innerHTML = `
       <div>
         <div class="analytics-total-label" style="margin-bottom:10px">Verdict</div>
@@ -1229,6 +1395,10 @@ async function loadAnalytics() {
         <div class="analytics-total-label" style="margin-bottom:8px">By hook mechanic${channel_count_available ? ` (${tracked_uploads} of ${total_uploads} tracked)` : ""}</div>
         ${hookRows}
       </div>
+      ${breakdownHtml ? `
+        <div class="analytics-total-label">What's working: streamers, formats, timing</div>
+        ${breakdownHtml}
+        <div class="analytics-note">* fewer than 5 clips - too few to trust, don't act on it yet. Views keep growing as a clip ages, so an older group will look better than a newer one just for being older: compare groups posted over a similar period. The best row (with at least 5 clips) is highlighted.</div>` : ""}
       <div>
         <div class="analytics-total-label" style="margin-bottom:8px">Recent uploads</div>
         <div class="recent-grid">${recentCards}</div>
@@ -1325,13 +1495,161 @@ document.getElementById("clear-all-btn").addEventListener("click", async () => {
   }
 });
 
+// --- Where to post: YouTube plus any connected platform. Choices are remembered
+// in the browser; platforms with missing keys are shown greyed out with what's missing.
+const postTargetsListEl = document.getElementById("post-targets-list");
+const postTargetsNoteEl = document.getElementById("post-targets-note");
+let socialPlatforms = [];
+
+function selectedPlatforms() {
+  const picked = [...postTargetsListEl.querySelectorAll("input:checked")].map((el) => el.value);
+  return picked.length ? picked : ["youtube"];
+}
+
+async function loadPostTargets() {
+  try {
+    const res = await fetch("/api/social/status");
+    if (!res.ok) return;
+    socialPlatforms = (await res.json()).platforms;
+  } catch (e) { return; }
+  let saved = ["youtube"];
+  try { saved = JSON.parse(localStorage.getItem("postTargets") || '["youtube"]'); } catch (e) {}
+  postTargetsListEl.innerHTML = socialPlatforms.map((p) => `
+    <label class="${p.configured ? "" : "unavailable"}" title="${p.configured ? "" : escapeHtml("Missing: " + p.missing.join(", "))}">
+      <input type="checkbox" value="${p.name}" ${p.configured ? "" : "disabled"} ${p.configured && saved.includes(p.name) ? "checked" : ""}>
+      ${escapeHtml(p.label)}
+    </label>`).join("");
+  postTargetsListEl.querySelectorAll("input").forEach((el) => el.addEventListener("change", () => {
+    try { localStorage.setItem("postTargets", JSON.stringify(selectedPlatforms())); } catch (e) {}
+  }));
+  const off = socialPlatforms.filter((p) => !p.configured && p.name !== "youtube");
+  postTargetsNoteEl.textContent = off.length
+    ? `Not connected: ${off.map((p) => p.label).join(", ")} - add their keys to .env (see .env.example), then reload. Hover a greyed name to see what's missing.`
+    : "";
+}
+
+// --- Post dialog: used by Series episodes. Pick the platforms right where you post.
+// NOTHING is ticked by default, the Post button stays off until you tick something, the captions are written for you
+// (and editable) per platform, and a platform that already posted is locked so a retry can't double-post.
+async function openPostDialog({ title, send, privacy = true, captionReq = null, cleanupLabel = "" }) {
+  let platforms = [];
+  try { platforms = (await (await fetch("/api/social/status")).json()).platforms; } catch (e) { alert("Could not reach the server."); return; }
+  const root = document.createElement("div");
+  root.className = "pd-bg";
+  root.innerHTML = `<div class="pd" role="dialog" aria-label="Post">
+    <button class="pd-x" aria-label="Close">✕</button>
+    <h3>Post “${escapeHtml(title)}”</h3>
+    <p class="pd-note">Choose where it goes. Nothing is ticked for you - posting everywhere at once on a new account can trigger spam limits.</p>
+    <div class="pd-list">${platforms.map((p) => `
+      <label class="pd-row ${p.configured ? "" : "off"}" title="${p.configured ? "" : escapeHtml("Not connected - missing: " + p.missing.join(", "))}">
+        <input type="checkbox" value="${p.name}" ${p.configured ? "" : "disabled"}>
+        <span class="pd-name">${escapeHtml(p.label)}</span>
+        <span class="pd-state" data-state="${p.name}">${p.configured ? "" : "not connected"}</span>
+      </label>`).join("")}</div>
+    <div class="pd-quick"><button type="button" data-q="all">All connected</button><button type="button" data-q="none">None</button></div>
+    ${captionReq ? `<div class="pd-capshead"><b>Captions</b> <span class="pd-note pd-capstatus">writing…</span>
+      <button type="button" class="pd-regen" hidden>↻ Rewrite</button></div><div class="pd-caps"></div>` : ""}
+    ${privacy ? `<label class="pd-privacy">Visibility
+      <select><option value="public">public</option><option value="unlisted">unlisted</option><option value="private">private</option></select></label>
+    <p class="pd-note">Visibility is applied by YouTube. Facebook and Instagram post publicly. TikTok keeps posts private until TikTok approves the app.</p>` : ""}
+    ${cleanupLabel ? `<label class="pd-clean"><input type="checkbox" class="pd-cleanup" checked> ${escapeHtml(cleanupLabel)}</label>` : ""}
+    <div class="pd-result"></div>
+    <div class="pd-actions"><button type="button" class="pd-cancel">Cancel</button><button type="button" class="pd-go" disabled>Post</button></div>
+  </div>`;
+  document.body.appendChild(root);
+  const boxes = () => [...root.querySelectorAll(".pd-list input")];
+  const go = root.querySelector(".pd-go"), result = root.querySelector(".pd-result");
+  const capsEl = root.querySelector(".pd-caps"), capStatus = root.querySelector(".pd-capstatus"), regen = root.querySelector(".pd-regen");
+  let caps = null;                                   // {instagram, facebook, tiktok, youtube_title, youtube}
+  const close = () => root.remove();
+  const label = (n) => (platforms.find((p) => p.name === n) || { label: n }).label;
+
+  const renderCaps = () => {
+    if (!capsEl) return;
+    const picked = boxes().filter((b) => b.checked && !b.disabled).map((b) => b.value);
+    if (!caps) { capsEl.innerHTML = ""; return; }
+    capsEl.innerHTML = picked.map((n) => n === "youtube"
+      ? `<div class="pd-cap"><div class="pd-capname">${label(n)} - title</div><input data-cap="youtube_title" maxlength="100" value="${escapeHtml(caps.youtube_title || "")}">
+         <div class="pd-capname">description</div><textarea data-cap="youtube" rows="4">${escapeHtml(caps.youtube || "")}</textarea></div>`
+      : `<div class="pd-cap"><div class="pd-capname">${label(n)} <span class="pd-count" data-count="${n}"></span></div>
+         <textarea data-cap="${n}" rows="${n === "instagram" ? 7 : 5}">${escapeHtml(caps[n] || "")}</textarea></div>`).join("");
+    capsEl.querySelectorAll("[data-count]").forEach((c) => {
+      const ta = capsEl.querySelector(`[data-cap="${c.dataset.count}"]`);
+      const upd = () => { const first = ta.value.split("\n")[0].length; c.textContent = `${ta.value.length} chars · first line ${first}${c.dataset.count === "instagram" && first > 125 ? " (cut off after 125)" : ""}`; };
+      ta.addEventListener("input", upd); upd();
+    });
+  };
+  capsEl && capsEl.addEventListener("input", (e) => { const k = e.target.dataset.cap; if (k && caps) caps[k] = e.target.value; });
+  const loadCaps = async () => {
+    if (!captionReq) return;
+    capStatus.textContent = "writing…"; regen.hidden = true; caps = null; renderCaps();
+    try {
+      const res = await fetch("/api/caption", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(captionReq) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || "failed");
+      caps = data.captions; capStatus.textContent = "edit freely - these are exactly what gets posted";
+    } catch (err) { capStatus.textContent = "couldn't write captions (" + err.message + ") - a plain caption will be used"; }
+    regen.hidden = false; renderCaps();
+  };
+  const refresh = () => {
+    const picked = boxes().filter((b) => b.checked && !b.disabled);
+    go.disabled = !picked.length;
+    go.textContent = picked.length ? `Post to ${picked.map((b) => label(b.value)).join(", ")}` : "Tick a platform to post";
+    renderCaps();
+  };
+  root.addEventListener("change", (e) => { if (e.target.closest(".pd-list")) refresh(); });
+  root.querySelector(".pd-x").onclick = root.querySelector(".pd-cancel").onclick = close;
+  root.addEventListener("mousedown", (e) => { if (e.target === root) close(); });
+  if (regen) regen.onclick = loadCaps;
+  root.querySelectorAll("[data-q]").forEach((b) => b.onclick = () => {
+    boxes().forEach((x) => { if (!x.disabled) x.checked = b.dataset.q === "all"; });
+    refresh();
+  });
+  go.onclick = async () => {
+    const picked = boxes().filter((b) => b.checked && !b.disabled).map((b) => b.value);
+    go.disabled = true; go.textContent = "Posting…"; result.textContent = "";
+    let data;
+    try { data = await send(picked, root.querySelector(".pd-privacy select")?.value || "public", caps, !!root.querySelector(".pd-cleanup")?.checked); }
+    catch (err) { result.textContent = err.message || "Could not post."; refresh(); return; }
+    let failed = 0;
+    for (const [name, r] of Object.entries(data.results || {})) {
+      const state = root.querySelector(`[data-state="${name}"]`), box = root.querySelector(`.pd-list input[value="${name}"]`);
+      if (r.ok) { state.innerHTML = r.url ? `<a href="${r.url}" target="_blank" rel="noopener">posted ✓</a>` : "posted ✓"; box.checked = false; box.disabled = true; }
+      else { failed++; state.textContent = "failed"; state.title = r.error || ""; result.textContent += `${name}: ${r.error}\n`; }
+    }
+    refresh();
+    if (!failed) {
+      result.style.color = "#9be26b";
+      result.textContent = (data.cleaned && data.cleaned.length) ? "Posted. Its files were deleted to save space (the script is kept)." : "Posted.";
+      go.disabled = false; go.textContent = "Done"; go.onclick = () => { close(); if (typeof loadSeries === "function") loadSeries(); };
+    }
+  };
+  refresh();
+  loadCaps();
+}
+
+document.getElementById("post-targets-test").addEventListener("click", async (e) => {
+  e.currentTarget.disabled = true;
+  const lines = [];
+  for (const p of socialPlatforms.filter((p) => p.configured && p.name !== "youtube")) {
+    try {
+      const r = await (await fetch(`/api/social/test/${p.name}`, { method: "POST" })).json();
+      lines.push(`${p.label}: ${r.ok ? r.message : "FAILED - " + r.error}`);
+    } catch (err) { lines.push(`${p.label}: could not reach the server`); }
+  }
+  postTargetsNoteEl.textContent = lines.length ? lines.join("  |  ") : "No other platform is connected yet.";
+  e.currentTarget.disabled = false;
+});
+loadPostTargets();
+
 async function startUpload(card, uploadBtn, privacySelect, clip) {
   uploadBtn.textContent = "Uploading...";
+  const platforms = selectedPlatforms();
   try {
     const res = await fetch("/api/upload-clip", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ meta_path: clip.meta_path, privacy: privacySelect.value }),
+      body: JSON.stringify({ meta_path: clip.meta_path, privacy: privacySelect.value, platforms }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -1342,7 +1660,24 @@ async function startUpload(card, uploadBtn, privacySelect, clip) {
       }
       throw new Error(err.detail || res.statusText);
     }
-    const result = await res.json();
+    let result = await res.json();
+    if (result.results) {
+      // Several platforms: report each one. If any failed, keep the clip so a
+      // retry redoes only the failures (the ones that worked are remembered).
+      const entries = Object.entries(result.results);
+      entries.forEach(([name, r]) => logLine(
+        r.ok ? `[upload] ${clip.title}: ${name} OK ${r.url || r.id || ""} ${r.note || ""}` : `[upload] ${clip.title}: ${name} FAILED - ${r.error}`,
+        r.ok ? "sys" : "err"));
+      const failed = entries.filter(([, r]) => !r.ok);
+      if (failed.length) {
+        uploadBtn.textContent = `Retry (${failed.map(([n]) => n).join(", ")} failed)`;
+        uploadBtn.classList.add("failed");
+        uploadBtn.disabled = false;
+        return;
+      }
+      const first = entries.map(([, r]) => r).find((r) => r.url);
+      result = { url: first ? first.url : "https://studio.youtube.com" };
+    }
     uploadBtn.textContent = "Uploaded";
     uploadBtn.classList.add("uploaded");
     uploadBtn.onclick = () => window.open(result.url, "_blank");
@@ -1405,6 +1740,12 @@ function handleRunMessage(msg) {
     }
     setStatus("done", "done");
     setRunningUI(false);
+    Activity.finish(false);
+    // A Series job (write/pictures/render) finished: go back to the Series tab to see the result.
+    if (window.seriesReturnPending) {
+      window.seriesReturnPending = false;
+      location.hash = "#series";
+    }
     refreshTokenBudget();
     loadAnalytics();
     // A transcribe/cut_plan action (or a full run) can change a file's
@@ -1424,6 +1765,7 @@ function handleRunMessage(msg) {
     activeDownloadTarget = null;
   } else if (msg.type === "stopped") {
     logLine("[web] Run stopped.", "sys");
+    Activity.finish(true);
     setStatus("stopped", "idle");
     setRunningUI(false);
     refreshTokenBudget();
@@ -1434,6 +1776,7 @@ function handleRunMessage(msg) {
     activeDownloadTarget = null;
   } else if (msg.type === "error") {
     logLine(`[web] Error: ${msg.message}`, "err");
+    Activity.finish(true);
     setStatus("error", "error");
     setRunningUI(false);
     refreshTokenBudget();
@@ -1455,7 +1798,7 @@ function openRunSocket(config, watch) {
     handleRunMessage(msg);
   });
   ws.addEventListener("close", () => {
-    if (statusEl.classList.contains("running")) setStatus("idle", "idle");
+    if (statusEl.classList.contains("running")) { setStatus("idle", "idle"); Activity.finish(true); }
     setRunningUI(false);
   });
   ws.addEventListener("error", () => {
@@ -1492,6 +1835,7 @@ runBtn.addEventListener("click", async () => {
   }
 
   const config = {
+    ...streamSettings(),
     video_path: videoPath,
     max_clips: parseInt(document.getElementById("max-clips").value, 10),
     whisper_model: document.getElementById("whisper-model").value,
@@ -1501,7 +1845,7 @@ runBtn.addEventListener("click", async () => {
     add_voiceover: document.getElementById("add-voiceover").checked,
   };
 
-  terminalEl.innerHTML = "";
+  resetOutput();
   clipsEl.innerHTML = "";
   clipCount = 0;
   clipCountEl.textContent = "";
@@ -1523,7 +1867,7 @@ async function resumeActiveRunIfAny() {
     const { active, log } = await res.json();
     if (!active) return;
 
-    terminalEl.innerHTML = "";
+    resetOutput();
     clipsEl.innerHTML = "";
     clipCount = 0;
     clipCountEl.textContent = "";

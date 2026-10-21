@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>T-Minus</title>
 <link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/theme.css">
 </head>
 <body>
 <header>
@@ -27,6 +28,7 @@
   <a href="#input" class="page-tab" data-page="input">Input</a>
   <a href="#filler" class="page-tab" data-page="filler">Filler</a>
   <a href="#clips" class="page-tab" data-page="clips">Clips <span id="clip-count"></span></a>
+  <a href="#series" class="page-tab" data-page="series">Series</a>
   <a href="#analytics" class="page-tab" data-page="analytics">Analytics</a>
 </nav>
 
@@ -45,6 +47,21 @@
         <input id="file-input" type="file" accept="video/*" style="display:none" />
         <div id="selected-input-label" class="field-hint" style="display:none;margin-top:6px"></div>
       </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="run-mode">Video type</label>
+          <select id="run-mode">
+            <option value="talk" selected>Talking / podcast / interview</option>
+            <option value="stream">Livestream (finds loud moments)</option>
+          </select>
+        </div>
+        <div class="field" id="streamer-field" style="display:none">
+          <label for="streamer-name">Streamer name</label>
+          <input id="streamer-name" type="text" placeholder="IShowSpeed" />
+        </div>
+      </div>
+      <div class="field-hint" id="stream-mode-hint" style="display:none">Livestream mode scans the audio for the loudest, most animated moments (screaming, laughing, rage), transcribes only those, and has the model pick clips from them - so a 5-hour VOD doesn't have to be transcribed end to end. Twitch and YouTube VOD links both work.</div>
 
       <div class="field-row">
         <div class="field">
@@ -130,15 +147,27 @@
     </section>
 
     <section class="panel" id="terminal-panel">
-      <h2>Output</h2>
-      <pre id="terminal"></pre>
+      <h2>Activity <span id="act-elapsed" class="act-elapsed"></span></h2>
+      <div id="act-idle" class="act-idle">Nothing is running. Start a run, a download or an episode and its progress shows up here.</div>
+      <div id="act-card" hidden>
+        <div id="act-title" class="act-title">Starting…</div>
+        <div id="act-sub" class="act-sub"></div>
+        <div id="act-bar" class="act-bar"><div id="act-fill"></div></div>
+        <ol id="act-steps" class="act-steps"></ol>
+        <div id="act-alerts"></div>
+      </div>
+      <details id="act-details" class="act-details"><summary>Technical log</summary><pre id="terminal"></pre></details>
     </section>
   </div>
 
   <div class="page" id="page-discover">
     <section class="panel" id="discover-panel">
       <h2>Discover <span id="discover-refresh-wrap"><button id="discover-refresh-btn" class="pill-btn">refresh</button></span></h2>
-      <div class="field-hint">Recent uploads from verified, rights-safe official channels, ranked by view velocity (views per day) and a model's read on Shorts potential.</div>
+      <div class="field-hint">Recent long streams (40+ minutes) from IShowSpeed and Kai Cenat's official channels. <b>Clip it</b> loads the stream into Run in Livestream mode with the streamer already filled in. These aren't rights-cleared: check each streamer's clipping rules, or use an official clipping campaign, before posting.</div>
+      <div class="discover-filters">
+        <div id="discover-streamers" class="discover-pills"></div>
+        <select id="discover-sort"><option value="new">Newest</option><option value="hot">Most views per day</option><option value="long">Longest</option></select>
+      </div>
       <div id="discover-content" class="discover-grid"></div>
     </section>
   </div>
@@ -249,7 +278,21 @@
           <button id="upload-all-btn" class="upload-btn upload-all-btn">Upload all</button>
         </div>
       </h2>
+      <div id="post-targets" class="post-targets">
+        <span class="post-targets-label">Post to</span>
+        <span id="post-targets-list"></span>
+        <button id="post-targets-test" class="pill-btn" title="Checks each connected platform's login without posting anything">Test connections</button>
+        <div id="post-targets-note" class="field-hint"></div>
+      </div>
       <div id="clips" class="clips-grid"></div>
+    </section>
+  </div>
+
+  <div class="page" id="page-series">
+    <section class="panel" id="series-panel">
+      <h2>Series</h2>
+      <div class="field-hint">AI story videos: a cast, a look and a planned arc, one 60-second episode at a time. Pictures are made on your Mac (about 40 seconds each), voices and music are free. Nothing is posted until you press Post.</div>
+      <div id="series-content" class="series-content"></div>
     </section>
   </div>
 
@@ -299,6 +342,8 @@
   </div>
 </div>
 
+<script src="/static/activity.js"></script>
 <script src="/static/app.js"></script>
+<script src="/static/series.js"></script>
 </body>
 </html>

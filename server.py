@@ -18,25 +18,31 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 import traceback
 from base64 import b64decode
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 load_dotenv()
 
-from pipeline import run_pipeline
+import series as series_mod
+import shots as shots_mod
+from performance import compute_breakdowns
+from social_post import MODULES as SOCIAL_MODULES, platform_status, post_clip
+from pipeline import annotate_clips, run_pipeline
 from select_clips import (
     DEFAULT_MAX_DURATION,
     DEFAULT_MIN_DURATION,
     MODEL_FALLBACK_CHAIN,
     build_performance_hint,
+    build_stream_system_prompt,
     build_system_prompt,
     build_user_prompt,
     load_transcript,
@@ -49,7 +55,7 @@ from cut_clips import make_split_screen_variant, process_all_clips
 from upload_youtube import upload_from_meta_file, YouTubeUploadLimitExceeded
 from token_budget import all_usage_today
 from clip_log import read_log
-from discover import discover, discover_filler_candidates
+from discover import STREAMER_CHANNELS, discover, discover_filler_candidates, discover_streams
 from youtube_analytics import fetch_video_stats, get_channel_stats
 from queue_daily import SUPPORTED_EXTENSIONS, run_daily_queue
 from download import download_video
@@ -126,10 +132,26 @@ class BasicAuthMiddleware:
 
 app = FastAPI()
 app.add_middleware(BasicAuthMiddleware, username=WEB_UI_USERNAME, password=WEB_UI_PASSWORD)
+series_mod.STORIES_DIR.mkdir(exist_ok=True)
+app.mount("/media/stories", StaticFiles(directory=series_mod.STORIES_DIR), name="stories-media")
 app.mount("/media/output", StaticFiles(directory=OUTPUT_DIR), name="output-media")
 app.mount("/media/input-thumbnails", StaticFiles(directory=INPUT_THUMB_DIR), name="input-thumbnails")
 app.mount("/media/filler-thumbnails", StaticFiles(directory=FILLER_THUMB_DIR), name="filler-thumbnails")
-app.mount("/static", StaticFiles(directory=BASE_DIR / "web_static"), name="static")
+
+
+class RevalidatingStaticFiles(StaticFiles):
+    """Dashboard files change as the app is edited, and a browser's default
+    heuristic cache can keep serving an old app.js after a normal refresh -
+    buttons then run stale code with no visible error. no-cache makes the
+    browser check on every load (a cheap 304 when nothing changed)."""
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
+app.mount("/static", RevalidatingStaticFiles(directory=BASE_DIR / "web_static"), name="static")
 
 run_lock = threading.Lock()
 
@@ -187,7 +209,21 @@ class LineStreamer:
 
 @app.get("/")
 async def index():
-    return FileResponse(BASE_DIR / "web_static" / "index.html")
+    """The page itself, with every /static/ file tagged by its last-modified time
+    (style.css?v=...). The tag changes whenever a file changes, so a browser can never
+    keep showing an old design or old buttons from its saved copy."""
+    static = BASE_DIR / "web_static"
+    html = (static / "index.html").read_text(encoding="utf-8")
+
+    def tag(match: re.Match) -> str:
+        name = match.group(2)
+        try:
+            return f'{match.group(1)}/static/{name}?v={int((static / name).stat().st_mtime)}"'
+        except OSError:
+            return match.group(0)
+
+    html = re.sub(r'((?:href|src)=")/static/([\w.\-]+)"', tag, html)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
 
 
 def _ensure_thumbnail(video_path: Path, thumb_dir: Path = INPUT_THUMB_DIR) -> str:
@@ -285,6 +321,9 @@ def _delete_input_file(path: Path) -> None:
     plan_path = CLIPS_DIR / f"{stem}_plan.json"
     if plan_path.exists():
         plan_path.unlink()
+    for sidecar in (path.with_suffix(".source.json"), TRANSCRIPTS_DIR / f"{stem}.windows.json"):
+        if sidecar.exists():
+            sidecar.unlink()
 
 
 @app.delete("/api/input-files/{filename}")
@@ -415,10 +454,20 @@ async def get_input_prompt(
     if not transcript_path.exists():
         raise HTTPException(status_code=400, detail="Transcribe this file first - the prompt needs the transcript.")
     segments = load_transcript(str(transcript_path))
-    return {
-        "system": build_system_prompt(min_duration, max_duration, build_performance_hint()),
-        "user": build_user_prompt(segments, max_clips),
-    }
+    hint = build_performance_hint()
+    if (TRANSCRIPTS_DIR / f"{stem}.windows.json").exists():
+        # A stream-mode transcript: only the loud windows, so it needs the
+        # prompt that knows about that, not the talking-head one.
+        source = {}
+        try:
+            with open((INPUT_DIR / stem).with_suffix(".source.json"), "r", encoding="utf-8") as f:
+                source = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            pass
+        system = build_stream_system_prompt(min_duration, max_duration, hint, source.get("uploader"))
+    else:
+        system = build_system_prompt(min_duration, max_duration, hint)
+    return {"system": system, "user": build_user_prompt(segments, max_clips)}
 
 
 @app.post("/api/input-file/{stem}/plan")
@@ -449,18 +498,33 @@ async def post_input_plan(stem: str, payload: dict):
                    "too short, or over the 180s Shorts limit).",
         )
 
+    # validate_clips only keeps the fields the model returns, so without this a
+    # pasted plan would lose its streamer/mode/loudness tags and show up as
+    # "(untagged)" in Analytics.
+    try:
+        with open((INPUT_DIR / stem).with_suffix(".source.json"), "r", encoding="utf-8") as f:
+            source_info = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        source_info = {}
+    mode = "stream" if (TRANSCRIPTS_DIR / f"{stem}.windows.json").exists() else "talk"
+    streamer = (payload.get("streamer") or "").strip() or source_info.get("uploader")
+    annotate_clips(validated, stem, streamer, mode, source_info)
+
     plan_path = save_plan(stem, validated, out_dir=str(CLIPS_DIR))
     return {"clips": validated, "plan_path": plan_path}
 
 
 @app.get("/api/discover")
-async def discover_videos():
+async def discover_videos(streamer: str = "all", refresh: bool = False):
+    """Recent long streams (40+ minutes) from IShowSpeed and Kai Cenat's official channels."""
     loop = asyncio.get_event_loop()
     try:
-        videos = await loop.run_in_executor(None, discover)
+        videos = await loop.run_in_executor(None, lambda: discover_streams(streamer, force=refresh))
     except RuntimeError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    return {"videos": videos}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not reach YouTube: {e}")
+    return {"videos": videos, "streamers": list(STREAMER_CHANNELS)}
 
 
 @app.get("/api/token-budget")
@@ -626,9 +690,190 @@ async def analytics():
         "duration_insight": duration_insight,
         "title_insight": title_insight,
         "format_insight": format_insight,
+        "breakdowns": compute_breakdowns(records_with_stats),
         "hook_mechanics": hook_mechanics,
         "recent": recent,
     }
+
+
+@app.post("/api/copy-to-clipboard")
+async def copy_to_clipboard(payload: dict, request: Request):
+    """Last-resort for the dashboard's Copy buttons when the browser refuses
+    clipboard access (Safari does this often). The server runs on your own
+    machine, so it can put the text on the system clipboard itself - but only
+    for requests coming from that same machine, never from the network."""
+    if request.client is None or request.client.host not in ("127.0.0.1", "::1"):
+        raise HTTPException(status_code=403, detail="Only available when the dashboard is opened on this machine.")
+    if not shutil.which("pbcopy"):
+        raise HTTPException(status_code=501, detail="Server-side copy is only supported on macOS.")
+    text = payload.get("text")
+    if not isinstance(text, str):
+        raise HTTPException(status_code=400, detail="text is required")
+    subprocess.run(["pbcopy"], input=text.encode("utf-8"), check=True)
+    return {"copied": len(text)}
+
+
+# ---------------- Series (AI story videos) ----------------
+
+@app.get("/api/series")
+async def get_series():
+    loop = asyncio.get_event_loop()
+    return {"series": await loop.run_in_executor(None, series_mod.list_series), "pitches": series_mod.PITCHES}
+
+
+@app.get("/api/series/{slug}/episode/{number}/prompt")
+async def series_episode_prompt(slug: str, number: int):
+    try:
+        return series_mod.episode_prompt(slug, number)
+    except (OSError, IndexError, KeyError):
+        raise HTTPException(status_code=404, detail="That series or episode isn't in the plan.")
+
+
+@app.post("/api/series/{slug}/episode/{number}/script")
+async def series_save_script(slug: str, number: int, payload: dict):
+    """A script written by someone else (an outside model, or you) - checked the same way as one the app writes."""
+    raw = (payload.get("raw") or "").strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Paste the episode JSON first.")
+    raw = re.sub(r"^```(?:json)?|```$", "", raw).strip()
+    try:
+        ep = json.loads(raw)
+        series_mod.save_episode(slug, number, ep)
+    except (json.JSONDecodeError, RuntimeError, KeyError, TypeError, OSError) as e:
+        raise HTTPException(status_code=400, detail=f"Could not use that script: {e}")
+    return series_mod.episode_status(series_mod.episode_dir(slug, number))
+
+
+@app.post("/api/series/post")
+async def series_post(payload: dict):
+    """Posts a finished episode video to the chosen platforms. Only ever runs from an explicit button press."""
+    slug, number = payload.get("slug"), int(payload.get("number", 1))
+    platforms = payload.get("platforms") or []
+    ep_dir = series_mod.episode_dir(slug, number)
+    status = series_mod.episode_status(ep_dir)
+    if not status.get("video"):
+        raise HTTPException(status_code=400, detail="Render this episode's video first.")
+    if not platforms:
+        raise HTTPException(status_code=400, detail="Pick at least one platform.")
+    story = json.loads((ep_dir / "story.json").read_text(encoding="utf-8"))
+    title = story["title"][:100]
+    description = f"{story.get('summary', '')}\n"
+    credit = story.get("credit")
+    if credit:                                      # SCP adaptations: credit the source in the description too (CC BY-SA 3.0)
+        credit_txt = (ep_dir / "credit.txt")
+        description += "\n" + (credit_txt.read_text(encoding="utf-8") if credit_txt.exists() else credit["line"])
+    cat = _story_caption_info(slug, story)["category"]
+    loop = asyncio.get_event_loop()
+    from social_post import post_video
+    out = await loop.run_in_executor(None, lambda: post_video(
+        str(series_mod.STORIES_DIR / status["video"]), title, description, platforms,
+        payload.get("privacy", "public"), aigc=True, captions=payload.get("captions") or None, category=cat,
+        youtube_license="creativeCommon" if credit else "youtube"))
+    out["cleaned"] = []
+    if payload.get("cleanup") and out.get("all_ok"):         # only when EVERY ticked platform took it
+        out["cleaned"] = await loop.run_in_executor(None, lambda: series_mod.archive_posted(ep_dir, out["results"]))
+    return out
+
+
+def _story_caption_info(slug: str, story: dict) -> dict:
+    import captions
+    sj = series_mod.STORIES_DIR / slug / "series.json"
+    genre = json.loads(sj.read_text(encoding="utf-8")).get("genre", "") if sj.exists() else ""
+    first = story["scenes"][0]["lines"][0]["text"] if story.get("scenes") and story["scenes"][0].get("lines") else ""
+    return {"title": story["title"], "summary": story.get("summary", ""), "hook": first,
+            "category": captions.category_for(genre, story.get("format", ""), slug, story["title"])}
+
+
+@app.post("/api/caption")
+async def write_caption(payload: dict):
+    """Writes the per-platform captions + tags for the post dialog (editable there before anything is posted)."""
+    import captions
+    ep_dir = series_mod.episode_dir(payload.get("slug"), int(payload.get("number", 1)))
+    if not (ep_dir / "story.json").exists():
+        raise HTTPException(status_code=404, detail="Episode not found")
+    info = _story_caption_info(payload["slug"], json.loads((ep_dir / "story.json").read_text(encoding="utf-8")))
+    loop = asyncio.get_event_loop()
+    caps = await loop.run_in_executor(None, lambda: captions.write_captions(info, remember=False))
+    story = json.loads((ep_dir / "story.json").read_text(encoding="utf-8"))
+    if story.get("credit"):                         # the licence requires it on every copy: it is added here so you can see it, and edit around it
+        line = story["credit"]["line"]
+        for k in ("instagram", "facebook", "tiktok", "youtube"):
+            caps[k] = (caps.get(k, "") + "\n\n" + line).strip()
+    return {"captions": caps, "category": info["category"], "credit": story.get("credit")}
+
+
+@app.post("/api/series/{slug}/episodes")
+async def series_add_episode(slug: str, payload: dict):
+    """Adds an episode to an existing series: SCP numbers for a Foundation Tapes series, an idea (or nothing) for a story series."""
+    if not (series_mod.STORIES_DIR / slug / "series.json").exists():
+        raise HTTPException(status_code=404, detail="Series not found")
+    loop = asyncio.get_event_loop()
+    try:
+        added = await loop.run_in_executor(None, lambda: series_mod.add_episode(slug, str(payload.get("hint", ""))))
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"added": [e["title"] for e in added]}
+
+
+@app.post("/api/series/{slug}/episode/{number}/clear")
+async def series_clear_episode(slug: str, number: int):
+    ep_dir = series_mod.episode_dir(slug, number)
+    if not (ep_dir / "story.json").exists():
+        raise HTTPException(status_code=404, detail="Episode not found")
+    try:
+        return {"deleted": series_mod.clear_episode_files(ep_dir)}
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/api/series/{slug}")
+async def series_delete(slug: str):
+    try:
+        series_mod.delete_series(slug)
+    except RuntimeError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return {"ok": True}
+
+
+@app.get("/api/series/{slug}/episode/{number}/shots")
+async def shots_get(slug: str, number: int):
+    ep_dir = series_mod.episode_dir(slug, number)
+    if not (ep_dir / "story.json").exists():
+        raise HTTPException(status_code=404, detail="Episode not found")
+    return {"shots": shots_mod.shot_list(str(ep_dir))}
+
+
+@app.post("/api/series/{slug}/episode/{number}/shots/plan")
+async def shots_plan(slug: str, number: int):
+    ep_dir = series_mod.episode_dir(slug, number)
+    if not (ep_dir / "story.json").exists():
+        raise HTTPException(status_code=404, detail="Episode not found")
+    loop = asyncio.get_event_loop()
+    try:
+        return {"shots": await loop.run_in_executor(None, lambda: shots_mod.plan_shots(str(ep_dir)))}
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/series/{slug}/episode/{number}/shots/{scene}/prompt")
+async def shots_prompt(slug: str, number: int, scene: int, payload: dict):
+    ep_dir = series_mod.episode_dir(slug, number)
+    if not (ep_dir / "story.json").exists():
+        raise HTTPException(status_code=404, detail="Episode not found")
+    shots_mod.set_prompt(str(ep_dir), scene, str(payload.get("prompt", "")))
+    return {"ok": True}
+
+
+@app.post("/api/series/{slug}/episode/{number}/motion/{scene}")
+async def motion_import(slug: str, number: int, scene: int, file: UploadFile = File(...)):
+    ep_dir = series_mod.episode_dir(slug, number)
+    if not (ep_dir / "story.json").exists():
+        raise HTTPException(status_code=404, detail="Episode not found")
+    data = await file.read()
+    if len(data) < 1000 or not (file.filename or "").lower().endswith((".mp4", ".mov", ".webm", ".mkv")):
+        raise HTTPException(status_code=400, detail="Upload the video file you downloaded (.mp4).")
+    shots_mod.import_clip(str(ep_dir), scene, data)
+    return series_mod.episode_status(ep_dir)
 
 
 @app.post("/api/stop-run")
@@ -716,7 +961,20 @@ async def create_split_screen_variant(payload: dict):
 
     video_path = Path(new_meta["video_path"])
     new_meta_path = Path(meta_path).parent / f"{Path(meta_path).stem}_split.json"
+    # The split-screen version REPLACES the original, so you never end up posting two versions of the same moment.
+    # Only after the new one exists on disk, and never for a clip that has already been posted somewhere.
+    deleted_original = False
+    try:
+        old = json.loads(Path(meta_path).read_text(encoding="utf-8"))
+        posted_somewhere = bool(old.get("posted") or old.get("youtube_video_id"))
+        if video_path.exists() and new_meta_path.exists() and not posted_somewhere and Path(meta_path) != new_meta_path:
+            from upload_youtube import delete_uploaded_clip
+            delete_uploaded_clip(meta_path, old["video_path"])
+            deleted_original = True
+    except (OSError, json.JSONDecodeError, KeyError):
+        pass
     return {
+        "deleted_original": deleted_original,
         **new_meta,
         "meta_path": str(new_meta_path),
         "url": f"/media/output/{video_path.name}",
@@ -763,14 +1021,41 @@ async def upload_video(file: UploadFile = File(...)):
     return {"path": str(dest)}
 
 
+@app.get("/api/social/status")
+async def social_status():
+    """Which platforms have everything they need (keys in .env, a completed login)."""
+    return {"platforms": platform_status()}
+
+
+@app.post("/api/social/test/{platform}")
+async def social_test(platform: str):
+    """A cheap authenticated call (who am I connected as) - posts nothing."""
+    module = SOCIAL_MODULES.get(platform)
+    if module is None:
+        raise HTTPException(status_code=404, detail="Unknown platform")
+    gone = module.missing()
+    if gone:
+        return {"ok": False, "error": f"Missing: {', '.join(gone)}"}
+    loop = asyncio.get_event_loop()
+    try:
+        return {"ok": True, "message": await loop.run_in_executor(None, module.check_connection)}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 @app.post("/api/upload-clip")
 async def upload_clip(payload: dict):
     meta_path = payload.get("meta_path")
     privacy = payload.get("privacy", "public")
+    platforms = payload.get("platforms")
     if not meta_path:
         raise HTTPException(status_code=400, detail="meta_path is required")
 
     loop = asyncio.get_event_loop()
+    if platforms and platforms != ["youtube"]:
+        # Several platforms: per-platform results, never a hard failure - the
+        # ones that worked stay worked, and a retry only redoes the rest.
+        return await loop.run_in_executor(None, post_clip, meta_path, platforms, privacy)
     try:
         result = await loop.run_in_executor(None, upload_from_meta_file, meta_path, privacy)
     except YouTubeUploadLimitExceeded as e:
@@ -864,6 +1149,32 @@ async def ws_run(ws: WebSocket):
                     run_state.push,
                     {"type": "done", "count": 0, "video_path": video_path},
                 )
+            elif action == "series_auto":
+                series_mod.make_episode(config["slug"], int(config["number"]) if config.get("number") else None, log=print, cancel_event=cancel_event)
+                loop.call_soon_threadsafe(run_state.push, {"type": "done", "count": 0})
+            elif action in ("series_create", "series_episode", "story_images", "story_preview", "story_render"):
+                # AI story videos: write the series/episode, make pictures (slow, ~4-5 min each), preview, render.
+                from story_images import generate_images
+                from story_video import build_story, make_placeholders
+                if action == "series_create":
+                    if config.get("kind") == "scp":
+                        new_slug = series_mod.create_scp_series(config.get("title", ""), config.get("scp_numbers", ""))
+                    else:
+                        new_slug = series_mod.create_series(config["title"], config["premise"], config.get("genre", ""), int(config.get("episodes", 6)))
+                    if config.get("then_episode"):          # "make episode 1 right away"
+                        series_mod.make_episode(new_slug, 1, log=print, cancel_event=cancel_event)
+                else:
+                    ep_dir = series_mod.episode_dir(config["slug"], int(config.get("number", 1)))
+                    if action == "series_episode":
+                        series_mod.write_episode(config["slug"], int(config["number"]))
+                    elif action == "story_images":
+                        generate_images(str(ep_dir), force=bool(config.get("force")), only=config.get("only"), cancel_event=cancel_event)
+                    elif action == "story_preview":
+                        build_story(str(ep_dir), images_dir=str(make_placeholders(str(ep_dir))), out_name="preview.mp4",
+                                    motion="pan", cancel_event=cancel_event)
+                    else:
+                        series_mod.render_episode(config["slug"], int(config.get("number", 1)), motion=config.get("motion"), cancel_event=cancel_event)
+                loop.call_soon_threadsafe(run_state.push, {"type": "done", "count": 0})
             elif action == "cut_plan":
                 # Cuts clips straight from an existing plan.json (whether it
                 # came from our own selection or a pasted external-model
@@ -888,11 +1199,14 @@ async def ws_run(ws: WebSocket):
                     whisper_model=config.get("whisper_model", "small"),
                     do_upload=bool(config.get("upload", False)),
                     privacy=config.get("privacy", "public"),
+                    platforms=config.get("platforms"),
                     spacing_minutes=float(config.get("spacing_minutes", 20.0)),
                     min_duration=float(config.get("min_duration", DEFAULT_MIN_DURATION)),
                     max_duration=float(config.get("max_duration", DEFAULT_MAX_DURATION)),
                     burn_captions=bool(config.get("burn_captions", True)),
                     add_voiceover=bool(config.get("add_voiceover", False)),
+                    mode=config.get("mode", "talk"),
+                    streamer=config.get("streamer"),
                     on_clip=on_clip,
                     cancel_event=cancel_event,
                 )
@@ -907,6 +1221,8 @@ async def ws_run(ws: WebSocket):
                     add_voiceover=bool(config.get("add_voiceover", False)),
                     min_duration=float(config.get("min_duration", DEFAULT_MIN_DURATION)),
                     max_duration=float(config.get("max_duration", DEFAULT_MAX_DURATION)),
+                    mode=config.get("mode", "talk"),
+                    streamer=config.get("streamer"),
                     on_clip=on_clip,
                     cancel_event=cancel_event,
                 )
