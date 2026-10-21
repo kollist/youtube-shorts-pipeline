@@ -47,7 +47,10 @@ Use ONLY facts in the article text - never invent abilities, history or incident
 should not exist", never "Euclid class" or "D-class" unless you explain it in the same breath).
 The Foundation runs MANY sites (Site-19, Site-17, Site-64, Site-81...), task forces, researchers and other anomalies - do NOT default to Site-19. Use the site, facility, team,
 people and related anomalies that THIS article actually names, and draw on all of its material (every procedure, incident, addendum and interview), not just the opening paragraph. NEVER say "Rule one / Rule two".
-Story order (8 scenes, 115-140 words total, plain spoken English, short sentences):
+IT MUST READ AS ONE CONTINUOUS SCRIPT, spoken in a single breath of storytelling - NOT eight separate lines. The 8 scenes below are only where the PICTURE changes: the text of each scene
+continues the sentence/thought of the one before it, joined by natural connectors ("But", "And here is the problem", "So", "Which means"), with sentences of varied length. No fragments, no list-like beats,
+no scene that restarts, repeats or summarises the previous one, and no one-line "slogans". Read it aloud in your head: it should sound like one person telling you a story.
+Story order (8 scenes, 130-150 words total, plain spoken English):
 1. HOOK + WHAT IT IS: one chilling, concrete sentence that makes people need to know more, then what the thing is, in plain words ("This is a statue. It is alive.").
 2. WHAT IT DOES: its one terrifying ability or behaviour, said simply, with the consequence ("The moment nobody is looking at it, it moves. Fast. It kills in a second.").
 3. WHY IT IS DANGEROUS: one specific fact from the article that makes it real (where it was found, what it did, what it leaves behind).

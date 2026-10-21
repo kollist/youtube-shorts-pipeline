@@ -179,3 +179,34 @@ def jump_scream(dur: float = 1.2) -> np.ndarray:
     x += np.sin(2 * np.pi * (38 - 8 * t / dur) * t) * np.exp(-t * 2.2) * 1.3
     env = np.minimum(1, t * 1500) * np.where(t < dur * 0.62, 1.0, np.exp(-(t - dur * 0.62) * 9))
     return reverb(x * env, 0.3)
+
+
+# ---- real scream recordings (CC0, see assets/sfx/CREDITS.md): far more convincing than a synthesized one ------------------
+
+_SFX_DIR = __import__("pathlib").Path(__file__).parent / "assets" / "sfx"
+
+
+def _load_wav(path) -> np.ndarray:
+    import subprocess
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(path), "-f", "f32le", "-ac", "1", "-ar", str(SR), "-"], capture_output=True).stdout
+    return np.frombuffer(raw, dtype=np.float32).copy()
+
+
+def real_scream(seed: int = 0) -> np.ndarray | None:
+    """The jump scare from real recordings: a female scream (one of four) with the long horror scream layered just behind it, a sub-bass hit
+    under both, a touch of room. Returns None if the files are missing (callers fall back to jump_scream())."""
+    clips = sorted(_SFX_DIR.glob("scream_*.wav"))
+    if not clips:
+        return None
+    female = [c for c in clips if c.stem[-1] in "1234"]
+    horror = [c for c in clips if c.stem[-1] == "5"]
+    a = _load_wav(female[seed % len(female)] if female else clips[0])
+    out = np.zeros(len(a) + int(0.4 * SR))
+    out[:len(a)] += a / max(1e-9, np.abs(a).max())
+    if horror:
+        b = _load_wav(horror[0]); n = int(0.09 * SR)
+        out[n:n + len(b)] += (b / max(1e-9, np.abs(b).max()) * 0.7)[: len(out) - n]
+    t = _t(1.4)
+    sub = np.sin(2 * np.pi * (44 - 10 * t / 1.4) * t) * np.exp(-t * 2.4) * 1.4
+    out[:len(sub)] += sub[: len(out)]
+    return reverb(np.tanh(out * 1.3), 0.22)

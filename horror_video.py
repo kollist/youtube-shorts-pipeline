@@ -34,7 +34,7 @@ CUES = [  # (regex on the spoken word, cue name) - at most one per scene (two in
     (r"^(keys?|key,)\b", "key_jingle"), (r"^(knock\w*)\b", "knock"), (r"^(door|doors|creaks?)\b", "door_creak"), (r"^(breath\w*|behind|whisper\w*)\b", "breath"),
     (r"^(snaps?|snapped|crack\w*)\b", "snap"), (r"^(scream\w*|shriek\w*)\b", "scream_stab"), (r"^(scrap\w*|scratch\w*)\b", "door_creak"),
 ]
-SILENCE_BEFORE_FINAL = 1.6
+SILENCE_BEFORE_FINAL = 0.9
 CARD = 2.4
 
 
@@ -81,22 +81,36 @@ def build_horror_video(story_dir: str, log=print) -> Path:
         scenes_in[-1]["lines"] = [{"who": "Narrator", "text": " ".join(sentences[:-1])}]
     scenes_in[-1]["final"] = True
 
-    # ---- 2. voices and timeline
+    # ---- 2. voices and timeline: ONE continuous narration. The scenes only mark where the picture changes - the pictures follow the words, there are no gaps
+    #         between scenes. The only pause is a short beat before the whispered final scare.
     log("[horror] Voices...")
-    t, scenes = 0.0, []
-    for i, sc in enumerate(scenes_in, 1):
-        final = bool(sc.get("final"))
-        mp3 = work / f"v{i}.mp3"
-        words = asyncio.run(_voice(sc["lines"][0]["text"], whisper_voice if final else narr, mp3, final))
-        dur = probe_duration(mp3)
-        lead = 0.55 if final else (0.04 if i == 1 else 0.14)
-        extra_tail = SILENCE_BEFORE_FINAL if i == len(scenes_in) - 1 else 0.0            # the silence belongs to the scene before the finale
-        length = max(2.3, lead + dur + 0.16) + extra_tail
-        scenes.append({"i": i, "kind": sc.get("kind", "rule"), "rule_no": sc.get("rule_no", 0), "final": final, "start": t, "len": length, "lead": lead, "dur": dur,
-                       "mp3": mp3, "words": words, "image": sdir / sc["image"], "tail": extra_tail, "label": sc.get("label", ""),
-                       "badge": (sc["label"] if sc.get("label") else f"RULE {sc['rule_no']}" if sc.get("kind") in ("rule", "twist") and not final and sc.get("rule_no") and not any(s["kind"] == "twist" for s in scenes if sc.get("kind") == "twist") else "")})
-        t += length
-    story_end = t
+    main_in, fin_in = scenes_in[:-1], scenes_in[-1]
+    texts = [sc["lines"][0]["text"] for sc in main_in]
+    main_mp3 = work / "voice_main.mp3"
+    words = asyncio.run(_voice(" ".join(texts), narr, main_mp3, False))
+    VO = 0.05                                                                          # the voice starts a hair after the first picture
+    n_tok = sum(len(t.split()) for t in texts); ratio = len(words) / max(1, n_tok)    # if the engine merged/split a word, scale the slices
+    bounds, k = [], 0
+    for c in (len(t.split()) for t in texts):
+        bounds.append((int(round(k * ratio)), int(round((k + c) * ratio)))); k += c
+    bounds[-1] = (bounds[-1][0], len(words))
+    starts = [0.0] + [max(0.0, VO + words[bd[0]][0] - 0.06) for bd in bounds[1:]]    # the picture changes just before the scene's first word
+    main_end = VO + words[-1][1] + 0.25
+    scenes = []
+    for i, (sc, (lo, hi)) in enumerate(zip(main_in, bounds), 1):
+        is_last = i == len(main_in)
+        end = (main_end + SILENCE_BEFORE_FINAL) if is_last else starts[i]
+        rel = [(VO + a_ - starts[i - 1], VO + b_ - starts[i - 1], w) for a_, b_, w in words[lo:hi]]
+        scenes.append({"i": i, "kind": sc.get("kind", "rule"), "rule_no": sc.get("rule_no", 0), "final": False, "start": starts[i - 1], "len": end - starts[i - 1], "lead": 0.0, "dur": 0.0,
+                       "mp3": None, "words": rel, "image": sdir / sc["image"], "tail": SILENCE_BEFORE_FINAL if is_last else 0.0, "label": sc.get("label", ""),
+                       "badge": (sc["label"] if sc.get("label") else f"RULE {sc['rule_no']}" if sc.get("kind") in ("rule", "twist") and sc.get("rule_no") and not any(s["kind"] == "twist" for s in scenes if sc.get("kind") == "twist") else "")})
+    fmp3 = work / "voice_final.mp3"
+    fwords = asyncio.run(_voice(fin_in["lines"][0]["text"], whisper_voice, fmp3, True))
+    fdur = probe_duration(fmp3); flead = 0.35
+    fstart = main_end + SILENCE_BEFORE_FINAL
+    scenes.append({"i": len(scenes) + 1, "kind": fin_in.get("kind", "twist"), "rule_no": fin_in.get("rule_no", 0), "final": True, "start": fstart, "len": flead + fdur + 0.16, "lead": flead,
+                   "dur": fdur, "mp3": fmp3, "words": fwords, "image": sdir / fin_in["image"], "tail": 0.0, "label": "", "badge": ""})
+    story_end = fstart + flead + fdur + 0.16
     total = story_end + 0.6 + CARD                                                     # + tape dying + end card
     log(f"[horror] {len(scenes)} scenes, story {story_end:.1f}s, total {total:.1f}s")
 
@@ -162,8 +176,8 @@ def build_horror_video(story_dir: str, log=print) -> Path:
     if r5:
         wb = sfx.whisper_bed(silence_at - r5["start"])
         put(shape(wb, [(0, 0), (3, 0.05), (len(wb) / SR - 0.4, 0.07), (len(wb) / SR, 0)]), r5["start"])
-    for sc in scenes:                                                              # the narrator
-        put(_wav(sc["mp3"]), sc["start"] + sc["lead"], 1.0)
+    put(_wav(main_mp3), VO, 1.0)                                                   # the narrator: one continuous take
+    put(_wav(scenes[-1]["mp3"]), scenes[-1]["start"] + scenes[-1]["lead"], 1.0)    # then the whispered finale
     used = 0
     for sc in scenes:                                                              # foley on the spoken word, sound slightly BEFORE the picture it belongs to
         found = 0
@@ -179,9 +193,9 @@ def build_horror_video(story_dir: str, log=print) -> Path:
             put(np.sin(2 * np.pi * (46 + 38 * np.exp(-np.arange(int(0.6 * SR)) / SR * 14)) * np.arange(int(0.6 * SR)) / SR) * np.exp(-np.arange(int(0.6 * SR)) / SR * 7), sc["start"] - 0.05, 0.28 + 0.07 * sc["rule_no"])
     turn = next((s for s in scenes if s["kind"] == "twist" and not s["final"]), None)
     if turn:                                                                       # a smaller scare earlier, so the big one is not the only thing to flinch at
-        put(sfx.scream_stab(0.4), turn["start"] + turn["lead"] + 0.2, 0.45)
+        put(sfx.scream_stab(0.4), turn["start"] + turn["lead"] + 0.2, 0.3)
         put(sfx.static_burst(0.18), turn["start"] + turn["lead"] + 0.18, 0.5)
-    put(sfx.jump_scream(), reveal - 0.02, 1.15)                                    # THE jump scare, on the slam
+    put(sfx.real_scream(len(story.get('title', ''))) if sfx.real_scream() is not None else sfx.jump_scream(), reveal - 0.02, 1.15)   # THE jump scare, on the slam
     st = sfx.sting(1.1)                                                            # the ONE sting: its rise ends just before the reveal picture
     put(st, reveal - 1.1 - 0.08, 0.85)
     fin = story.get("finale_sfx") or ("snap" if story.get("format") == "scp" and "173" in json.dumps(story.get("credit", {})) else "scream")
