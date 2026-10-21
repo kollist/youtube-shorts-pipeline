@@ -93,8 +93,8 @@ def build_horror_video(story_dir: str, log=print) -> Path:
         extra_tail = SILENCE_BEFORE_FINAL if i == len(scenes_in) - 1 else 0.0            # the silence belongs to the scene before the finale
         length = max(2.3, lead + dur + 0.16) + extra_tail
         scenes.append({"i": i, "kind": sc.get("kind", "rule"), "rule_no": sc.get("rule_no", 0), "final": final, "start": t, "len": length, "lead": lead, "dur": dur,
-                       "mp3": mp3, "words": words, "image": sdir / sc["image"], "tail": extra_tail,
-                       "badge": (f"RULE {sc['rule_no']}" if sc.get("kind") in ("rule", "twist") and not final and sc.get("rule_no") and not any(s["kind"] == "twist" for s in scenes if sc.get("kind") == "twist") else "")})
+                       "mp3": mp3, "words": words, "image": sdir / sc["image"], "tail": extra_tail, "label": sc.get("label", ""),
+                       "badge": (sc["label"] if sc.get("label") else f"RULE {sc['rule_no']}" if sc.get("kind") in ("rule", "twist") and not final and sc.get("rule_no") and not any(s["kind"] == "twist" for s in scenes if sc.get("kind") == "twist") else "")})
         t += length
     story_end = t
     total = story_end + 0.6 + CARD                                                     # + tape dying + end card

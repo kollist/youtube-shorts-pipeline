@@ -41,24 +41,30 @@ def fetch_scp(number: str) -> dict:
     return {"item": f"SCP-{n}", "url": url, "text": text[:6500], "author": author}
 
 
-SYSTEM = """You adapt an SCP Foundation article into a 45-55 second vertical horror short, told as a Foundation ORIENTATION TAPE for new night-shift staff.
-Use ONLY facts that are in the article text you are given - never invent abilities, history or incidents. The containment procedures become the RULES.
-Structure (8 scenes, 90-105 words in total - SHORT; 8-15 words per scene, plain spoken English, short sentences, deadpan instructor tone that slowly cracks):
-1. intro: "Welcome to Site-19. This tape covers SCP-xxx." One cold sentence about what it is and that one mistake is fatal.
-2. rules 1-4: each scene = one rule taken from the containment procedures, spoken as a command, then ONE concrete, creepy detail from the article (why it matters).
-3. rule 5 / twist scene: the rule that is already being broken (by the viewer / the tape's own operator). Specific, quiet, cold.
-4. final scene (the scare, 14-22 words): present tense, second person, the entity is RIGHT THERE and the last thing said is short and unexplained. Do not repeat a sentence or idea already said. Then ONE last sentence that is a
-   question to the viewer (6-9 words, about the subject, e.g. whether they could survive it) - it will be shown as text, not spoken.
-PICTURES - this is where the fear comes from: the entity (or the sign of it) must be in EVERY picture from scene 2 on, never in the same place: behave according to its canon
-(e.g. if it only moves unseen, show it slightly closer in each picture). Scenes 2-7: small and in the background / at the edge of frame / reflected / half hidden.
-The FINAL picture shows it right behind the hero, large, in focus, the hero not yet aware. Describe the entity only with traits from the article. First picture = poster: hero low-angle, entity
-faint behind, empty dark space at the top for the title.
+SYSTEM = """You turn an SCP Foundation article into a 55-65 second vertical horror short for people who have NEVER heard of SCP. If a viewer does not understand what is happening, they leave -
+so this is explained like a gripping true-crime documentary told by a calm, serious narrator, not read like a rulebook.
+Use ONLY facts in the article text - never invent abilities, history or incidents. No jargon without a plain-words explanation (say "a secret organization that locks away things that
+should not exist", never "Euclid class", "D-class", "Site-19" unless you explain it in the same breath). NEVER say "Rule one / Rule two".
+Story order (8 scenes, 115-140 words total, plain spoken English, short sentences):
+1. HOOK + WHAT IT IS: one chilling, concrete sentence that makes people need to know more, then what the thing is, in plain words ("This is a statue. It is alive.").
+2. WHAT IT DOES: its one terrifying ability or behaviour, said simply, with the consequence ("The moment nobody is looking at it, it moves. Fast. It kills in a second.").
+3. WHY IT IS DANGEROUS: one specific fact from the article that makes it real (where it was found, what it did, what it leaves behind).
+4. HOW THE FOUNDATION KEEPS IT LOCKED UP: the containment, explained as a story ("It lives in a sealed room. Nobody ever goes in alone. Two guards must stare at it without blinking - the whole time.").
+5. HOW IT IS WATCHED: the monitoring and procedures in plain steps - who watches, how often, what they do and what happens if they slip.
+6. THE MISTAKE: the one thing that goes wrong (from the article's incidents or procedures), told in second person - you are the one on watch.
+7. THE TURN: the moment you realise it already happened. Quiet and cold.
+8. THE SCARE: present tense, second person, the thing is RIGHT THERE; the last spoken line is short, unfinished or unexplained (14-22 words). Then ONE final sentence: a question to the viewer
+   (6-9 words) - it is shown as text, not spoken.
+Each scene has a "label": 1-3 plain words shown on screen (e.g. "WHAT IT IS", "WHAT IT DOES", "HOW IT'S CONTAINED", "WHO WATCHES IT", "THE MISTAKE"). Scene 1 may have label "".
+PICTURES - this is where the fear comes from: the entity (or the sign of it) is in EVERY picture from scene 2 on, never in the same place, behaving as its canon says (e.g. if it only moves unseen,
+slightly closer each time). Scenes 2-7: small / background / edge of frame / reflected / half hidden. The FINAL picture shows it right behind the hero, large, in focus, the hero unaware.
+Describe the entity only with traits from the article. Picture 1 = poster: hero low-angle, entity faint behind, empty dark space at the top for the title.
 "image_prompt" = one clear moment, max 45 words, ending with {style}; use {Hero} for the character (a Foundation guard or junior researcher, 20 words: age, uniform, one detail).
 Respond with ONLY this JSON:
-{"title_lines": ["SCP-173", "THE SCULPTURE"], "hero_look": "...", "tape_label": "SITE-19 ARCHIVE - TAPE 173 - CONFIDENTIAL" (max 44 characters),
+{"title_lines": ["SCP-173", "THE SCULPTURE"], "poster_tag": "2-4 word tag under the title, e.g. THE STATUE THAT MOVES", "hero_look": "...", "tape_label": "SITE-19 ARCHIVE - TAPE 173 - CONFIDENTIAL" (max 44 characters),
  "caption": "Instagram hook line (max 90 chars) + one question",
- "scenes": [{"kind": "intro|rule|twist", "rule_no": 0, "narration": "...", "image_prompt": "... {style}"}]}
-(rule_no: 1..4 for rule scenes, 5 for the twist scene, 0 for the intro; the final scare is the last scene with kind "twist".)"""
+ "scenes": [{"kind": "intro|rule|twist", "rule_no": 0, "label": "WHAT IT IS", "narration": "...", "image_prompt": "... {style}"}]}
+(kind: scene 1 "intro"; scenes 2-6 "rule" with rule_no 1..5 in order; scenes 7-8 "twist" with rule_no 6.)"""
 
 
 def create_scp_story(number: str, voice: str = "adult_man", log=print, dest: Path | None = None) -> Path:
@@ -74,7 +80,7 @@ def create_scp_story(number: str, voice: str = "adult_man", log=print, dest: Pat
         prompt = clean_image_prompt(s["image_prompt"].strip())
         prompt = prompt if "{style}" in prompt else prompt.rstrip(". ") + ", {style}"
         sc.append({"image": f"images/scene{i}.png", "min_seconds": 3.0, "kind": s.get("kind", "rule"), "rule_no": int(s.get("rule_no") or 0),
-                   "image_prompt": prompt, "lines": [{"who": "Narrator", "text": re.sub(r"\s+", " ", s["narration"]).strip()}]})
+                   "label": str(s.get("label") or "").upper()[:24], "image_prompt": prompt, "lines": [{"who": "Narrator", "text": re.sub(r"\s+", " ", s["narration"]).strip()}]})
     words = sum(len(s["lines"][0]["text"].split()) for s in sc)
     title_lines = [t.upper() for t in out.get("title_lines", [])][:3] or [art["item"]]
     credit = {"item": art["item"], "author": art["author"], "url": art["url"], "license": "CC BY-SA 3.0",
@@ -83,7 +89,7 @@ def create_scp_story(number: str, voice: str = "adult_man", log=print, dest: Pat
     folder = Path(dest) if dest else STORIES_DIR / slug          # a series episode folder, or a stand-alone story
     story = {"title": " ".join(title_lines).title(), "format": "scp", "title_lines": title_lines, "audience": "horror", "style": STYLE, "tape_label": out.get("tape_label", "")[:58],
              "music": {"mood": "eerie"}, "motion": "pan", "caption_colors": {}, "caption_size": 84, "caption_words": 3, "credit": credit,
-             "post_caption": out.get("caption", ""), "summary": f"Foundation orientation tape for {art['item']}.",
+             "poster_tag": str(out.get("poster_tag") or "FOUNDATION ORIENTATION TAPE").upper()[:34], "post_caption": out.get("caption", ""), "summary": f"Foundation orientation tape for {art['item']}.",
              "characters": {"Narrator": {**VOICES[voice], "rate": "+6%", "pitch": "-3Hz", "look": ""}, "Hero": {**VOICES[voice], "look": out.get("hero_look", "")}}, "scenes": sc}
     _write(folder / "story.json", story)
     (folder / "credit.txt").write_text(
