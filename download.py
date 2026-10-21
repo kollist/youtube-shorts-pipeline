@@ -10,6 +10,8 @@ Requires yt-dlp:
     pip install yt-dlp
 """
 
+import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -61,8 +63,22 @@ def download_video(url: str, out_dir: str = "input", cancel_event=None, on_progr
         # only enables "deno" by default, which usually isn't installed. Fall back
         # to node (commonly already present) to avoid 403s on the video/audio formats.
         "js_runtimes": {"deno": {}, "node": {}},
+        # The runtime also needs yt-dlp's challenge-solver script (EJS); without
+        # it the player's "n" challenge fails and only thumbnails come back.
+        "remote_components": ["ejs:github"],
         "progress_hooks": [_hook],
     }
+
+    # YouTube often answers anonymous requests with "Sign in to confirm you're
+    # not a bot". Passing a logged-in session's cookies gets past it. A
+    # Netscape-format cookies file (YT_COOKIES_FILE, default youtube_cookies.txt
+    # if present) or a browser to read them from (YT_COOKIES_BROWSER=chrome).
+    cookies_file = os.environ.get("YT_COOKIES_FILE") or "youtube_cookies.txt"
+    cookies_browser = os.environ.get("YT_COOKIES_BROWSER")
+    if cookies_browser:
+        ydl_opts["cookiesfrombrowser"] = (cookies_browser,)
+    elif Path(cookies_file).is_file():
+        ydl_opts["cookiefile"] = cookies_file
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -88,6 +104,17 @@ def download_video(url: str, out_dir: str = "input", cancel_event=None, on_progr
             f"merge likely failed (check disk space and that ffmpeg is on PATH). Delete "
             f"this file and try the download again."
         )
+
+    # Who/where this came from, so clips cut from it can be tracked by streamer
+    # later without anyone having to type it in (pipeline.py reads this back).
+    source_info = {
+        "url": info.get("webpage_url") or url,
+        "title": info.get("title"),
+        "uploader": info.get("uploader") or info.get("channel"),
+        "upload_date": info.get("upload_date"),
+    }
+    with open(Path(video_path).with_suffix(".source.json"), "w", encoding="utf-8") as f:
+        json.dump(source_info, f, ensure_ascii=False, indent=2)
 
     return video_path
 

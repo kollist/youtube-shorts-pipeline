@@ -44,11 +44,14 @@ def run_daily_queue(
     whisper_model: str = "small",
     do_upload: bool = False,
     privacy: str = "public",
+    platforms: list[str] | None = None,
     spacing_minutes: float = 20.0,
     min_duration: float = DEFAULT_MIN_DURATION,
     max_duration: float = DEFAULT_MAX_DURATION,
     burn_captions: bool = True,
     add_voiceover: bool = False,
+    mode: str = "talk",
+    streamer: str | None = None,
     on_clip=None,
     cancel_event=None,
 ) -> list[dict]:
@@ -80,6 +83,8 @@ def run_daily_queue(
                 max_duration=max_duration,
                 burn_captions=burn_captions,
                 add_voiceover=add_voiceover,
+                mode=mode,
+                streamer=streamer,
                 on_clip=on_clip,
                 cancel_event=cancel_event,
             )
@@ -110,7 +115,15 @@ def run_daily_queue(
             check_cancelled(cancel_event)
             meta_json_path = Path(meta["video_path"]).with_suffix(".json")
             try:
-                upload_from_meta_file(str(meta_json_path), privacy_status=privacy)
+                if platforms and platforms != ["youtube"]:
+                    from social_post import post_clip
+                    outcome = post_clip(str(meta_json_path), platforms, privacy)
+                    for name, r in outcome["results"].items():
+                        print(f"[queue]   {name}: " + (r.get("url") or r.get("id") or "ok" if r["ok"] else f"FAILED - {r['error']}"))
+                    if outcome["results"].get("youtube", {}).get("limit"):
+                        raise YouTubeUploadLimitExceeded(outcome["results"]["youtube"]["error"])
+                else:
+                    upload_from_meta_file(str(meta_json_path), privacy_status=privacy)
             except YouTubeUploadLimitExceeded as e:
                 print(f"[queue] {e}\n"
                       f"[queue] Stopping uploads here - this is an account-level daily cap, "

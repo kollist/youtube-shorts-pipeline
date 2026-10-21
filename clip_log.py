@@ -17,6 +17,12 @@ from pathlib import Path
 
 LOG_FILE = Path("upload_log.jsonl")
 
+# Fields that describe where a clip came from. They start on the clip plan
+# (pipeline.py), get copied into the clip's meta JSON (cut_clips.py), and end up
+# in this log (upload_youtube.py) - the only record left once the local files
+# are deleted after upload, and what the Analytics tab groups results by.
+SOURCE_FIELDS = ("source", "streamer", "mode", "source_url", "peak_score")
+
 
 def log_upload(record: dict) -> None:
     record = dict(record)

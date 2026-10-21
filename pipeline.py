@@ -31,6 +31,7 @@ import time
 from pathlib import Path
 
 from download import download_video
+from highlights import build_stream_transcript
 from transcribe import transcribe, save_transcript
 from select_clips import (
     load_transcript,
@@ -44,6 +45,30 @@ from upload_youtube import upload_from_meta_file
 from run_control import check_cancelled, interruptible_sleep
 
 UPLOAD_DELAY_SECONDS = 5  # small pause between uploads, be gentle on quota/network
+
+
+def _read_json(path: Path):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def annotate_clips(clips: list[dict], stem: str, streamer: str | None, mode: str, source_info: dict) -> None:
+    """Stamps each planned clip with where it came from (streamer, mode, source
+    link, and how loud the detector thought its moment was) so the Analytics tab
+    can group results by it later. Shared by the automatic pipeline and the
+    "paste a plan from an outside model" path, so both are tracked the same way."""
+    windows = (_read_json(Path("transcripts") / f"{stem}.windows.json") or {}).get("windows", [])
+    for c in clips:
+        c["source"] = stem
+        c["streamer"] = streamer
+        c["mode"] = mode
+        c["source_url"] = source_info.get("url")
+        window = next((w for w in windows if w["start"] <= c["start"] <= w["end"]), None)
+        if window:
+            c["peak_score"] = window["score"]
 
 
 def _is_url(s: str) -> bool:
@@ -62,7 +87,13 @@ def run_pipeline(
     max_duration: float = DEFAULT_MAX_DURATION,
     on_clip=None,
     cancel_event=None,
+    mode: str = "talk",
+    streamer: str | None = None,
+    max_windows: int | None = None,
 ):
+    """mode="stream" is for hours-long livestream VODs: instead of transcribing
+    everything, find the loud/animated moments from the audio and only
+    transcribe and judge those (see highlights.py)."""
     if _is_url(video_path):
         check_cancelled(cancel_event)
         print(f"[pipeline] Downloading video from URL...")
@@ -73,13 +104,32 @@ def run_pipeline(
     stem = video_path.stem
 
     transcript_json_path = Path("transcripts") / f"{stem}.json"
+    windows_sidecar = Path("transcripts") / f"{stem}.windows.json"
+
+    if mode == "stream":
+        check_cancelled(cancel_event)
+        transcript_json_path = Path(build_stream_transcript(
+            str(video_path),
+            max_windows=max_windows or max(10, max_clips * 3),
+            whisper_model=whisper_model,
+            cancel_event=cancel_event,
+        ))
+        return _select_cut_upload(
+            video_path, stem, transcript_json_path, max_clips, min_duration, max_duration,
+            burn_captions, add_voiceover, do_upload, privacy_status, on_clip, cancel_event,
+            mode, streamer,
+        )
+
+    # A leftover stream-mode transcript only covers the loud windows, not the
+    # whole video - treating it as complete would make this run clip from a
+    # handful of moments instead of the full recording.
+    needs_transcription = not transcript_json_path.exists() or windows_sidecar.exists()
     # A transcript saved before word-level timestamps were added has no
     # "words" field, which forces the karaoke captions to fall back to the
     # old full-sentence style for the clip body - reusing it as-is here
     # would silently give you sentence captions on every clip cut from this
     # video no matter how many times you re-run this, since burn_captions
     # doesn't control transcription at all. Re-transcribe once to upgrade it.
-    needs_transcription = not transcript_json_path.exists()
     if not needs_transcription and burn_captions:
         with open(transcript_json_path, "r", encoding="utf-8") as f:
             existing_segments = json.load(f)
@@ -92,10 +142,26 @@ def run_pipeline(
         check_cancelled(cancel_event)
         segments = transcribe(str(video_path), whisper_model, cancel_event=cancel_event)
         transcript_json_path = Path(save_transcript(str(video_path), segments))
+        windows_sidecar.unlink(missing_ok=True)
     else:
         print(f"[pipeline] Found existing transcript, skipping re-transcription: {transcript_json_path}")
 
+    return _select_cut_upload(
+        video_path, stem, transcript_json_path, max_clips, min_duration, max_duration,
+        burn_captions, add_voiceover, do_upload, privacy_status, on_clip, cancel_event,
+        mode, streamer,
+    )
+
+
+def _select_cut_upload(
+    video_path, stem, transcript_json_path, max_clips, min_duration, max_duration,
+    burn_captions, add_voiceover, do_upload, privacy_status, on_clip, cancel_event,
+    mode, streamer,
+):
     segments = load_transcript(str(transcript_json_path))
+
+    source_info = _read_json(video_path.with_suffix(".source.json")) or {}
+    streamer = streamer or source_info.get("uploader")
 
     clips = select_clips(
         segments,
@@ -103,10 +169,14 @@ def run_pipeline(
         min_duration=min_duration,
         max_duration=max_duration,
         cancel_event=cancel_event,
+        mode=mode,
+        streamer=streamer,
     )
     if not clips:
         print("[pipeline] Model did not return any confident clips. Stopping.")
         return []
+
+    annotate_clips(clips, stem, streamer, mode, source_info)
     plan_path = save_plan(stem, clips)
 
     produced = process_all_clips(
@@ -165,6 +235,12 @@ if __name__ == "__main__":
     parser.add_argument("--privacy", default="public", choices=["public", "unlisted", "private"])
     parser.add_argument("--no-captions", action="store_true", help="Disable burned-in captions")
     parser.add_argument("--voiceover", action="store_true", help="Add an AI-narrated voiceover intro to each clip")
+    parser.add_argument("--mode", default="talk", choices=["talk", "stream"],
+                         help="'stream' finds loud moments in a long livestream VOD from its audio "
+                              "instead of transcribing the whole thing (default: talk)")
+    parser.add_argument("--streamer", help="Streamer's name, used in clip titles (stream mode)")
+    parser.add_argument("--max-windows", type=int,
+                         help="How many loud windows to send to the model (stream mode; default: 3x --max-clips)")
     parser.add_argument("--min-duration", type=float, default=DEFAULT_MIN_DURATION,
                          help="Target minimum clip length in seconds (default: 30)")
     parser.add_argument("--max-duration", type=float, default=DEFAULT_MAX_DURATION,
@@ -186,4 +262,7 @@ if __name__ == "__main__":
             add_voiceover=args.voiceover,
             min_duration=args.min_duration,
             max_duration=args.max_duration,
+            mode=args.mode,
+            streamer=args.streamer,
+            max_windows=args.max_windows,
         )

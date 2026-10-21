@@ -47,30 +47,34 @@ def get_channel_stats() -> dict:
 
 
 def fetch_video_stats(video_ids: list[str]) -> dict:
-    """{video_id: {"views", "avg_view_duration_sec", "avg_view_percentage"}} -
+    """{video_id: {"views", "avg_view_duration_sec", "avg_view_percentage", "subscribers_gained"}} -
     real retention numbers straight from YouTube, not our own upload log."""
     if not video_ids:
         return {}
 
     service = get_analytics_service()
-    response = service.reports().query(
-        ids="channel==MINE",
-        startDate=ANALYTICS_START_DATE,
-        endDate=str(date.today()),
-        metrics="views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage",
-        dimensions="video",
-        filters=f"video=={','.join(video_ids)}",
-        maxResults=len(video_ids),
-    ).execute()
-
     stats = {}
-    for row in response.get("rows", []):
-        video_id, views, _watched_min, avg_dur, avg_pct = row
-        stats[video_id] = {
-            "views": int(views),
-            "avg_view_duration_sec": round(avg_dur, 1),
-            "avg_view_percentage": round(avg_pct, 1),
-        }
+    # Chunked so a long upload history doesn't blow past the request URL length.
+    for i in range(0, len(video_ids), 200):
+        chunk = video_ids[i:i + 200]
+        response = service.reports().query(
+            ids="channel==MINE",
+            startDate=ANALYTICS_START_DATE,
+            endDate=str(date.today()),
+            metrics="views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained",
+            dimensions="video",
+            filters=f"video=={','.join(chunk)}",
+            maxResults=len(chunk),
+        ).execute()
+
+        for row in response.get("rows", []):
+            video_id, views, _watched_min, avg_dur, avg_pct, subs = row
+            stats[video_id] = {
+                "views": int(views),
+                "avg_view_duration_sec": round(avg_dur, 1),
+                "avg_view_percentage": round(avg_pct, 1),
+                "subscribers_gained": int(subs),
+            }
     return stats
 
 

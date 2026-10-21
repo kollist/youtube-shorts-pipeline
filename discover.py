@@ -19,6 +19,7 @@ ONE-TIME SETUP:
 
 import json
 import os
+import re
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -58,6 +59,52 @@ def _api_get(path: str, **params) -> dict:
 def _uploads_playlist_id(channel_id: str) -> str:
     data = _api_get("channels", part="contentDetails", id=channel_id)
     return data["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"]
+
+
+# Long streams from the two streamers this project clips. These are the official channels
+# (found through the YouTube API): the stream channels hold the full VODs, the main
+# channels hold the edited uploads. Anything under MIN_STREAM_SECONDS (shorts, clips, short
+# videos) is dropped - Discover is for hours-long streams worth mining for moments.
+STREAMER_CHANNELS = {
+    "IShowSpeed": [("Live Speedy", "UC2bW_AY9BlbYLGJSXAbjS4Q"), ("IShowSpeed", "UCWsDFcIhY2DBi3GB5uykGXA")],
+    "Kai Cenat": [("Kai Cenat Live", "UCvCfpQXRXdJdL07pzTIA6Cw"), ("Kai Cenat", "UCoEmptob-eEGKk18c2VplJg")],
+}
+MIN_STREAM_SECONDS = 40 * 60
+_STREAM_CACHE: dict = {"at": 0.0, "videos": []}
+STREAM_CACHE_SECONDS = 600   # the YouTube API has a daily quota; don't refetch on every page view
+
+
+def _iso_duration_seconds(iso: str) -> int:
+    m = re.fullmatch(r"P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", iso or "")
+    if not m:
+        return 0
+    d, h, mi, s = (int(x or 0) for x in m.groups())
+    return d * 86400 + h * 3600 + mi * 60 + s
+
+
+def discover_streams(streamer: str | None = None, per_channel: int = 50, force: bool = False) -> list[dict]:
+    """Recent long streams from the streamers above, newest first. Each carries its
+    length, views and views per day. `streamer` filters to one of them."""
+    import time
+    if force or time.time() - _STREAM_CACHE["at"] > STREAM_CACHE_SECONDS or not _STREAM_CACHE["videos"]:
+        collected = []
+        for name, channels in STREAMER_CHANNELS.items():
+            for label, channel_id in channels:
+                vids = _recent_uploads(channel_id, max_results=per_channel)
+                for v in vids:
+                    v.update(streamer=name, channel=label, url=f"https://www.youtube.com/watch?v={v['video_id']}")
+                if not vids:
+                    continue
+                ids = ",".join(v["video_id"] for v in vids)
+                details = {i["id"]: i for i in _api_get("videos", part="contentDetails", id=ids).get("items", [])}
+                for v in vids:
+                    v["duration_sec"] = _iso_duration_seconds(details.get(v["video_id"], {}).get("contentDetails", {}).get("duration", ""))
+                collected.extend(v for v in vids if v["duration_sec"] >= MIN_STREAM_SECONDS)
+        collected = _attach_stats(collected)
+        collected.sort(key=lambda v: v["published_at"], reverse=True)
+        _STREAM_CACHE.update(at=time.time(), videos=collected)
+    videos = _STREAM_CACHE["videos"]
+    return [v for v in videos if streamer in (None, "", "all", v["streamer"])]
 
 
 def _recent_uploads(channel_id: str, max_results: int = 15) -> list[dict]:

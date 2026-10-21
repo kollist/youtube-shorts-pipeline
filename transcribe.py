@@ -11,6 +11,8 @@ Output:
 
 import sys
 import json
+import subprocess
+import tempfile
 import time
 from pathlib import Path
 
@@ -23,6 +25,18 @@ from run_control import check_cancelled
 # cleaner captions. On CPU-only machines, "small" or "base" is far more
 # realistic for a daily pipeline.
 MODEL_SIZE = "small"
+
+
+def _segment_to_dict(seg, offset: float = 0.0) -> dict:
+    return {
+        "start": round(seg.start + offset, 2),
+        "end": round(seg.end + offset, 2),
+        "text": seg.text.strip(),
+        "words": [
+            {"start": round(w.start + offset, 3), "end": round(w.end + offset, 3), "text": w.word.strip()}
+            for w in (seg.words or [])
+        ],
+    }
 
 
 def transcribe(video_path: str, model_size: str = MODEL_SIZE, cancel_event=None) -> list[dict]:
@@ -44,19 +58,49 @@ def transcribe(video_path: str, model_size: str = MODEL_SIZE, cancel_event=None)
     results = []
     for seg in segments:
         check_cancelled(cancel_event)
-        results.append({
-            "start": round(seg.start, 2),
-            "end": round(seg.end, 2),
-            "text": seg.text.strip(),
-            "words": [
-                {"start": round(w.start, 3), "end": round(w.end, 3), "text": w.word.strip()}
-                for w in (seg.words or [])
-            ],
-        })
+        results.append(_segment_to_dict(seg))
 
     print(f"[transcribe] Done in {time.time() - t0:.1f}s. "
           f"Detected language: {info.language} "
           f"({len(results)} segments)")
+    return results
+
+
+def transcribe_windows(
+    video_path: str,
+    windows: list[dict],
+    model_size: str = MODEL_SIZE,
+    cancel_event=None,
+) -> list[dict]:
+    """Transcribe only the given [start, end] windows of a long video (e.g. the
+    loud moments found by highlights.py) instead of the whole thing. Returned
+    timestamps are absolute positions in the full video, same as transcribe()."""
+    video_path = Path(video_path)
+    if not video_path.exists():
+        raise FileNotFoundError(f"Video not found: {video_path}")
+
+    print(f"[transcribe] Loading Whisper model '{model_size}'...")
+    model = WhisperModel(model_size, device="auto", compute_type="auto")
+
+    results: list[dict] = []
+    t0 = time.time()
+    with tempfile.TemporaryDirectory() as tmp:
+        for i, w in enumerate(windows, 1):
+            check_cancelled(cancel_event)
+            wav = Path(tmp) / f"window_{i}.wav"
+            subprocess.run(
+                ["ffmpeg", "-v", "error", "-y", "-ss", str(w["start"]), "-t", str(w["end"] - w["start"]),
+                 "-i", str(video_path), "-vn", "-ac", "1", "-ar", "16000", str(wav)],
+                check=True,
+            )
+            print(f"[transcribe] Window {i}/{len(windows)} ({w['start']:.0f}s-{w['end']:.0f}s)...")
+            segments, _ = model.transcribe(str(wav), word_timestamps=True)
+            for seg in segments:
+                check_cancelled(cancel_event)
+                results.append(_segment_to_dict(seg, offset=w["start"]))
+
+    print(f"[transcribe] Done in {time.time() - t0:.1f}s ({len(results)} segments "
+          f"across {len(windows)} windows).")
     return results
 
 

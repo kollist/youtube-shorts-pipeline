@@ -19,6 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from clip_log import SOURCE_FIELDS
 from run_control import check_cancelled
 
 # User-supplied gameplay/filler footage for the split-screen layout (see
@@ -296,8 +297,17 @@ def cut_clip(
             "-t", str(duration),
         ]
 
+        # The content is scaled to fit its half whole (over a blurred copy of
+        # itself to fill the leftover space) rather than center-cropped to
+        # fill it: cropping a wide stream to this near-square half threw away
+        # about 40% of the width, which is where facecams and the streamer's
+        # face usually sit. The filler is decorative, so that one is still
+        # cropped to fill.
         chain = (
-            "[0:v]scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960,setsar=1[content_raw];"
+            "[0:v]split[c_bg][c_fg];"
+            "[c_bg]scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960,boxblur=20:2[bg];"
+            "[c_fg]scale=1080:960:force_original_aspect_ratio=decrease[fg];"
+            "[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[content_raw];"
             "[1:v]scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960,setsar=1[filler]"
         )
         last_label = "content_raw"
@@ -456,6 +466,8 @@ def process_all_clips(
             "end": clip["end"],
             "hook_mechanic": clip.get("hook_mechanic", "unknown"),
             "format": "normal",
+            "captions": subtitle_path is not None,
+            **{k: clip[k] for k in SOURCE_FIELDS if k in clip},
         }
 
         if add_voiceover:
@@ -562,6 +574,8 @@ def make_split_screen_variant(
         "hook_mechanic": meta.get("hook_mechanic", "unknown"),
         "format": "split_screen",
         "source_clip": clip_id,
+        "captions": subtitle_path is not None,
+        **{k: meta[k] for k in SOURCE_FIELDS if k in meta},
     }
     new_meta_path = out_dir / f"{clip_id}_split.json"
     with open(new_meta_path, "w", encoding="utf-8") as f:

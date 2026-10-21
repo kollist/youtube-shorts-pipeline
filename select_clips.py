@@ -42,7 +42,7 @@ load_dotenv()
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-MODEL = "llama-3.3-70b-versatile"  # free tier on Groq, far stronger than any local 7-14B model
+MODEL = "openai/gpt-oss-120b"  # free tier on Groq, far stronger than any local 7-14B model
 
 # Each model on Groq's free tier has its own independent daily token budget.
 # When the preferred model's budget runs out mid-day, fall through to the
@@ -51,10 +51,8 @@ MODEL = "llama-3.3-70b-versatile"  # free tier on Groq, far stronger than any lo
 # our chunking (verified against Groq's /models endpoint).
 MODEL_FALLBACK_CHAIN = [
     MODEL,
-    "openai/gpt-oss-120b",
-    "qwen/qwen3.6-27b",
+    "qwen/qwen3.8-27b",
     "openai/gpt-oss-20b",
-    "llama-3.1-8b-instant",
 ]
 
 # Reasoning-capable models can bleed their chain-of-thought into the JSON
@@ -67,7 +65,7 @@ MODEL_FALLBACK_CHAIN = [
 REASONING_FORMAT_OVERRIDES = {
     "openai/gpt-oss-120b": {"reasoning_format": "hidden", "reasoning_effort": "low"},
     "openai/gpt-oss-20b": {"reasoning_format": "hidden", "reasoning_effort": "low"},
-    "qwen/qwen3.6-27b": {"reasoning_format": "hidden", "reasoning_effort": "none"},
+    "qwen/qwen3.8-27b": {"reasoning_format": "hidden", "reasoning_effort": "none"},
 }
 # Generous ceiling so a multi-clip JSON response (plus any hidden reasoning
 # tokens on models above) has enough room to finish instead of truncating
@@ -87,8 +85,10 @@ SNAP_TOLERANCE = 1.5  # how far a timestamp may drift from a real segment edge a
 
 # Groq's free tier caps tokens-per-minute per request, and both the limit AND
 # the real token count for the same content vary by model:
-#   llama-3.3-70b-versatile: 12,000 TPM   openai/gpt-oss-120b: 8,000 TPM
-#   qwen/qwen3.6-27b:         8,000 TPM   llama-3.1-8b-instant: 6,000 TPM (tightest)
+#   openai/gpt-oss-120b, qwen/qwen3.8-27b, openai/gpt-oss-20b: 8,000 TPM each
+#   (measured from Groq's response headers). Earlier models in this project's
+#   history had tighter caps (6,000 TPM), which is why the chunk size below
+#   leaves more headroom than 8,000 strictly needs.
 # Size chunks for the tightest model in the chain, not just the primary one.
 # The char/4 estimate also runs well short of real tokenization on dense,
 # conversational transcripts - observed real "Requested" sizes were ~3x this
@@ -252,6 +252,114 @@ preamble, no explanation before or after:
     if performance_hint:
         prompt += performance_hint
     return prompt
+
+
+# A stream-mode transcript is a handful of separate high-energy windows cut
+# out of a multi-hour VOD, so timestamps jump between them. A clip spanning one
+# of those jumps would stitch together footage from hours apart.
+MAX_INTERNAL_GAP_SECONDS = 8
+
+STREAM_HOOK_PATTERNS = """Streamer clips work on a different logic than talking-head clips. The
+hook is usually the moment itself, not a clever opening sentence:
+1. REACTION PEAK - the streamer screams, loses it, laughs uncontrollably, or rage
+   quits. The clip must include the setup (so the viewer understands why) and the
+   full reaction, not just the loudest second.
+2. MID-ACTION DROP - open already inside the chaos, no warm-up.
+3. EMOTIONAL/RELATABLE CONFLICT - a fight with chat, a fan, a friend, or the game.
+4. OPEN LOOP - a line that promises something is about to happen ("watch this"),
+   paid off within the clip.
+5. STAKES OR NUMBERS - real money, a record, a score, a bet on the line."""
+
+
+def build_stream_system_prompt(
+    min_duration: float,
+    max_duration: float,
+    performance_hint: str | None = None,
+    streamer: str | None = None,
+) -> str:
+    who = streamer or "the streamer"
+    prompt = f"""You are an editor for a channel that clips {who}'s livestreams into
+YouTube Shorts. You know what makes a stream moment worth watching by someone who
+never saw the stream.
+
+You will be given transcript lines in the form start|end|text (times in seconds).
+They come from short, automatically detected LOUD windows of a long stream - the
+moments where {who} got unusually loud or animated. Time jumps between windows are
+skipped footage: never pick a clip that crosses a jump of more than
+{MAX_INTERNAL_GAP_SECONDS} seconds between consecutive lines.
+
+{STREAM_HOOK_PATTERNS}
+
+Rules for picking clips:
+- Loud does not mean good. Many of these windows are just yelling at a loading
+  screen, reading chat or donations, a sponsor read, or arguing about settings.
+  Reject those. Keep only moments with a clear event and a clear reaction.
+- A reaction clip can have very few words ("NO NO NO", "BRO WHAT") - do not reject
+  a moment for a thin transcript if the lines around it show clearly what happened.
+- Include a few seconds of setup before the peak so the viewer knows what is
+  happening, and end soon after the reaction lands. Never end on dead air or on a
+  trailing half-sentence.
+- Target clip duration is {min_duration:.0f}-{max_duration:.0f} seconds as a guide,
+  never more than {SHORTS_MAX_DURATION:.0f} seconds. Shorter and tighter beats longer.
+- CLEAN CUTS ONLY: "start" must exactly equal the "start" of one of the given
+  lines, and "end" must exactly equal the "end" of one of the given lines.
+- Do not let clips overlap.
+- Only describe what the transcript actually supports. Never invent an event, name
+  or number in the title or description.
+- Return fewer clips rather than padding with weak ones. Zero is a valid answer.
+
+For each clip, write:
+- "hook_mechanic": one of "reaction_peak", "mid_action", "emotional_conflict",
+  "open_loop", "stakes_or_numbers"
+- "title": <=60 characters, specific to the moment, in the style of a clip channel
+  ("{who} LOSES IT after ..."), never a flat summary. Name {who} when it helps.
+- "description": 1-2 sentences, include 2-4 relevant hashtags (always include #Shorts)
+- "reason": one short sentence naming what happens and why it lands
+
+Respond with ONLY a JSON object of this exact shape, no markdown fences, no
+preamble, no explanation before or after:
+{{
+  "clips": [
+    {{
+      "start": 102.5,
+      "end": 138.0,
+      "hook_mechanic": "reaction_peak",
+      "title": "{who} LOSES IT when the ref gets it wrong",
+      "description": "The exact moment it all went wrong. #Shorts #streamer",
+      "reason": "Builds to an obvious call, then a full-volume reaction with a clean payoff"
+    }}
+  ]
+}}
+"""
+    if performance_hint:
+        prompt += performance_hint
+    return prompt
+
+
+def drop_clips_spanning_gaps(clips: list[dict], segments: list[dict]) -> list[dict]:
+    """Stream mode only: drop clips whose span includes skipped footage - either
+    a jump between two transcribed windows, or an edge reaching past the lines
+    the model was actually shown."""
+    kept = []
+    for c in clips:
+        inside = sorted(
+            (s for s in segments if s["end"] > c["start"] and s["start"] < c["end"]),
+            key=lambda s: s["start"],
+        )
+        if not inside:
+            continue
+        gaps = [b["start"] - a["end"] for a, b in zip(inside, inside[1:])]
+        spans_jump = bool(gaps) and max(gaps) > MAX_INTERNAL_GAP_SECONDS
+        reaches_out = (
+            c["start"] < inside[0]["start"] - SNAP_TOLERANCE
+            or c["end"] > inside[-1]["end"] + SNAP_TOLERANCE
+        )
+        if spans_jump or reaches_out:
+            print(f"[select_clips] Dropped a clip ({c['start']:.0f}s-{c['end']:.0f}s) "
+                  f"that spans skipped footage between detected windows.")
+            continue
+        kept.append(c)
+    return kept
 
 
 def build_rerank_system_prompt(
@@ -419,6 +527,11 @@ def call_groq(prompt: str, system: str, model: str = MODEL) -> str:
                 raise token_budget.GroqBudgetExhausted(
                     f"'{model}' has hit Groq's free-tier daily token budget: {body_text}"
                 )
+            if e.code in (403, 404) and "model" in body_text.lower():
+                # Groq retires models (llama-3.3-70b-versatile and llama-3.1-8b-instant
+                # both disappeared), or an account can lose access to one. Neither
+                # is fixable by retrying, but the next model in the chain may work.
+                raise GroqGenerationError(f"'{model}' is not available on this Groq account: {body_text}")
             if e.code == 400 and "json_validate_failed" in body_text:
                 # Some models don't reliably honor response_format=json_object
                 # for a given prompt - that's a model-compatibility issue, not
@@ -533,14 +646,19 @@ def _select_clips_for_chunk(
     max_duration: float,
     performance_hint: str | None = None,
     cancel_event=None,
+    mode: str = "talk",
+    streamer: str | None = None,
 ) -> list[dict]:
     check_cancelled(cancel_event)
     user_prompt = build_user_prompt(segments, max_clips)
-    system_prompt = build_system_prompt(min_duration, max_duration, performance_hint)
+    if mode == "stream":
+        system_prompt = build_stream_system_prompt(min_duration, max_duration, performance_hint, streamer)
+    else:
+        system_prompt = build_system_prompt(min_duration, max_duration, performance_hint)
 
     raw_text = call_groq(user_prompt, system_prompt, model=model)
-    clips = parse_clips_json(raw_text)
-    return validate_clips(clips, segments)
+    clips = validate_clips(parse_clips_json(raw_text), segments)
+    return drop_clips_spanning_gaps(clips, segments) if mode == "stream" else clips
 
 
 def _remaining_chunks_estimate(chunks: list[list[dict]], from_index: int) -> int:
@@ -570,6 +688,8 @@ def select_clips(
     max_duration: float = DEFAULT_MAX_DURATION,
     allow_model_fallback: bool = True,
     cancel_event=None,
+    mode: str = "talk",
+    streamer: str | None = None,
 ) -> list[dict]:
     chunks = chunk_segments(segments)
     if not chunks:
@@ -615,7 +735,7 @@ def select_clips(
             all_clips.extend(
                 _select_clips_for_chunk(
                     chunk, per_chunk_max, current_model, min_duration, max_duration,
-                    performance_hint, cancel_event,
+                    performance_hint, cancel_event, mode, streamer,
                 )
             )
         except (token_budget.GroqBudgetExhausted, GroqGenerationError) as e:

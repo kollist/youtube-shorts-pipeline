@@ -16,7 +16,7 @@ from pathlib import Path
 # change; a model not listed here falls back to DEFAULT_DAILY_TOKEN_BUDGET.
 DEFAULT_DAILY_TOKEN_BUDGET = 100_000
 MODEL_DAILY_BUDGETS: dict[str, int] = {
-    "llama-3.3-70b-versatile": 100_000,
+    "openai/gpt-oss-120b": 100_000,
 }
 
 USAGE_FILE = Path(".groq_usage.json")
