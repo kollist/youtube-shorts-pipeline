@@ -1,0 +1,10 @@
+# Only needed for generating story images locally (story_images.py). Building a
+# video from images you already have (story_video.py) needs none of these.
+torch
+diffusers
+transformers
+accelerate
+safetensors
+sentencepiece
+protobuf
+pillow
