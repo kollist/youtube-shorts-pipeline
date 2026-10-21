@@ -8,14 +8,16 @@ Usage:
     python upload_youtube.py output/myvideo_clip01.json
 """
 
+import re
 import sys
 import json
+from pathlib import Path
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
-from clip_log import log_upload
+from clip_log import log_upload, SOURCE_FIELDS
 from google_auth import get_credentials
 
 
@@ -31,7 +33,7 @@ def get_authenticated_service():
     return build("youtube", "v3", credentials=get_credentials())
 
 
-STATIC_HASHTAGS = ["#Shorts", "#Subscribe", "#Viral", "#fyp", "#Trending"]
+STATIC_HASHTAGS = ["#Shorts", "#Subscribe", "#Viral", "#fyp", "#fypage", "#fypシ", "#Trending"]
 
 
 def upload_short(
@@ -40,6 +42,8 @@ def upload_short(
     description: str,
     privacy_status: str = "public",
     category_id: str = "22",  # "People & Blogs" - change as needed
+    made_for_kids: bool = False,  # must be True for content aimed at children (COPPA) - YouTube enforces it
+    license_: str = "youtube",  # "youtube" (standard) | "creativeCommon" (CC BY) - SCP adaptations must be shared under CC BY-SA 3.0
 ):
     """Uploads a single video file as a Short. category_id reference:
     https://developers.google.com/youtube/v3/docs/videoCategories/list
@@ -48,10 +52,10 @@ def upload_short(
 
     # Always append a fixed set of hashtags (algorithm reach + subscribe CTA) on
     # top of whatever clip-specific hashtags the description already has.
-    missing_tags = [
-        tag for tag in STATIC_HASHTAGS
-        if tag.lower() not in description.lower() and tag.lower() not in title.lower()
-    ]
+    # Compare whole hashtags, not substrings, so "#fyp" isn't considered present
+    # just because "#fypage" is.
+    existing = {t.lower() for t in re.findall(r"#\S+", f"{title} {description}")}
+    missing_tags = [tag for tag in STATIC_HASHTAGS if tag.lower() not in existing]
     if missing_tags:
         description = f"{description}\n{' '.join(missing_tags)}".strip()
 
@@ -63,7 +67,8 @@ def upload_short(
         },
         "status": {
             "privacyStatus": privacy_status,  # "public" | "unlisted" | "private"
-            "selfDeclaredMadeForKids": False,
+            "selfDeclaredMadeForKids": made_for_kids,
+            "license": license_,
         },
     }
 
@@ -107,9 +112,18 @@ def delete_uploaded_clip(meta_path: str, video_path: str):
             path.unlink()
 
 
-def upload_from_meta_file(meta_path: str, privacy_status: str = "public"):
+def upload_from_meta_file(meta_path: str, privacy_status: str = "public", delete_after: bool = True):
     with open(meta_path, "r", encoding="utf-8") as f:
         meta = json.load(f)
+
+    # A clip that already went up but whose cleanup failed (so the UI said
+    # "Failed - retry") must not be uploaded a second time as a duplicate.
+    if meta.get("youtube_video_id"):
+        print(f"[upload] '{meta['title']}' is already on YouTube ({meta['youtube_video_id']}), "
+              f"not uploading it again.")
+        if delete_after:
+            delete_uploaded_clip(meta_path, meta["video_path"])
+        return {"video_id": meta["youtube_video_id"], "url": meta["youtube_url"]}
 
     result = upload_short(
         video_path=meta["video_path"],
@@ -131,9 +145,14 @@ def upload_from_meta_file(meta_path: str, privacy_status: str = "public"):
         "duration_sec": round(meta["end"] - meta["start"], 1),
         "privacy_status": privacy_status,
         "format": meta.get("format", "normal"),
+        "platform": "youtube",
+        "captions": meta.get("captions"),
+        "voiceover": bool(meta.get("voiceover_text")),
+        **{k: meta[k] for k in SOURCE_FIELDS if k in meta},
     })
 
-    delete_uploaded_clip(meta_path, meta["video_path"])
+    if delete_after:
+        delete_uploaded_clip(meta_path, meta["video_path"])
 
     return result
 
