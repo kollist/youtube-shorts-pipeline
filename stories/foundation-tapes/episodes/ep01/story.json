@@ -1,0 +1,156 @@
+{
+  "title": "Scp-173 The Sculpture",
+  "format": "scp",
+  "title_lines": [
+    "SCP-173",
+    "THE SCULPTURE"
+  ],
+  "audience": "horror",
+  "style": "dark anime key art, painterly cinematic horror illustration, a concrete-and-fluorescent-light government facility at night, moody lighting with deep shadows and one cold light source, rich detail, film still quality, vertical composition, absolutely no text, no letters, no numbers, no signs with writing",
+  "tape_label": "SITE-19 ARCHIVE - TAPE 173 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-173",
+    "author": "Moto42",
+    "url": "https://scp-wiki.wikidot.com/scp-173",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-173 by Moto42 - scp-wiki.wikidot.com/scp-173 - CC BY-SA 3.0"
+  },
+  "poster_tag": "THE STATUE THAT MOVES",
+  "post_caption": "It only moves when you blink. Would you last a full minute in that room?",
+  "summary": "Foundation orientation tape for SCP-173.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "A 28-year-old Foundation guard, short dark hair, grey tactical uniform, black vest, ID badge on chest, tired eyes, sweat on his forehead."
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "Low-angle shot of {Hero} in a dim concrete corridor, a faint pale concrete statue silhouette far behind him, empty dark space above. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Something scrapes inside a locked room where nobody is. It is a statue. It is alive."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "WHAT IT DOES",
+      "image_prompt": "Dark concrete cell seen through a small observation window, a rough concrete statue standing small in the far corner, faintly lit. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "It cannot move while you look at it. Look away, and it snaps your neck."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "WHY IT'S DANGEROUS",
+      "image_prompt": "Close view of a floor stained reddish brown, rusted rebar visible, the statue's concrete feet half hidden in shadow at the edge of frame. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "It is concrete and rebar. Nobody knows where it came from. Its floor is stained with blood."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "HOW IT'S CONTAINED",
+      "image_prompt": "Heavy steel containment door ajar, three guards entering, {Hero} among them, the statue a small grey shape in the dark room beyond, slightly closer. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "A secret organization locks it away. At least three people enter. The door locks behind them."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "WHO WATCHES IT",
+      "image_prompt": "{Hero} and a second guard staring forward, their faces reflected in a dark visor, the statue's reflection tiny and pale between them. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Two must stare at it the whole time, and warn each other before blinking."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "THE MISTAKE",
+      "image_prompt": "Extreme close-up of {Hero}'s eye mid-blink, red and tired, the blurred statue standing in the background doorway, closer than before. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Tonight, you are one of the two. Your eyes burn. You blink without warning."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "{Hero} frozen in a dim cell, the statue now halfway across the room at the edge of frame, one concrete arm slightly raised. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "You look again. The statue is closer. The scraping has stopped."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "{Hero} standing unaware, the concrete statue looming large and in sharp focus right behind him, its stone hands inches from his neck. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "The room is silent now. Your partner is staring past you, pale. Something cold touches the base of your skull and Could you keep your eyes open that long?"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "title": "Foundation Tapes",
+  "slug": "foundation-tapes",
+  "format": "scp",
+  "genre": "SCP Foundation",
+  "premise": "",
+  "style": "dark anime key art, painterly cinematic horror illustration, a concrete-and-fluorescent-light government facility at night, moody lighting with deep shadows and one cold light source, rich detail, film still quality, vertical composition, absolutely no text, no letters, no numbers, no signs with writing",
+  "music_mood": "eerie",
+  "characters": {},
+  "logline": "Orientation tapes from Site-19, one containment file per episode. Adapted from the SCP Foundation wiki (CC BY-SA 3.0).",
+  "arc": [
+    {
+      "title": "SCP-173",
+      "summary": "Foundation orientation tape for SCP-173.",
+      "cliffhanger": "",
+      "scp": "173"
+    }
+  ],
+  "created": "2026-10-21"
+}

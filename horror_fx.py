@@ -124,6 +124,13 @@ def process(in_mp4: str, out_mp4: str, curve: list[tuple[float, float]], events:
                 out = np.roll(out, int((t - ev["t"]) / ev["dur"] * H * 1.5) % H, axis=0)
             elif kind == "black":
                 out = out * 0.0
+            elif kind == "slam":                                  # the jump scare: the picture lunges at you, shakes, and flashes white
+                k2 = min(1.0, (t - ev["t"]) / ev["dur"])
+                z = 1 + 0.38 * min(1.0, k2 * 4)
+                sx, sy = tape.rng.integers(-16, 17, 2) * (1 - k2)
+                im = Image.fromarray(np.clip(out, 0, 255).astype(np.uint8)).transform((W, H), Image.AFFINE,
+                      (1 / z, 0, W / 2 - W / (2 * z) + sx, 0, 1 / z, H / 2 - H / (2 * z) + sy), Image.BILINEAR)
+                out = np.asarray(im, dtype=np.float32) * (2.2 if k2 < 0.12 else 1.0)
             enc.stdin.write(out.astype(np.uint8).tobytes())
             if i % 150 == 0:
                 log(f"[fx] frame {i}/{total_frames}")

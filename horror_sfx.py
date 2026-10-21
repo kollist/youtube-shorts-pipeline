@@ -163,3 +163,19 @@ def scream_stab(dur: float = 0.55) -> np.ndarray:
     vowel = np.sin(2 * np.pi * 1150 * t) * 0.4 + np.sin(2 * np.pi * 2300 * t) * 0.25                      # a crude "ah" resonance
     x = np.tanh((saw * 0.8 + vowel) * 3.2) * 0.7 + _lp(_rng.normal(0, 1, len(t)), 3) * 0.18
     return reverb(x * np.minimum(1, t * 120), 0.35) * (t < dur - 0.004)
+
+
+def jump_scream(dur: float = 1.2) -> np.ndarray:
+    """The jump-scare: four detuned harsh voices that leap upward, a vowel resonance, heavy distortion, grit and a sub hit under it.
+    Instant attack (no build-up - the build-up is the silence before it) and a short ragged tail."""
+    t = _t(dur)
+    x = np.zeros_like(t)
+    for base, g in ((620, 1.0), (880, 0.75), (1290, 0.55), (410, 0.7)):
+        f = base * (1 + 0.85 * np.minimum(1, t / 0.10)) + 80 * np.sin(2 * np.pi * (9 + base % 7) * t) + 25 * _rng.normal(0, 1, len(t)).cumsum() / 400
+        ph = np.cumsum(f) / SR
+        x += (2 * (ph % 1) - 1) * g
+    vowel = np.sin(2 * np.pi * 1150 * t) * 0.5 + np.sin(2 * np.pi * 2450 * t) * 0.3 + np.sin(2 * np.pi * 3400 * t) * 0.15
+    x = np.tanh((x * 0.55 + vowel) * 5.0) * 0.8 + _lp(_rng.normal(0, 1, len(t)), 2) * 0.35
+    x += np.sin(2 * np.pi * (38 - 8 * t / dur) * t) * np.exp(-t * 2.2) * 1.3
+    env = np.minimum(1, t * 1500) * np.where(t < dur * 0.62, 1.0, np.exp(-(t - dur * 0.62) * 9))
+    return reverb(x * env, 0.3)

@@ -134,7 +134,7 @@ def build_horror_video(story_dir: str, log=print) -> Path:
         if sc["kind"] == "rule" and sc["rule_no"] == 5:
             events.append({"t": sc["start"] + 2.2, "dur": 0.4, "kind": "roll"})
     events += [{"t": final["start"] - SILENCE_BEFORE_FINAL, "dur": 0.28, "kind": "freeze"},
-               {"t": reveal, "dur": 0.1, "kind": "flash", "image": "twist"},
+               {"t": reveal, "dur": 0.34, "kind": "slam"},
                {"t": story_end, "dur": 0.6, "kind": "static"}, {"t": story_end + 0.45, "dur": 0.15, "kind": "black"}]
     log("[horror] Degrading the tape...")
     fxv = work / "fx.mp4"
@@ -177,6 +177,11 @@ def build_horror_video(story_dir: str, log=print) -> Path:
                     break
         if sc["kind"] == "rule" and sc["rule_no"] >= 1:                           # a low hit on each rule number, a little quieter early
             put(np.sin(2 * np.pi * (46 + 38 * np.exp(-np.arange(int(0.6 * SR)) / SR * 14)) * np.arange(int(0.6 * SR)) / SR) * np.exp(-np.arange(int(0.6 * SR)) / SR * 7), sc["start"] - 0.05, 0.28 + 0.07 * sc["rule_no"])
+    turn = next((s for s in scenes if s["kind"] == "twist" and not s["final"]), None)
+    if turn:                                                                       # a smaller scare earlier, so the big one is not the only thing to flinch at
+        put(sfx.scream_stab(0.4), turn["start"] + turn["lead"] + 0.2, 0.45)
+        put(sfx.static_burst(0.18), turn["start"] + turn["lead"] + 0.18, 0.5)
+    put(sfx.jump_scream(), reveal - 0.02, 1.15)                                    # THE jump scare, on the slam
     st = sfx.sting(1.1)                                                            # the ONE sting: its rise ends just before the reveal picture
     put(st, reveal - 1.1 - 0.08, 0.85)
     fin = story.get("finale_sfx") or ("snap" if story.get("format") == "scp" and "173" in json.dumps(story.get("credit", {})) else "scream")

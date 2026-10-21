@@ -44,7 +44,9 @@ def fetch_scp(number: str) -> dict:
 SYSTEM = """You turn an SCP Foundation article into a 55-65 second vertical horror short for people who have NEVER heard of SCP. If a viewer does not understand what is happening, they leave -
 so this is explained like a gripping true-crime documentary told by a calm, serious narrator, not read like a rulebook.
 Use ONLY facts in the article text - never invent abilities, history or incidents. No jargon without a plain-words explanation (say "a secret organization that locks away things that
-should not exist", never "Euclid class", "D-class", "Site-19" unless you explain it in the same breath). NEVER say "Rule one / Rule two".
+should not exist", never "Euclid class" or "D-class" unless you explain it in the same breath).
+The Foundation runs MANY sites (Site-19, Site-17, Site-64, Site-81...), task forces, researchers and other anomalies - do NOT default to Site-19. Use the site, facility, team,
+people and related anomalies that THIS article actually names, and draw on all of its material (every procedure, incident, addendum and interview), not just the opening paragraph. NEVER say "Rule one / Rule two".
 Story order (8 scenes, 115-140 words total, plain spoken English, short sentences):
 1. HOOK + WHAT IT IS: one chilling, concrete sentence that makes people need to know more, then what the thing is, in plain words ("This is a statue. It is alive.").
 2. WHAT IT DOES: its one terrifying ability or behaviour, said simply, with the consequence ("The moment nobody is looking at it, it moves. Fast. It kills in a second.").
@@ -61,7 +63,7 @@ slightly closer each time). Scenes 2-7: small / background / edge of frame / ref
 Describe the entity only with traits from the article. Picture 1 = poster: hero low-angle, entity faint behind, empty dark space at the top for the title.
 "image_prompt" = one clear moment, max 45 words, ending with {style}; use {Hero} for the character (a Foundation guard or junior researcher, 20 words: age, uniform, one detail).
 Respond with ONLY this JSON:
-{"title_lines": ["SCP-173", "THE SCULPTURE"], "poster_tag": "2-4 word tag under the title, e.g. THE STATUE THAT MOVES", "hero_look": "...", "tape_label": "SITE-19 ARCHIVE - TAPE 173 - CONFIDENTIAL" (max 44 characters),
+{"title_lines": ["SCP-173", "THE SCULPTURE"], "poster_tag": "2-4 word tag under the title, e.g. THE STATUE THAT MOVES", "hero_look": "...", "tape_label": "<the site named in the article> ARCHIVE - <ITEM> - CONFIDENTIAL" (max 44 characters; if no site is named: FOUNDATION ARCHIVE - <ITEM> - CONFIDENTIAL),
  "caption": "Instagram hook line (max 90 chars) + one question",
  "scenes": [{"kind": "intro|rule|twist", "rule_no": 0, "label": "WHAT IT IS", "narration": "...", "image_prompt": "... {style}"}]}
 (kind: scene 1 "intro"; scenes 2-6 "rule" with rule_no 1..5 in order; scenes 7-8 "twist" with rule_no 6.)"""
