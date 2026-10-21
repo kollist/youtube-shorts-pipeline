@@ -103,7 +103,7 @@ def build_horror_video(story_dir: str, log=print, dread: bool = False) -> Path:
         rel = [(VO + a_ - starts[i - 1], VO + b_ - starts[i - 1], w) for a_, b_, w in words[lo:hi]]
         scenes.append({"i": i, "kind": sc.get("kind", "rule"), "rule_no": sc.get("rule_no", 0), "final": False, "start": starts[i - 1], "len": end - starts[i - 1], "lead": 0.0, "dur": 0.0,
                        "mp3": None, "words": rel, "image": sdir / sc["image"], "tail": SILENCE_BEFORE_FINAL if is_last else 0.0, "label": sc.get("label", ""),
-                       "badge": (sc["label"] if sc.get("label") else f"RULE {sc['rule_no']}" if sc.get("kind") in ("rule", "twist") and sc.get("rule_no") and not any(s["kind"] == "twist" for s in scenes if sc.get("kind") == "twist") else "")})
+                       "badge": (sc["label"] if sc.get("label") else "" if story.get("format") == "scp" else f"RULE {sc['rule_no']}" if sc.get("kind") in ("rule", "twist") and sc.get("rule_no") and not any(s["kind"] == "twist" for s in scenes if sc.get("kind") == "twist") else "")})
     fmp3 = work / "voice_final.mp3"
     fwords = asyncio.run(_voice(fin_in["lines"][0]["text"], whisper_voice, fmp3, True))
     fdur = probe_duration(fmp3); flead = 0.35
