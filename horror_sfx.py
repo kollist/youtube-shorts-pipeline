@@ -130,7 +130,7 @@ def heartbeat(dur: float, bpm0: float = 62, bpm1: float = 118) -> np.ndarray:
     out = np.zeros(int(dur * SR)); t0 = 0.0
     while t0 < dur:
         for off, g in ((0.0, 1.0), (0.26, 0.7)):
-            tt = _t(0.3); thump = np.sin(2 * np.pi * (58 - 18 * tt / 0.3) * tt) * np.exp(-16 * tt)
+            tt = _t(0.3); thump = np.sin(2 * np.pi * (58 - 18 * tt / 0.3) * tt) * np.exp(-16 * tt) + np.sin(2 * np.pi * 105 * tt) * np.exp(-30 * tt) * 0.5 + _lp(_rng.normal(0, 1, len(tt)), 8) * np.exp(-80 * tt) * 0.35
             i = int((t0 + off) * SR)
             if i + len(thump) < len(out): out[i:i + len(thump)] += thump * g
         bpm = bpm0 + (bpm1 - bpm0) * min(1, t0 / dur)
@@ -210,3 +210,23 @@ def real_scream(seed: int = 0) -> np.ndarray | None:
     sub = np.sin(2 * np.pi * (44 - 10 * t / 1.4) * t) * np.exp(-t * 2.4) * 1.4
     out[:len(sub)] += sub[: len(out)]
     return reverb(np.tanh(out * 1.3), 0.22)
+
+
+def heartbeat_times(dur: float, bpm0: float = 62, bpm1: float = 118) -> list[float]:
+    """When each 'lub' of heartbeat() lands (the same schedule), so the picture can pulse in time with it."""
+    out, t0 = [], 0.0
+    while t0 < dur:
+        out.append(t0)
+        t0 += 60.0 / (bpm0 + (bpm1 - bpm0) * min(1, t0 / dur))
+    return out
+
+
+def rising_bed(dur: float, f0: float = 70, f1: float = 520) -> np.ndarray:
+    """A tone that climbs for the whole story and never reaches anywhere (a Shepard-style unresolved rise): two detuned voices, a slow tremolo that speeds up.
+    This is the 'tight chest' layer - the ear keeps waiting for it to stop."""
+    t = _t(dur)
+    f = f0 * (f1 / f0) ** (t / dur)
+    ph = np.cumsum(f) / SR
+    trem = 0.6 + 0.4 * np.sin(2 * np.pi * (0.4 + 5.0 * (t / dur) ** 2) * t)
+    x = (np.sin(2 * np.pi * ph) + 0.7 * np.sin(2 * np.pi * ph * 1.0145) + 0.25 * np.sin(2 * np.pi * ph * 2.01)) * trem
+    return x * 0.5

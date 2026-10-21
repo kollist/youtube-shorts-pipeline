@@ -65,7 +65,7 @@ def _wav(mp3: Path) -> np.ndarray:
     return np.frombuffer(raw, dtype=np.float32)
 
 
-def build_horror_video(story_dir: str, log=print) -> Path:
+def build_horror_video(story_dir: str, log=print, dread: bool = False) -> Path:
     sdir = Path(story_dir).resolve()
     story = json.loads((sdir / "story.json").read_text(encoding="utf-8"))
     work = sdir / "build_horror"; work.mkdir(exist_ok=True)
@@ -139,6 +139,8 @@ def build_horror_video(story_dir: str, log=print) -> Path:
     curve = [(0.0, 0.08)] + [(sc["start"] + sc["lead"], _tension(sc)) for sc in scenes] + [(story_end, 1.0), (total, 1.0)]
     final = scenes[-1]
     reveal = final["start"]
+    turn0 = next((s for s in scenes if s["kind"] == "twist" and not s["final"]), None)
+    jolt = (turn0["start"] + 0.45) if (dread and turn0) else None
     events = []
     for sc in scenes:
         if sc["kind"] == "rule" and sc["rule_no"] >= 3:
@@ -148,19 +150,29 @@ def build_horror_video(story_dir: str, log=print) -> Path:
         if sc["kind"] == "rule" and sc["rule_no"] == 5:
             events.append({"t": sc["start"] + 2.2, "dur": 0.4, "kind": "roll"})
     events += [{"t": final["start"] - SILENCE_BEFORE_FINAL, "dur": 0.28, "kind": "freeze"},
-               {"t": reveal, "dur": 0.34, "kind": "slam"},
+               ({"t": jolt, "dur": 0.34, "kind": "slam"} if jolt else {"t": reveal, "dur": 0.34, "kind": "slam"}),
                {"t": story_end, "dur": 0.6, "kind": "static"}, {"t": story_end + 0.45, "dur": 0.15, "kind": "black"}]
+    if dread:                                                                         # one-frame glimpses of the entity, spread out so you never know when
+        events += [{"t": story_end * 0.55, "dur": 0.04, "kind": "flash", "image": "twist"}, {"t": story_end * 0.77, "dur": 0.04, "kind": "flash", "image": "twist"},
+                   {"t": reveal + 1.1, "dur": 0.04, "kind": "flash", "image": "twist"}]
+    beats = []
+    if dread:
+        hb0 = VO + 0.4; hb_end = (jolt - 0.35) if jolt else (reveal - 1.0)
+        beats = [hb0 + b for b in sfx.heartbeat_times(hb_end - hb0, 52, 128)]
+        if jolt:
+            beats += [jolt + 1.2 + b for b in sfx.heartbeat_times(reveal - jolt - 1.2, 132, 132)]
     log("[horror] Degrading the tape...")
     fxv = work / "fx.mp4"
-    horror_fx.process(str(work / "silent.mp4"), str(fxv), curve, events, label, {"twist": str(final["image"])}, log=log)
+    horror_fx.process(str(work / "silent.mp4"), str(fxv), curve, events, label, {"twist": str(final["image"])}, log=log, beats=beats)
 
     # ---- 5. sound
     log("[horror] Sound design...")
-    n = int((total + 1) * SR); mix = np.zeros(n)
-    def put(sound, at, gain=1.0):
+    n = int((total + 1) * SR); mixL = np.zeros(n); mixR = np.zeros(n)
+    def put(sound, at, gain=1.0, pan=0.0):                                         # pan -1 (left ear) .. +1 (right ear)
         i = int(max(0, at) * SR)
         if i < n:
-            seg = sound[: n - i]; mix[i:i + len(seg)] += seg * gain
+            seg = sound[: n - i] * gain; ang = (pan + 1) * np.pi / 4
+            mixL[i:i + len(seg)] += seg * np.cos(ang) * 1.414; mixR[i:i + len(seg)] += seg * np.sin(ang) * 1.414
     def shape(x, pts):                                                             # piecewise-linear gain envelope [(t, g), ...]
         return np.interp(np.arange(len(x)) / SR, [p[0] for p in pts], [p[1] for p in pts]) * x
     silence_at = final["start"] - SILENCE_BEFORE_FINAL + 0.25
@@ -176,6 +188,16 @@ def build_horror_video(story_dir: str, log=print) -> Path:
     if r5:
         wb = sfx.whisper_bed(silence_at - r5["start"])
         put(shape(wb, [(0, 0), (3, 0.05), (len(wb) / SR - 0.4, 0.07), (len(wb) / SR, 0)]), r5["start"])
+    if dread:
+        put(shape(sfx.rising_bed(story_end), [(0, 0), (6, 0.06), (story_end * 0.8, 0.2), (story_end - 0.3, 0.26), (story_end, 0)]), 0)           # never resolves
+        put(shape(sfx.drone(story_end), [(0, 0), (2, 0.3), (story_end - 0.5, 0.42), (story_end, 0)]), 0)
+        hb_a = sfx.heartbeat(hb_end - hb0, 52, 128)                                # starts almost at once and speeds up; it STOPS before the jolt
+        put(shape(hb_a, [(0, 0.25), (len(hb_a) / SR * 0.5, 0.6), (len(hb_a) / SR - 0.05, 0.95), (len(hb_a) / SR, 0)]), hb0)
+        if jolt:
+            hb_b = sfx.heartbeat(reveal - jolt - 1.2, 132, 132)
+            put(shape(hb_b, [(0, 0.5), (len(hb_b) / SR, 0)]), jolt + 1.2)
+        for frac, snd, pan, g in ((0.30, sfx.breath, -0.95, 0.5), (0.43, sfx.door_creak, 0.9, 0.45), (0.50, sfx.knock, -0.8, 0.5), (0.66, sfx.breath, 0.95, 0.55), (0.78, sfx.door_creak, -0.9, 0.5)):
+            put(snd(), story_end * frac, g, pan)                                   # sounds from behind you, in one ear, on no word
     put(_wav(main_mp3), VO, 1.0)                                                   # the narrator: one continuous take
     put(_wav(scenes[-1]["mp3"]), scenes[-1]["start"] + scenes[-1]["lead"], 1.0)    # then the whispered finale
     used = 0
@@ -195,9 +217,13 @@ def build_horror_video(story_dir: str, log=print) -> Path:
     if turn:                                                                       # a smaller scare earlier, so the big one is not the only thing to flinch at
         put(sfx.scream_stab(0.4), turn["start"] + turn["lead"] + 0.2, 0.3)
         put(sfx.static_burst(0.18), turn["start"] + turn["lead"] + 0.18, 0.5)
-    put(sfx.real_scream(len(story.get('title', ''))) if sfx.real_scream() is not None else sfx.jump_scream(), reveal - 0.02, 1.15)   # THE jump scare, on the slam
+    big = sfx.real_scream(len(story.get('title', ''))) if sfx.real_scream() is not None else sfx.jump_scream()
+    if jolt:
+        put(big, jolt - 0.02, 1.15)                                                  # THE jump scare: mid-story, right after the heartbeat stops dead
+    else:
+        put(big, reveal - 0.02, 1.15)
     st = sfx.sting(1.1)                                                            # the ONE sting: its rise ends just before the reveal picture
-    put(st, reveal - 1.1 - 0.08, 0.85)
+    put(st, reveal - 1.1 - 0.08, 0.5 if jolt else 0.85)
     fin = story.get("finale_sfx") or ("snap" if story.get("format") == "scp" and "173" in json.dumps(story.get("credit", {})) else "scream")
     voice_end = final["start"] + final["lead"] + final["dur"]
     if fin == "snap":
@@ -206,9 +232,9 @@ def build_horror_video(story_dir: str, log=print) -> Path:
         put(sfx.scream_stab(), voice_end + 0.06, 0.8)
     put(sfx.tape_stop(0.8), story_end - 0.1, 0.8)
     put(sfx.static_burst(0.6), story_end, 0.5)
-    mix = np.tanh(mix * 0.9)
-    mix = mix / max(1e-9, np.abs(mix).max()) * 0.92
-    raw = work / "mix.raw"; raw.write_bytes((np.repeat(mix[:, None], 2, 1)[: int(total * SR)] * 32767).astype(np.int16).tobytes())
+    st_mix = np.tanh(np.stack([mixL, mixR], axis=1) * 0.9)
+    st_mix = st_mix / max(1e-9, np.abs(st_mix).max()) * 0.92
+    raw = work / "mix.raw"; raw.write_bytes((st_mix[: int(total * SR)] * 32767).astype(np.int16).tobytes())
     run(["ffmpeg", "-y", "-v", "error", "-f", "s16le", "-ar", str(SR), "-ac", "2", "-i", str(raw), "-af", "loudnorm=I=-15:TP=-1.5:LRA=11", str(work / "audio.wav")]); raw.unlink()
     log(f"[horror] {used} foley cues placed on spoken words")
 
@@ -220,7 +246,7 @@ def build_horror_video(story_dir: str, log=print) -> Path:
         if story.get("credit"):
             extra += (f"Dialogue: 3,{rv._ass_time(story_end + 0.7)},{rv._ass_time(total)},Cap,,0,0,0,,{{\\an2\\pos(540,1840)\\fs30\\c&H00C8C8C8&\\bord3}}{story['credit']['line']}\n")
         cap.write_text(cap.read_text(encoding="utf-8") + extra, encoding="utf-8")
-    out = sdir / f"{sdir.name}-HORROR.mp4"
+    out = sdir / f"{sdir.name}-HORROR{'2' if dread else ''}.mp4"
     log("[horror] Final render...")
     subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", "fx.mp4", "-i", "audio.wav", "-vf", f"tpad=stop_mode=clone:stop_duration={CARD + 1:.1f},subtitles=captions.ass",
                     "-t", f"{total:.2f}", "-c:v", "libx264", "-crf", "28", "-preset", "medium", "-maxrate", "6M", "-bufsize", "12M",      # the grain is heavy: bound the bitrate (~40 MB)
@@ -231,5 +257,5 @@ def build_horror_video(story_dir: str, log=print) -> Path:
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("story_dir"); a = ap.parse_args()
-    build_horror_video(a.story_dir)
+    ap = argparse.ArgumentParser(); ap.add_argument("story_dir"); ap.add_argument("--dread", action="store_true", help="version 2: constant physical dread, unexpected scare"); a = ap.parse_args()
+    build_horror_video(a.story_dir, dread=a.dread)

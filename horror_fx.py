@@ -75,7 +75,7 @@ class Tape:
         self.bands = alive
         f = f * self.scan
         f = f + self.noise[fi % 6] * (5 + 17 * k)                            # grain
-        f = f * self.vig
+        f = f * (1 - (1 - self.vig) * (0.7 + 0.9 * k))                        # the dark edges close in as the tension rises
         f = f * (1 + 0.025 * np.sin(t * 41) + (0.08 if self.rng.random() < 0.02 + 0.06 * k else 0))   # flicker
         rgb, a = self.overlay(t, k)
         f[:96] = f[:96] * (1 - a) + rgb * a
@@ -94,7 +94,7 @@ def _frames(path: str):
 
 
 def process(in_mp4: str, out_mp4: str, curve: list[tuple[float, float]], events: list[dict], label: str, flash_images: dict | None = None,
-            out_size=(1080, 1920), log=print) -> Path:
+            out_size=(1080, 1920), log=print, beats: list[float] | None = None) -> Path:
     """curve: [(seconds, tension 0..1), ...] linear in between. events: {"t", "dur", "kind": static|roll|freeze|black|flash, "image": key into flash_images}."""
     tape = Tape(label)
     flash = {k: np.asarray(Image.open(v).convert("RGB").resize((W, H), Image.LANCZOS), np.float32) for k, v in (flash_images or {}).items()}
@@ -118,6 +118,9 @@ def process(in_mp4: str, out_mp4: str, curve: list[tuple[float, float]], events:
             if kind == "flash" and ev.get("image") in flash:
                 f = flash[ev["image"]]
             out = tape.frame(f, t, 1.0 if kind in ("static", "roll") else k, i)
+            if beats:                                              # the picture dips dark on every heartbeat - the chest-tightening pulse
+                lub = max((np.exp(-(t - b) / 0.06) for b in beats if 0 <= t - b < 0.35), default=0.0)
+                out = out * (1 - 0.30 * min(1.0, k + 0.25) * lub)
             if kind == "static":
                 out = np.clip(128 + tape.noise[i % 6] * 70 + out * 0.15, 0, 255)
             elif kind == "roll":
