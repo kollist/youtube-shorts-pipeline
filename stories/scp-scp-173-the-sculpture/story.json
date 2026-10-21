@@ -1,0 +1,149 @@
+{
+  "title": "Scp-173 The Sculpture",
+  "format": "scp",
+  "title_lines": [
+    "SCP-173",
+    "THE SCULPTURE"
+  ],
+  "audience": "horror",
+  "style": "dark anime key art, painterly cinematic horror illustration, a concrete-and-fluorescent-light government facility at night, moody lighting with deep shadows and one cold light source, rich detail, film still quality, vertical composition, absolutely no text, no letters, no numbers, no signs with writing",
+  "tape_label": "SITE-19 ARCHIVE - TAPE 173 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-173",
+    "author": "Moto42",
+    "url": "https://scp-wiki.wikidot.com/scp-173",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-173 by Moto42 - scp-wiki.wikidot.com/scp-173 - CC BY-SA 3.0"
+  },
+  "post_caption": "Don't blink during this Site-19 tape. Could you survive SCP-173?",
+  "summary": "Foundation orientation tape for SCP-173.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+12%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "Man, 28, navy Foundation guard uniform, black tactical vest, tired eyes, short brown hair, lanyard ID badge, radio headset."
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "image_prompt": "Low-angle poster shot of {Hero} in a dim concrete corridor, flashlight in hand. A faint crude concrete statue with rebar stands far behind in shadow. Empty dark space above for title. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Welcome to Site-19. This tape covers SCP-173. Concrete and rebar. Hostile. One mistake is fatal."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "image_prompt": "{Hero} turns a heavy steel key in a container door. At the far end of the dark corridor behind, a tiny pale concrete figure with rebar stands barely visible. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Rule one. Keep the container locked. Always."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "image_prompt": "{Hero} and two other guards step through a steel door into a bare concrete cell. In the far corner, half hidden in shadow, a small gritty concrete statue with rust-streaked rebar. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Rule two. Enter in threes, never fewer. It snaps necks at the base of the skull."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "image_prompt": "Close on {Hero}'s wide unblinking eye in the foreground. Blurred at the edge of frame, a concrete statue with faint spray paint traces stands slightly closer than before. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Rule three. Two people hold eye contact. Always. It cannot move while you see it."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "image_prompt": "{Hero} kneels scrubbing a reddish brown stain on a concrete floor with a brush. Behind, at the edge of frame, the concrete statue stands half hidden behind a pillar, closer still. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Rule four. Clean the enclosure every two weeks. The stain is blood. Nobody knows whose."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 5,
+      "image_prompt": "{Hero} in a dark control room, face lit by a monitor. In the black glass of the screen's reflection, a pale concrete figure with rebar stands behind, small but nearer. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Rule five. Warn the others before you blink. Nobody warned you. You have already blinked."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 5,
+      "image_prompt": "Security camera view of the open container doorway at night. {Hero} small in the foreground, head tilted listening. The concrete statue stands half in the doorway, partly in shadow, scratched floor beneath. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Scraping from the container is normal. Listen. It stopped."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 5,
+      "image_prompt": "{Hero} seated at a desk, unaware, back half turned. Directly behind, huge and in sharp focus, the cracked concrete statue with rebar and spray paint traces looms, hands outstretched near his neck. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "It is behind you now. Your eyes burn. Don't blink. Don't— Could you hold its stare until morning?"
+        }
+      ]
+    }
+  ],
+  "poster_tag": "FOUNDATION ORIENTATION TAPE",
+  "finale_sfx": "snap"
+}
