@@ -54,9 +54,15 @@ async def _voice(text: str, who: dict, mp3: Path, whisper: bool):
     if not whisper:                                                      # an old training tape: narrow band, a little wobble, squashed
         tmp = mp3.with_suffix(".t.mp3"); mp3.rename(tmp)
         run(["ffmpeg", "-y", "-v", "error", "-i", str(tmp), "-af", "highpass=f=170,lowpass=f=4800,vibrato=f=4.6:d=0.025,acompressor=threshold=-20dB:ratio=3:makeup=3", str(mp3)]); tmp.unlink()
-    if whisper:                                                          # close, breathy, in a big empty room
+    if whisper:                                                          # the finale: not a quiet voice - a VOICE WITH SOMETHING UNDER IT
         tmp = mp3.with_suffix(".w.mp3"); mp3.rename(tmp)
-        run(["ffmpeg", "-y", "-v", "error", "-i", str(tmp), "-af", "highpass=f=140,aecho=0.85:0.6:48|120|230:0.38|0.26|0.16,volume=1.25", str(mp3)]); tmp.unlink()
+        chain = ("[0:a]aresample=44100,highpass=f=80,acompressor=threshold=-26dB:ratio=4:makeup=5,asplit=3[m][d][w];"
+                 "[d]rubberband=pitch=0.62,adelay=28|28,volume=0.9[low];"                      # a second, much lower voice a hair behind: the 'it' under the voice
+                 "[w]highpass=f=3200,acompressor=threshold=-30dB:ratio=6:makeup=6,volume=0.18[air];"   # rasp of breath / sibilance, pulled forward
+                 "[m][low][air]amix=inputs=3:weights=1 1.1 0.3:normalize=0,"
+                 "acrusher=bits=12:mode=log:aa=1:mix=0.18,"                                      # a little digital grit, like a voice that is not quite coming from a throat
+                 "aecho=0.85:0.7:55|140|310:0.5|0.38|0.26,volume=1.6,alimiter=limit=0.95")
+        run(["ffmpeg", "-y", "-v", "error", "-i", str(tmp), "-filter_complex", chain, "-ar", "44100", str(mp3)]); tmp.unlink()
     return words
 
 
@@ -69,7 +75,7 @@ def build_horror_video(story_dir: str, log=print, dread: bool = False) -> Path:
     sdir = Path(story_dir).resolve()
     story = json.loads((sdir / "story.json").read_text(encoding="utf-8"))
     work = sdir / "build_horror"; work.mkdir(exist_ok=True)
-    narr = story["characters"]["Narrator"]; whisper_voice = VOICES["creepy_whisper"]
+    narr = story["characters"]["Narrator"]; whisper_voice = {**VOICES["creepy_whisper"], "rate": "-26%", "pitch": "-24Hz"}      # slower and lower: it takes its time
     label = story.get("tape_label") or f"{(story.get('title_lines') or [story['title']])[-1]} - NIGHT STAFF ORIENTATION - 1994".upper()[:60]
 
     # ---- 1. the end card: the viewer-question is pulled out of the last scene so the scare is the last thing heard
