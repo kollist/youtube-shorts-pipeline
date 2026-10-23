@@ -73,7 +73,7 @@ def _wav(mp3: Path) -> np.ndarray:
     return np.frombuffer(raw, dtype=np.float32)
 
 
-def build_horror_video(story_dir: str, log=print, dread: bool = False) -> Path:
+def build_horror_video(story_dir: str, log=print, dread: bool = True) -> Path:
     sdir = Path(story_dir).resolve()
     story = json.loads((sdir / "story.json").read_text(encoding="utf-8"))
     work = sdir / "build_horror"; work.mkdir(exist_ok=True)
@@ -289,7 +289,7 @@ def build_horror_video(story_dir: str, log=print, dread: bool = False) -> Path:
         if story.get("credit"):
             extra += (f"Dialogue: 3,{rv._ass_time(story_end + 0.7)},{rv._ass_time(total)},Cap,,0,0,0,,{{\\an2\\pos(540,1840)\\fs30\\c&H00C8C8C8&\\bord3}}{story['credit']['line']}\n")
         cap.write_text(cap.read_text(encoding="utf-8") + extra, encoding="utf-8")
-    out = sdir / f"{sdir.name}-HORROR{('3' if len(set(px_used)) > 1 else '2') if dread else ''}.mp4"
+    out = sdir / f"{sdir.name}-HORROR{'' if dread else '-classic'}.mp4"
     log("[horror] Final render...")
     subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", "fx.mp4", "-i", "audio.wav", "-vf", f"tpad=stop_mode=clone:stop_duration={CARD + 1:.1f},subtitles=captions.ass",
                     "-t", f"{total:.2f}", "-c:v", "libx264", "-crf", "28", "-preset", "medium", "-maxrate", "6M", "-bufsize", "12M",      # the grain is heavy: bound the bitrate (~40 MB)
@@ -300,5 +300,5 @@ def build_horror_video(story_dir: str, log=print, dread: bool = False) -> Path:
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("story_dir"); ap.add_argument("--dread", action="store_true", help="version 2: constant physical dread, unexpected scare"); a = ap.parse_args()
-    build_horror_video(a.story_dir, dread=a.dread)
+    ap = argparse.ArgumentParser(); ap.add_argument("story_dir"); ap.add_argument("--classic", action="store_true", help="the older, simpler cut (no constant dread build-up)"); a = ap.parse_args()
+    build_horror_video(a.story_dir, dread=not a.classic)
