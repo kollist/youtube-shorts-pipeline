@@ -1,0 +1,156 @@
+{
+  "title": "Scp-096 The Shy Guy",
+  "format": "scp",
+  "title_lines": [
+    "SCP-096",
+    "THE SHY GUY"
+  ],
+  "audience": "horror",
+  "style": "dark anime key art, painterly cinematic horror illustration, a concrete-and-fluorescent-light government facility at night, moody lighting with deep shadows and one cold light source, rich detail, film still quality, vertical composition, absolutely no text, no letters, no numbers, no signs with writing",
+  "tape_label": "FOUNDATION ARCHIVE - SCP-096 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-096",
+    "author": "Dan",
+    "url": "https://scp-wiki.wikidot.com/scp-096",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-096 by Dan - scp-wiki.wikidot.com/scp-096 - CC BY-SA 3.0"
+  },
+  "poster_tag": "NEVER SEE ITS FACE",
+  "post_caption": "One glance at its face and it will find you, wherever you are. Would you open the photo?",
+  "summary": "Foundation orientation tape for SCP-096.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "Foundation night guard, early 20s, black tactical uniform, ID badge on chest, tired wide eyes, short dark hair"
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "Low-angle {Hero} in a dark corridor, faint tall pale hairless figure with very long arms far behind, empty dark space above for the title, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Everyone who sees this creature's face dies. It is a pale, starving giant with arms too long for its body."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "WHAT IT DOES",
+      "image_prompt": "Tiny pale gaunt figure with long arms, hands covering its face, crying in the far corner of a steel cube seen on a distant monitor, {Hero} watching, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Normally it paces quietly. But if you see its face, even in a photo, it screams, sobs, then comes for you."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "WHY IT'S DANGEROUS",
+      "image_prompt": "Smoky snowy field at dusk, wrecked helicopter edge of frame, small pale long-armed figure standing half-hidden in the smoke, {Hero} as a photo on a case file, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Nothing stops it. One team fired hundreds of rounds, even an anti-tank weapon, and it kept killing."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "HOW IT'S CONTAINED",
+      "image_prompt": "Massive airtight steel cube cell door, {Hero} small in front of it, pale long fingers faintly reflected in the polished steel, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "So the Foundation, a secret group that locks away impossible things, seals it in a steel cube with no cameras."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "WHO WATCHES IT",
+      "image_prompt": "{Hero} in a control room checking a pressure sensor panel and laser readouts, a pale gaunt face with wide empty eyes barely visible in the dark screen glass, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Sensors and lasers tell guards it is inside, and every week someone checks the walls for cracks."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "THE MISTAKE",
+      "image_prompt": "Close on {Hero} holding a sealed folder, staring at a photo with dread, tall pale figure silhouetted at the far end of the dark hallway behind, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Tonight that someone is you, and curiosity wins. You open the forbidden photograph, just once."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "THE TURN",
+      "image_prompt": "Dead-silent control room, red warning light, {Hero} frozen, a long-armed pale figure sprinting small down a distant corridor on a cracked monitor, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Then the sensors go quiet, and far below, something begins to cry."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "Huge pale hairless long-armed creature with wide jaw and colorless eyes looming right behind {Hero}, sharp focus, hero unaware staring ahead, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "You looked at me, so I came. I am right behind you now. Go on... turn around."
+        }
+      ]
+    }
+  ]
+}
