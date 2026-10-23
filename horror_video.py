@@ -73,7 +73,7 @@ def _wav(mp3: Path) -> np.ndarray:
     return np.frombuffer(raw, dtype=np.float32)
 
 
-def build_horror_video(story_dir: str, log=print, dread: bool = True) -> Path:
+def build_horror_video(story_dir: str, log=print, dread: bool = True, yt: bool = False) -> Path:
     sdir = Path(story_dir).resolve()
     story = json.loads((sdir / "story.json").read_text(encoding="utf-8"))
     work = sdir / "build_horror"; work.mkdir(exist_ok=True)
@@ -171,7 +171,7 @@ def build_horror_video(story_dir: str, log=print, dread: bool = True) -> Path:
             beats += [jolt + 1.2 + b for b in sfx.heartbeat_times(reveal - jolt - 1.2, 132, 132)]
     log("[horror] Degrading the tape...")
     fxv = work / "fx.mp4"
-    horror_fx.process(str(work / "silent.mp4"), str(fxv), curve, events, label, {"twist": str(final["image"])}, log=log, beats=beats)
+    horror_fx.process(str(work / "silent.mp4"), str(fxv), curve, events, label, {"twist": str(final["image"])}, log=log, beats=beats, soft=yt)
 
     # ---- 5. sound
     log("[horror] Sound design...")
@@ -289,10 +289,11 @@ def build_horror_video(story_dir: str, log=print, dread: bool = True) -> Path:
         if story.get("credit"):
             extra += (f"Dialogue: 3,{rv._ass_time(story_end + 0.7)},{rv._ass_time(total)},Cap,,0,0,0,,{{\\an2\\pos(540,1840)\\fs30\\c&H00C8C8C8&\\bord3}}{story['credit']['line']}\n")
         cap.write_text(cap.read_text(encoding="utf-8") + extra, encoding="utf-8")
-    out = sdir / f"{sdir.name}-HORROR{'' if dread else '-classic'}.mp4"
+    out = sdir / f"{sdir.name}-HORROR{'' if dread else '-classic'}{'-YT' if yt else ''}.mp4"
     log("[horror] Final render...")
-    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", "fx.mp4", "-i", "audio.wav", "-vf", f"tpad=stop_mode=clone:stop_duration={CARD + 1:.1f},subtitles=captions.ass",
-                    "-t", f"{total:.2f}", "-c:v", "libx264", "-crf", "28", "-preset", "medium", "-maxrate", "6M", "-bufsize", "12M",      # the grain is heavy: bound the bitrate (~40 MB)
+    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", "fx.mp4", "-i", "audio.wav", "-vf", (f"tpad=stop_mode=clone:stop_duration={CARD + 1:.1f},scale=1440:2560:flags=lanczos,subtitles=captions.ass:original_size=1080x1920" if yt
+                                                 else f"tpad=stop_mode=clone:stop_duration={CARD + 1:.1f},subtitles=captions.ass"),
+                    "-t", f"{total:.2f}", "-c:v", "libx264", "-crf", "20" if yt else "28", "-preset", "medium", "-maxrate", "12M" if yt else "6M", "-bufsize", "24M" if yt else "12M",      # the grain is heavy: bound the bitrate (~40 MB)
                     "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", str(out)], cwd=work, check=True)
     shutil.rmtree(work, ignore_errors=True)                                      # ~500 MB of intermediate clips; the result is the video
     log(f"[horror] Done -> {out}")
@@ -300,5 +301,5 @@ def build_horror_video(story_dir: str, log=print, dread: bool = True) -> Path:
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("story_dir"); ap.add_argument("--classic", action="store_true", help="the older, simpler cut (no constant dread build-up)"); a = ap.parse_args()
-    build_horror_video(a.story_dir, dread=not a.classic)
+    ap = argparse.ArgumentParser(); ap.add_argument("story_dir"); ap.add_argument("--classic", action="store_true", help="the older, simpler cut (no constant dread build-up)"); ap.add_argument("--yt", action="store_true", help="YouTube-quality export: lighter grain, 1440x2560, higher bitrate (bigger file)"); a = ap.parse_args()
+    build_horror_video(a.story_dir, dread=not a.classic, yt=a.yt)

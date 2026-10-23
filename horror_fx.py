@@ -25,13 +25,14 @@ def _font(size):
 
 
 class Tape:
-    def __init__(self, label: str, seed: int = 7):
+    def __init__(self, label: str, seed: int = 7, soft: bool = False):
         self.rng = np.random.default_rng(seed)
         self.label = label
+        self.grain = 0.55 if soft else 1.0                 # soft: finer, lighter grain and gentler scanlines, so a re-encoder (YouTube) has less noise to spend bitrate on
         yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
         d = np.sqrt(((xx - W / 2) / (W / 2)) ** 2 + ((yy - H / 2) / (H / 2)) ** 2)
         self.vig = (1 - 0.55 * np.clip(d - 0.35, 0, 1) ** 1.5)[..., None].astype(np.float32)
-        self.scan = np.where(np.arange(H) % 3 == 0, 0.82, 1.0).astype(np.float32)[:, None, None]
+        self.scan = np.where(np.arange(H) % 3 == 0, 0.9 if soft else 0.82, 1.0).astype(np.float32)[:, None, None]
         self.noise = [self.rng.normal(0, 1, (H, W, 1)).astype(np.float32) for _ in range(6)]
         self.bands: list[dict] = []
         self._ov_cache: dict = {}
@@ -74,7 +75,7 @@ class Tape:
                 alive.append(b)
         self.bands = alive
         f = f * self.scan
-        f = f + self.noise[fi % 6] * (5 + 17 * k)                            # grain
+        f = f + self.noise[fi % 6] * (5 + 17 * k) * self.grain                            # grain
         f = f * (1 - (1 - self.vig) * (0.7 + 0.9 * k))                        # the dark edges close in as the tension rises
         f = f * (1 + 0.025 * np.sin(t * 41) + (0.08 if self.rng.random() < 0.02 + 0.06 * k else 0))   # flicker
         rgb, a = self.overlay(t, k)
@@ -94,13 +95,13 @@ def _frames(path: str):
 
 
 def process(in_mp4: str, out_mp4: str, curve: list[tuple[float, float]], events: list[dict], label: str, flash_images: dict | None = None,
-            out_size=(1080, 1920), log=print, beats: list[float] | None = None) -> Path:
+            out_size=(1080, 1920), log=print, beats: list[float] | None = None, soft: bool = False) -> Path:
     """curve: [(seconds, tension 0..1), ...] linear in between. events: {"t", "dur", "kind": static|roll|freeze|black|flash, "image": key into flash_images}."""
-    tape = Tape(label)
+    tape = Tape(label, soft=soft)
     flash = {k: np.asarray(Image.open(v).convert("RGB").resize((W, H), Image.LANCZOS), np.float32) for k, v in (flash_images or {}).items()}
     xs, ys = zip(*curve)
     enc = subprocess.Popen(["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
-                            "-vf", f"scale={out_size[0]}:{out_size[1]}:flags=lanczos", "-c:v", "libx264", "-crf", "22", "-preset", "fast", "-pix_fmt", "yuv420p", str(out_mp4)],
+                            "-vf", f"scale={out_size[0]}:{out_size[1]}:flags=lanczos", "-c:v", "libx264", "-crf", "16" if soft else "22", "-preset", "fast", "-pix_fmt", "yuv420p", str(out_mp4)],
                            stdin=subprocess.PIPE)
     held = None
     probe = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", in_mp4], capture_output=True, text=True).stdout.strip()
