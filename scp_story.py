@@ -8,6 +8,7 @@ video under CC BY-SA 3.0. The credit is stored in story.json ("credit"), burned 
 """
 
 import argparse
+import json
 import re
 from pathlib import Path
 
@@ -38,6 +39,12 @@ def fetch_scp(number: str) -> dict:
     m = re.search(r"([A-Za-z0-9_\-\.]+), from the", r.text)           # the licence box credits "<author>, from the SCP Wiki"
     if m:
         author = m.group(1)
+    if not author:                                                       # some pages lay the credit out differently: data/scp_authors.json = {"4153": "The Great Hippo"}
+        try:
+            overrides = json.loads((Path(__file__).parent / "data" / "scp_authors.json").read_text(encoding="utf-8"))
+            author = overrides.get(n.lstrip("0") or "0", "") or overrides.get(n, "")
+        except (OSError, json.JSONDecodeError):
+            pass
     return {"item": f"SCP-{n}", "url": url, "text": text[:6500], "author": author}
 
 
