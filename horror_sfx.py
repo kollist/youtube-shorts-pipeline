@@ -72,8 +72,8 @@ def knock(n: int = 3, gap: float = 0.34) -> np.ndarray:
     """Three knuckle raps on a wooden door, from real recordings (assets/sfx/knock_*.wav), a little different each time. Falls back to a synth thump."""
     mine = sorted(c for c in _SFX_DIR.glob("pixabay_knock*") if c.suffix.lower() in (".mp3", ".wav", ".ogg", ".m4a"))
     if mine:                                                                   # hand-picked recordings win: used whole, as one cue
-        a = _load_wav(mine[int(_rng.integers(len(mine)))])[: int(4.5 * SR)]
-        a = a / max(1e-9, np.abs(a).max()); a[-int(0.25 * SR):] *= np.linspace(1, 0, int(0.25 * SR))[: len(a[-int(0.25 * SR):])]
+        a = _load_wav(mine[int(_rng.integers(len(mine)))])[: int(4.2 * SR)]
+        a = a / max(1e-9, np.abs(a).max()); a[-int(0.4 * SR):] *= np.linspace(1, 0, int(0.4 * SR))[: len(a[-int(0.4 * SR):])]
         return reverb(a, 0.1) * 0.95
     clips = sorted(_SFX_DIR.glob("knock_*.wav"))
     if not clips:
