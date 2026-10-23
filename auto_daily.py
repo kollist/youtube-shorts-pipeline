@@ -185,6 +185,7 @@ def post(n: int, platforms: list[str], dry: bool) -> dict:
     d = ep_dir(n); c = captions_for(n, remember=not dry)
     normal, yt = d / f"{d.name}-HORROR.mp4", d / f"{d.name}-HORROR-YT.mp4"
     if dry:
+        (DATA / "tiktok_caption.txt").write_text(c["caps"]["tiktok"], encoding="utf-8")      # so `auto_daily.py caption` can be tried before the first real post
         print("\n=== DRY RUN: would post to", platforms)
         for k in ("youtube_title", "youtube", "instagram", "facebook", "tiktok"):
             print(f"--- {k}\n{c['caps'].get(k, '')}")
@@ -355,6 +356,8 @@ if __name__ == "__main__":
         status()
     elif a.cmd == "caption":
         txt = (DATA / "tiktok_caption.txt").read_text(encoding="utf-8") if (DATA / "tiktok_caption.txt").exists() else ""
+        if not txt.strip():
+            sys.exit("No TikTok caption saved yet - it is written when the job posts an episode.")
         subprocess.run(["pbcopy"], input=txt.encode()); print("Copied the latest TikTok caption to your clipboard:\n\n" + txt)
     elif a.cmd == "pause":
         DATA.mkdir(exist_ok=True); PAUSE.write_text("paused"); print("Paused. The daily job does nothing until: python auto_daily.py resume")
