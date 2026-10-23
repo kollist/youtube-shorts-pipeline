@@ -234,6 +234,21 @@ def pixabay(stem: str, seconds: float | None = None, start: float = 0.0, fade: f
     return a
 
 
+def pixabay_loop(stem: str, seconds: float, xfade: float = 0.7, fade: float = 0.5) -> np.ndarray | None:
+    """A short Pixabay recording stretched to `seconds` by overlapping crossfaded repeats, so a drone never audibly restarts."""
+    a = pixabay(stem, fade=0.0)
+    if a is None:
+        return None
+    target, xf = int(seconds * SR), min(int(xfade * SR), len(a) // 3)
+    out = a.copy()
+    while len(out) < target + xf:
+        up = np.linspace(0, 1, xf); out[-xf:] = out[-xf:] * (1 - up) + a[:xf] * up
+        out = np.concatenate([out, a[xf:]])
+    out = out[:target]; k = min(int(fade * SR), len(out) // 2)
+    out[:k] *= np.linspace(0, 1, k); out[-k:] *= np.linspace(1, 0, k)
+    return out
+
+
 def real_scream(seed: int = 0) -> np.ndarray | None:
     """The jump scare from real recordings: a female scream (one of four) with the long horror scream layered just behind it, a sub-bass hit
     under both, a touch of room. Returns None if the files are missing (callers fall back to jump_scream())."""

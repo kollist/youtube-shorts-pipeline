@@ -227,6 +227,9 @@ def build_horror_video(story_dir: str, log=print, dread: bool = False) -> Path:
         vp = sfx.pixabay("vocal1", scenes[-1]["dur"] + 1.2, 1.0, 0.5)
         if vp is not None:                                                         # a vocal presence under the monster's line
             put(vp, fstart - 0.2, 0.5); px_used.append("vocal")
+        dn = sfx.pixabay_loop("drone", scenes[-1]["dur"] + 1.6)
+        if dn is not None:                                                         # a steady, wide dread tone under the whole monster line
+            put(dn, fstart - 0.5, 0.45); px_used.append("drone")
         wh = sfx.pixabay("whisper1", 4.2, 0.0, 0.1)
         if wh is not None:                                                         # and a second voice, in each ear in turn
             put(wh, fstart + 0.2, 0.42, 0.9); put(wh, fstart + 0.2 + scenes[-1]["dur"] * 0.45, 0.34, -0.9); px_used.append("whisper")
