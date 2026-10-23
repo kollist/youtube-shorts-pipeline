@@ -206,7 +206,7 @@ def build_horror_video(story_dir: str, log=print, dread: bool = False) -> Path:
             put(shape(hb_b, [(0, 0.5), (len(hb_b) / SR, 0)]), jolt + 1.2)
         breath_px = lambda: sfx.pixabay('breath', 6.5, 0.8, 0.8)
         if breath_px() is not None: px_used.append('breath')
-        for frac, snd, pan, g in ((0.30, breath_px() is not None and breath_px or sfx.breath, -0.95, 0.9), (0.43, sfx.door_creak, 0.9, 0.45), (0.50, sfx.knock, -1.0, 0.8), (0.66, breath_px() is not None and breath_px or sfx.breath, 0.95, 0.95), (0.78, sfx.door_creak, -0.9, 0.5)):
+        for frac, snd, pan, g in ((0.30, breath_px() is not None and breath_px or sfx.breath, -0.95, 0.9), (0.43, sfx.door_creak, 0.9, 0.45), (0.50, sfx.knock, -1.0, 1.5), (0.66, breath_px() is not None and breath_px or sfx.breath, 0.95, 0.95), (0.78, sfx.door_creak, -0.9, 0.5)):
             put(snd(), story_end * frac, g, pan)                                   # sounds from behind you, in one ear, on no word
     fstart = scenes[-1]["start"] + scenes[-1]["lead"]
     if dread:                                                                      # real recordings (Pixabay) layered where the research says the fear is
@@ -217,18 +217,26 @@ def build_horror_video(story_dir: str, log=print, dread: bool = False) -> Path:
         sc_ = sfx.pixabay("scare1", 3.2, 0.0, 0.05)
         if sc_ is not None and jolt:
             put(sc_, jolt - 0.02, 0.8); px_used.append("scare")
-        gl = sfx.pixabay("glitch1", 1.3, 0.0, 0.02)
-        if gl is not None:
+        sw = sfx.pixabay("swell1", 3.0, 0.0, 0.2)
+        if sw is not None:                                                         # a ghostly swell on the tape moments (roll, final static)
             for ev in events:
-                if ev["kind"] in ("roll",) or (ev["kind"] == "static" and ev["t"] >= story_end):
-                    put(gl, ev["t"], 0.45); px_used.append("glitch")
-        gw = sfx.pixabay("growl1", scenes[-1]["dur"] + 0.9, 0.5, 0.35)
-        if gw is not None:                                                         # the animal under the monster's voice
-            put(gw, fstart - 0.1, 0.62); px_used.append("growl")
+                if ev["kind"] == "roll" or (ev["kind"] == "static" and ev["t"] >= story_end):
+                    put(sw, ev["t"] - 0.15, 0.5); px_used.append("swell")
+        vp = sfx.pixabay("vocal1", scenes[-1]["dur"] + 1.2, 1.0, 0.5)
+        if vp is not None:                                                         # a vocal presence under the monster's line
+            put(vp, fstart - 0.2, 0.5); px_used.append("vocal")
         wh = sfx.pixabay("whisper1", 4.2, 0.0, 0.1)
         if wh is not None:                                                         # and a second voice, in each ear in turn
             put(wh, fstart + 0.2, 0.42, 0.9); put(wh, fstart + 0.2 + scenes[-1]["dur"] * 0.45, 0.34, -0.9); px_used.append("whisper")
-    put(_wav(main_mp3), VO, 1.0)                                                   # the narrator: one continuous take
+    narr = _wav(main_mp3).copy()
+    if dread:                                                                      # the narrator dips for the knock so nothing covers it
+        k0 = int((story_end * 0.5 - 0.15 - VO) * SR); k1 = k0 + int(1.5 * SR)
+        duck = np.ones(len(narr)); a_, b_ = max(0, k0), min(len(narr), k1)
+        if a_ < b_:
+            duck[a_:b_] = 0.3; r_ = int(0.12 * SR)
+            duck[max(0, a_ - r_):a_] = np.linspace(1, 0.3, len(duck[max(0, a_ - r_):a_])); duck[b_:b_ + r_] = np.linspace(0.3, 1, len(duck[b_:b_ + r_]))
+            narr *= duck
+    put(narr, VO, 1.0)                                                             # the narrator: one continuous take
     put(_wav(scenes[-1]["mp3"]), scenes[-1]["start"] + scenes[-1]["lead"], 1.0)    # then the whispered finale
     used = 0
     for sc in scenes:                                                              # foley on the spoken word, sound slightly BEFORE the picture it belongs to
