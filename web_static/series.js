@@ -392,8 +392,8 @@ seriesContentEl.addEventListener("click", async (e) => {
     loadSeries();
   } else if (act === "post") {
     const s = seriesData.series.find((x) => x.slug === base.slug), ep = s && s.episodes.find((x) => x.number === base.number);
-    openPostDialog({ title: (ep && ep.title) || "this episode", captionReq: { kind: "series", ...base },
-      cleanupLabel: "Delete this episode's video and pictures after it posts (the script is kept)",
+    openPostDialog({ title: (ep && ep.title) || "this episode", captionReq: { kind: "series", ...base }, exportUrl: `/api/series/${encodeURIComponent(base.slug)}/episode/${base.number}/export`,
+      cleanupLabel: "Delete this episode's video and pictures after it posts everywhere (the script is kept)",
       send: async (platforms, privacy, captions, cleanup) => {
       const res = await fetch("/api/series/post", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...base, platforms, privacy, captions, cleanup }) });

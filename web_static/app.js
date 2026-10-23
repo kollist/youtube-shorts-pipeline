@@ -99,7 +99,7 @@ const autoPrivacyField = document.getElementById("auto-privacy-field");
 // show/hide rather than separate server-rendered pages). ---
 const pageTabs = document.querySelectorAll(".page-tab");
 const pages = document.querySelectorAll(".page");
-const VALID_PAGES = new Set(["run", "discover", "input", "filler", "clips", "series", "analytics"]);
+const VALID_PAGES = new Set(["run", "discover", "input", "filler", "clips", "series", "analytics", "accounts"]);
 let discoverLoadedOnce = false;
 let inputLoadedOnce = false;
 let fillerLoadedOnce = false;
@@ -116,6 +116,7 @@ function showPage(name) {
   }
   if (name === "analytics") loadAnalytics();
   if (name === "series" && typeof loadSeries === "function") loadSeries();
+  if (name === "accounts" && typeof loadAccounts === "function") loadAccounts();
 }
 
 window.addEventListener("hashchange", () => showPage(location.hash.slice(1)));
@@ -1531,7 +1532,7 @@ async function loadPostTargets() {
 // --- Post dialog: used by Series episodes. Pick the platforms right where you post.
 // NOTHING is ticked by default, the Post button stays off until you tick something, the captions are written for you
 // (and editable) per platform, and a platform that already posted is locked so a retry can't double-post.
-async function openPostDialog({ title, send, privacy = true, captionReq = null, cleanupLabel = "" }) {
+async function openPostDialog({ title, send, privacy = true, captionReq = null, cleanupLabel = "", exportUrl = "" }) {
   let platforms = [];
   try { platforms = (await (await fetch("/api/social/status")).json()).platforms; } catch (e) { alert("Could not reach the server."); return; }
   const root = document.createElement("div");
@@ -1552,9 +1553,9 @@ async function openPostDialog({ title, send, privacy = true, captionReq = null, 
     ${privacy ? `<label class="pd-privacy">Visibility
       <select><option value="public">public</option><option value="unlisted">unlisted</option><option value="private">private</option></select></label>
     <p class="pd-note">Visibility is applied by YouTube. Facebook and Instagram post publicly. TikTok keeps posts private until TikTok approves the app.</p>` : ""}
-    ${cleanupLabel ? `<label class="pd-clean"><input type="checkbox" class="pd-cleanup" checked> ${escapeHtml(cleanupLabel)}</label>` : ""}
+    ${cleanupLabel ? `<label class="pd-clean"><input type="checkbox" class="pd-cleanup"> ${escapeHtml(cleanupLabel)}</label>` : ""}
     <div class="pd-result"></div>
-    <div class="pd-actions"><button type="button" class="pd-cancel">Cancel</button><button type="button" class="pd-go" disabled>Post</button></div>
+    <div class="pd-actions">${exportUrl ? `<button type="button" class="pd-export" title="No accounts needed: saves the video and every caption in a folder, for posting by hand">Save for manual posting</button>` : ""}<button type="button" class="pd-cancel">Cancel</button><button type="button" class="pd-go" disabled>Post</button></div>
   </div>`;
   document.body.appendChild(root);
   const boxes = () => [...root.querySelectorAll(".pd-list input")];
@@ -1599,6 +1600,21 @@ async function openPostDialog({ title, send, privacy = true, captionReq = null, 
   };
   root.addEventListener("change", (e) => { if (e.target.closest(".pd-list")) refresh(); });
   root.querySelector(".pd-x").onclick = root.querySelector(".pd-cancel").onclick = close;
+  const exportBtn = root.querySelector(".pd-export");
+  if (exportBtn) exportBtn.onclick = async () => {                                  // MANUAL MODE: nothing is posted; the video + captions are saved for you
+    exportBtn.disabled = true; exportBtn.textContent = "Saving…"; result.textContent = "";
+    try {
+      const res = await fetch(exportUrl, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || "failed");
+      result.innerHTML = `<div class="pd-note">Saved to <b>${escapeHtml(data.folder)}</b> (video + one text file per platform). Upload the video in each app and paste the caption:</div>
+        <div class="pd-copyrow">${Object.keys(data.captions).map((k) => `<button type="button" class="pd-copy" data-k="${k}">Copy ${escapeHtml(k)} caption</button>`).join("")}</div>`;
+      result.querySelectorAll(".pd-copy").forEach((b) => b.onclick = async () => {
+        try { await navigator.clipboard.writeText(data.captions[b.dataset.k]); b.textContent = "Copied ✓"; } catch (e) { b.textContent = "Copy failed - open the text file"; }
+      });
+    } catch (err) { result.textContent = "Could not save: " + err.message; }
+    exportBtn.disabled = false; exportBtn.textContent = "Save for manual posting";
+  };
   root.addEventListener("mousedown", (e) => { if (e.target === root) close(); });
   if (regen) regen.onclick = loadCaps;
   root.querySelectorAll("[data-q]").forEach((b) => b.onclick = () => {

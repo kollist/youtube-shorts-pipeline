@@ -173,19 +173,8 @@ def check(n: int) -> list[str]:
 
 # ---------------------------------------------------------------- captions + posting
 def captions_for(n: int, remember: bool = True) -> dict:
-    import captions
-    s = _series_mod(); d = ep_dir(n)
-    story = json.loads((d / "story.json").read_text(encoding="utf-8"))
-    genre = _read(s.STORIES_DIR / SLUG / "series.json", {}).get("genre", "")
-    first = story["scenes"][0]["lines"][0]["text"] if story.get("scenes") and story["scenes"][0].get("lines") else ""
-    info = {"title": story["title"], "summary": story.get("summary", ""), "hook": first,
-            "category": captions.category_for(genre, story.get("format", ""), SLUG, story["title"])}
-    caps = captions.write_captions(info, remember=remember)
-    line = story["credit"]["line"]
-    for k in ("instagram", "facebook", "tiktok"):
-        caps[k] = (caps.get(k, "") + "\n\n" + line).strip()
-    caps["youtube"] = (caps.get("youtube", "") + "\n\n" + (d / "credit.txt").read_text(encoding="utf-8")).strip()      # credit.txt starts with the credit line
-    return {"caps": caps, "category": info["category"], "title": story["title"][:100], "summary": story.get("summary", "")}
+    from export_posts import episode_captions
+    return episode_captions(SLUG, n, remember=remember)
 
 
 def post(n: int, platforms: list[str], dry: bool) -> dict:

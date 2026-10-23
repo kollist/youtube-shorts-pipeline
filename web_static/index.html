@@ -30,6 +30,7 @@
   <a href="#clips" class="page-tab" data-page="clips">Clips <span id="clip-count"></span></a>
   <a href="#series" class="page-tab" data-page="series">Series</a>
   <a href="#analytics" class="page-tab" data-page="analytics">Analytics</a>
+  <a href="#accounts" class="page-tab" data-page="accounts">Accounts</a>
 </nav>
 
 <main>
@@ -296,6 +297,14 @@
     </section>
   </div>
 
+  <div class="page" id="page-accounts">
+    <section class="panel" id="accounts-panel">
+      <h2>Accounts</h2>
+      <div class="field-hint">Connect the places you post to. Each platform needs your own developer app (they don't allow sharing one), so this walks you through it. Keys are saved only in your .env file on this computer and are never shown again. No accounts? Skip this: every episode's post dialog has <b>Save for manual posting</b>, which saves the video and captions for you to upload by hand.</div>
+      <div id="accounts-content" class="accounts-content">Loading…</div>
+    </section>
+  </div>
+
   <div class="page" id="page-analytics">
     <section class="panel" id="analytics-panel">
       <h2>Analytics</h2>
@@ -345,5 +354,6 @@
 <script src="/static/activity.js"></script>
 <script src="/static/app.js"></script>
 <script src="/static/series.js"></script>
+<script src="/static/accounts.js"></script>
 </body>
 </html>

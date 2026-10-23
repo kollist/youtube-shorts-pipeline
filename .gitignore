@@ -62,3 +62,5 @@ data/scp_queue.json
 data/auto.lock
 data/tiktok_caption.txt
 branding/*_raw.png
+exports/
+legal_site/

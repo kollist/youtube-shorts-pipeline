@@ -1,51 +1,56 @@
-# Posting to Facebook, Instagram and TikTok
+# Connecting YouTube, Facebook, Instagram and TikTok
 
-YouTube works as before. Everything below is optional and off until its keys are in `.env`.
-In the dashboard, the Clips tab has a **Post to** row: tick the platforms, then Upload. A platform
-without keys is greyed out and shows what it's missing. `python social_post.py status` shows the same.
+**You can use the app with none of this.** In the dashboard, every episode's post dialog has **Save for manual posting**: it saves the video and
+one ready-to-paste caption per platform in `exports/<series>-epNN/` (or run `python export_posts.py <series> <episode>`). Upload by hand, paste, done.
 
-A clip is only deleted from disk once **every** platform you ticked has it. If one fails, the
-button says "Retry (tiktok failed)" and pressing it redoes only the failed ones - never a double post.
+To post from the app itself, each platform needs **your own developer app**. They don't allow one shared app, and this repo can't include keys
+(it's public). Three ways to do the setup, same steps:
 
-Check any platform without posting: `python social_post.py test facebook` (or the **Test connections** button).
+| | |
+|---|---|
+| Dashboard | **Accounts** tab: a card per platform with the steps, links, boxes for the keys, login and test buttons |
+| Terminal | `python setup.py` (or `python setup.py youtube`, `meta`, `tiktok`; `python setup.py --status`) |
+| This page | the details below |
 
-## Before any keys: the accounts (do these first, from your own Facebook/Instagram)
-1. **Facebook Page** - facebook.com -> menu -> Pages -> Create new Page. Name, category, one-line bio, Create.
-   (Posts go to the Page, not your personal profile.)
-2. **Instagram professional account** - Instagram app -> Settings -> Account type and tools -> Switch to professional
-   account -> Creator or Business -> pick a category.
-3. **Link them** - on the Page: Settings -> Linked accounts -> Instagram -> Connect (or in Instagram: Edit profile -> Page).
-4. **TikTok** - a normal TikTok account you can log in to on the web. Make it **private** for now (see TikTok notes below).
+Keys are saved only in `.env` (git-ignored); the dashboard never shows them again. A backup of the previous `.env` is kept as `.env.bak` each time you save keys.
 
-## Facebook Reels + Instagram Reels (one setup covers both)
-You need: a Facebook **Page**, and for Instagram a **Professional** (Business/Creator) account linked to that Page.
-1. https://developers.facebook.com -> create an app (type: Business). Copy **App ID** and **App Secret**
-   (Settings > Basic) into `.env` as `META_APP_ID` / `META_APP_SECRET`.
-2. Open **Graph API Explorer**, choose your app, and generate a **User token** with these permissions:
-   `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `instagram_basic`, `instagram_content_publish`.
-   Tick your Page when asked.
-3. `python social_auth.py meta` (paste the token). It swaps it for a permanent Page token and writes
-   `FACEBOOK_PAGE_ID`, `FACEBOOK_PAGE_ACCESS_TOKEN` and `INSTAGRAM_USER_ID` into `.env`.
-- Limits: Facebook Reels 3-90 s, 30 per 24 h. Instagram 100 per 24 h.
-- While your app is in development mode it should work for Pages/accounts you own; posting for other
-  people's accounts needs Meta's app review.
-- Instagram: tested live. The direct ("resumable") upload was rejected by Instagram for this app
-  (ProcessingFailedError), so posting uses a temporary public link instead: `public_tunnel.py` starts ngrok, serves only that one
-  video at a random address until Instagram has downloaded it, then closes. You need ngrok installed and logged in once
-  (`brew install ngrok`, `ngrok config add-authtoken <token>`). `INSTAGRAM_UPLOAD_MODE=url|resumable|auto` in `.env` (default auto).
-- If Instagram says the Page has no linked account: `python social_auth.py instagram` re-checks the link without a new token.
+| Platform | Effort | What you need |
+|---|---|---|
+| YouTube Shorts | easy, ~10 min | a Google Cloud project with an OAuth "Desktop app" client |
+| Facebook + Instagram | medium, ~30 min | a Facebook Page, an Instagram Professional account linked to it, a Meta developer app (Development mode is fine for your own accounts), ngrok for Instagram |
+| TikTok | hard, 30 min + approval wait | a TikTok developer app, public terms/privacy pages, a verified site |
+
+## YouTube
+1. https://console.cloud.google.com/ -> new project -> enable **YouTube Data API v3** (and **YouTube Analytics API** for the Analytics tab).
+2. OAuth consent screen: External, add yourself as a **Test user**.
+3. Credentials -> Create credentials -> **OAuth client ID -> Desktop app** -> download the JSON.
+4. Accounts tab: paste the JSON, **Save file**, **Log in** (a browser window opens). Or save it as `client_secret.json` and run `python setup.py youtube`.
+
+## Facebook + Instagram
+1. Link your Instagram Professional account to your Facebook Page.
+2. https://developers.facebook.com/apps/ -> create an app (type Business). Copy **App ID** and **App Secret** into `META_APP_ID` / `META_APP_SECRET`.
+3. In the Graph API Explorer pick your app and generate a **User token** with `pages_show_list, pages_manage_posts, pages_read_engagement, instagram_basic, instagram_content_publish, business_management` (tick your Page).
+4. Accounts tab -> paste the token -> **Log in** (or `python social_auth.py meta`). It's exchanged for a Page token that doesn't expire and the Page and Instagram ids are saved to `.env`.
+5. Instagram only accepts a public video link, so the app uses a temporary ngrok tunnel: `brew install ngrok`, `ngrok config add-authtoken ...`.
+- New accounts: post a couple a day, not dozens. Facebook rate-limits bursts.
 
 ## TikTok
-1. https://developers.tiktok.com -> create an app; add **Login Kit** and **Content Posting API**.
-   Scopes: `user.info.basic`, `video.publish`, `video.upload`.
-2. Copy **Client key** / **Client secret** into `TIKTOK_CLIENT_KEY` / `TIKTOK_CLIENT_SECRET`.
-3. Register a **redirect URI** in Login Kit. It must be **https** (TikTok rejects http://localhost) - any https
-   address works, it only has to match. Put the same value in `TIKTOK_REDIRECT_URI`.
-4. `python social_auth.py tiktok`: approve in the browser, then paste the full address you land on
-   (the page itself may show an error - the address contains the login code).
-- **Until TikTok audits your app, every post is private-only and only works on a private TikTok account.** That's
-  TikTok's rule. To post publicly you must pass their audit.
-- Stories made with AI: pass `--aigc` to `social_post.py video` to turn on TikTok's AI-generated label.
+1. **Terms and privacy pages** (TikTok requires public addresses): `python publish_legal_pages.py --name "Your Channel"` publishes them on free GitHub Pages
+   (needs `gh auth login`) and prints the three addresses.
+2. https://developers.tiktok.com/apps -> create an app. Add products **Login Kit** and **Content Posting API** (Direct Post on). Scopes: `user.info.basic`, `video.publish`, `video.upload`.
+3. Fill the terms/privacy/website addresses. TikTok asks you to **verify the site** (URL properties -> URL prefix -> download the `.txt` file). Then
+   `python publish_legal_pages.py --name "Your Channel" --verify-file ~/Downloads/tiktok....txt` and press Verify.
+4. Login Kit -> Redirect URI = the site address **with the trailing slash**. Put the same address, the Client key and the Client secret in `.env`
+   (`TIKTOK_REDIRECT_URI`, `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`) or in the Accounts tab.
+5. **Get login link**, approve, copy the address you land on (it contains `?code=`; the page may show an error, that's fine) and paste it back. Or `python social_auth.py tiktok`.
+- **Until TikTok approves your app, direct posts are private-only and only work on a private account.** So the daily job sends each video to your TikTok
+  **inbox as a draft**: open TikTok, paste the caption (`python auto_daily.py caption` copies it) and press Post. To get public API posting, submit the app for
+  review in the portal with a screen recording of the real flow (dashboard -> Post -> TikTok login -> the video arriving).
+- Stories made with AI: pass `--aigc` to `social_post.py video` to turn on TikTok's AI-generated label (the dashboard does it for series episodes).
 
-## Posting any video file (e.g. a story)
-`python social_post.py video stories/the-new-boy/the-new-boy.mp4 --title "..." --platforms tiktok,facebook,instagram --aigc`
+## Check it
+`python setup.py --status`, or the Accounts tab's **Test** buttons, or `python social_post.py test <facebook|instagram|tiktok>`: a harmless call that shows
+which account you're connected as and posts nothing.
+
+## Posting any video file
+`python social_post.py video my.mp4 --title "..." --platforms tiktok,facebook,instagram --aigc`

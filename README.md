@@ -12,6 +12,7 @@ Claude plan as the script writer.
 | **Clips** | Review, split-screen, caption, and post the clips. |
 | **Series** | AI story series and **SCP Foundation tapes**: one click makes the next episode, then you review it and press Post. |
 | **Analytics** | What actually performed, by format / streamer / hook. |
+| **Accounts** | Connect YouTube, Facebook, Instagram and TikTok step by step (keys stay in your `.env`). Or skip it: **Save for manual posting** gives you the video and captions to upload by hand. |
 
 ## 1. Install
 
@@ -31,7 +32,7 @@ You also need `ffmpeg` on your PATH (`brew install ffmpeg`).
   create a **Desktop app** OAuth client, save it as `client_secret.json`. The first upload opens a browser to approve; then `token.json` is cached.
 - **Script writer: your Claude plan** - `USE_CLAUDE_CODE=1` uses Claude Code's headless mode (`claude -p`, no API key). Order: Claude Code ->
   Groq -> OpenRouter free models (last resort).
-- **Facebook / Instagram / TikTok** - optional, see `SOCIAL_SETUP.md`.
+- **YouTube / Facebook / Instagram / TikTok** - optional. Use the dashboard's **Accounts** tab or `python setup.py`; details in `SOCIAL_SETUP.md`. Each platform needs your own developer app (nobody can share one), and nothing is required to use the app: every episode can be exported for manual posting.
 
 ## 2. Clipping (Run, Discover, Input, Clips)
 
@@ -59,8 +60,10 @@ python queue_daily.py --clips 20                                 # spread a dail
 **One click per episode** - *Make episode N*: writes it (or fetches/adapts the SCP), makes the pictures (skips ones that exist), renders the
 video. Then you watch it and press **Post**. **＋ Add episode** on a series adds an SCP (type its number) or has the AI plan the next chapter.
 
-**Posting** opens a dialog: nothing is ticked by default, the captions and hashtags are written per platform (and editable), and the episode's
-video + pictures are deleted after it posts everywhere you ticked (the script stays).
+**Posting** opens a dialog: nothing is ticked by default, the captions and hashtags are written per platform (and editable). **Save for manual posting** saves the video and
+captions in `exports/` instead. The "delete the video and pictures after posting" box is off by default (the script is always kept).
+
+**Daily automation (optional):** `python auto_daily.py status | pause | resume | queue 049 106 ...` - one new SCP episode a day, built ahead and posted in the US evening. See the header of `auto_daily.py`.
 
 ### SCP licence (important)
 
@@ -93,7 +96,7 @@ About 40-60 s per picture. Without it the slower PyTorch build (`models/flux2kle
 
 ## 4. Posting beyond YouTube
 
-Facebook Reels, Instagram Reels and TikTok: `SOCIAL_SETUP.md`. `python social_post.py status` shows what's connected; `python social_auth.py instagram`
+Facebook Reels, Instagram Reels and TikTok: `SOCIAL_SETUP.md` (or the Accounts tab). `python social_post.py status` shows what's connected; `python social_auth.py instagram`
 re-checks the Instagram link. Instagram uploads go through a temporary public link (ngrok, free) because direct upload is rejected for this app type.
 New accounts: post a couple a day, not dozens - Facebook rate-limits bursts.
 
