@@ -104,3 +104,32 @@ def post(video_path: str, caption: str, privacy: str = "public", aigc: bool = Fa
     ids = final.get("publicaly_available_post_id") or []   # (sic) - TikTok's spelling
     note = "" if level == "PUBLIC_TO_EVERYONE" else f" (posted as {level} - TikTok only allows that until the app is audited)"
     return {"id": str(ids[0]) if ids else publish_id, "url": None, "note": note.strip()}
+
+
+def post_draft(video_path: str, caption: str = "", **_) -> dict:
+    """Sends the video to the creator's TikTok inbox as a DRAFT (scope video.upload). The creator opens the TikTok app and presses Post, so it is
+    published by a person and is not limited to private the way an unaudited Direct Post is. TikTok does not carry a caption over: paste it yourself."""
+    data = Path(video_path).read_bytes()
+    size = len(data)
+    chunk, total = (size, 1) if size <= SINGLE_UPLOAD_MAX else (CHUNK, size // CHUNK)
+    init = http("POST", f"{API}/v2/post/publish/inbox/video/init/", headers=_headers(), json={
+        "source_info": {"source": "FILE_UPLOAD", "video_size": size, "chunk_size": chunk, "total_chunk_count": total},
+    }).json()
+    if init.get("error", {}).get("code", "ok") != "ok":
+        raise SocialError(f"TikTok refused the draft: {init['error']}")
+    publish_id, upload_url = init["data"]["publish_id"], init["data"]["upload_url"]
+    for i in range(total):
+        first = i * chunk
+        last = size - 1 if i == total - 1 else first + chunk - 1
+        part = data[first:last + 1]
+        http("PUT", upload_url, data=part, headers={"Content-Type": "video/mp4", "Content-Length": str(len(part)),
+                                                    "Content-Range": f"bytes {first}-{last}/{size}"})
+
+    def done():
+        d = http("POST", f"{API}/v2/post/publish/status/fetch/", headers=_headers(), json={"publish_id": publish_id}).json().get("data", {})
+        if d.get("status") == "FAILED":
+            raise SocialError(f"TikTok failed to take the draft: {d.get('fail_reason', 'unknown reason')}")
+        return d if d.get("status") in ("SEND_TO_USER_INBOX", "PUBLISH_COMPLETE") else None
+
+    final = wait_until(done, every=5, timeout=300, what="TikTok to put the draft in your inbox")
+    return {"id": publish_id, "url": None, "note": f"sent to your TikTok inbox as a draft ({final.get('status')}) - open the TikTok app and press Post"}
