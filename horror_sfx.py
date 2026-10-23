@@ -218,6 +218,22 @@ def _load_wav(path) -> np.ndarray:
     return np.frombuffer(raw, dtype=np.float32).copy()
 
 
+def pixabay(stem: str, seconds: float | None = None, start: float = 0.0, fade: float = 0.3, pick: int = 0) -> np.ndarray | None:
+    """A hand-picked Pixabay recording (assets/sfx/pixabay_<stem>*), peak-normalised, sliced and faded. None if the file is not there."""
+    files = sorted(c for c in _SFX_DIR.glob(f"pixabay_{stem}*") if c.suffix.lower() in (".mp3", ".wav", ".ogg", ".m4a"))
+    if not files:
+        return None
+    a = _load_wav(files[pick % len(files)])[int(start * SR):]
+    if seconds:
+        a = a[: int(seconds * SR)]
+    if not len(a):
+        return None
+    a = a / max(1e-9, np.abs(a).max()); k = min(int(fade * SR), len(a) // 2)
+    if k:
+        a[:k] *= np.linspace(0, 1, k); a[-k:] *= np.linspace(1, 0, k)
+    return a
+
+
 def real_scream(seed: int = 0) -> np.ndarray | None:
     """The jump scare from real recordings: a female scream (one of four) with the long horror scream layered just behind it, a sub-bass hit
     under both, a touch of room. Returns None if the files are missing (callers fall back to jump_scream())."""

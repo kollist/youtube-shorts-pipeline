@@ -175,7 +175,7 @@ def build_horror_video(story_dir: str, log=print, dread: bool = False) -> Path:
 
     # ---- 5. sound
     log("[horror] Sound design...")
-    n = int((total + 1) * SR); mixL = np.zeros(n); mixR = np.zeros(n)
+    n = int((total + 1) * SR); mixL = np.zeros(n); mixR = np.zeros(n); px_used = []
     def put(sound, at, gain=1.0, pan=0.0):                                         # pan -1 (left ear) .. +1 (right ear)
         i = int(max(0, at) * SR)
         if i < n:
@@ -204,8 +204,30 @@ def build_horror_video(story_dir: str, log=print, dread: bool = False) -> Path:
         if jolt:
             hb_b = sfx.heartbeat(reveal - jolt - 1.2, 132, 132)
             put(shape(hb_b, [(0, 0.5), (len(hb_b) / SR, 0)]), jolt + 1.2)
-        for frac, snd, pan, g in ((0.30, sfx.breath, -0.95, 0.5), (0.43, sfx.door_creak, 0.9, 0.45), (0.50, sfx.knock, -1.0, 0.8), (0.66, sfx.breath, 0.95, 0.55), (0.78, sfx.door_creak, -0.9, 0.5)):
+        breath_px = lambda: sfx.pixabay('breath', 6.5, 0.8, 0.8)
+        if breath_px() is not None: px_used.append('breath')
+        for frac, snd, pan, g in ((0.30, breath_px() is not None and breath_px or sfx.breath, -0.95, 0.9), (0.43, sfx.door_creak, 0.9, 0.45), (0.50, sfx.knock, -1.0, 0.8), (0.66, breath_px() is not None and breath_px or sfx.breath, 0.95, 0.95), (0.78, sfx.door_creak, -0.9, 0.5)):
             put(snd(), story_end * frac, g, pan)                                   # sounds from behind you, in one ear, on no word
+    fstart = scenes[-1]["start"] + scenes[-1]["lead"]
+    if dread:                                                                      # real recordings (Pixabay) layered where the research says the fear is
+        vb = sfx.pixabay("whisper2", 24, 2, 4)
+        if vb is not None:                                                         # voices in your head: very quiet, wide, from the build-up on, gone before the silence
+            span = max(4.0, silence_at - 0.5 - story_end * 0.35); vb = vb[: int(span * SR)]
+            put(shape(vb, [(0, 0), (2.5, 0.14), (len(vb) / SR - 2, 0.2), (len(vb) / SR, 0)]), story_end * 0.35, 1.0, -0.45); px_used.append("voices")
+        sc_ = sfx.pixabay("scare1", 3.2, 0.0, 0.05)
+        if sc_ is not None and jolt:
+            put(sc_, jolt - 0.02, 0.8); px_used.append("scare")
+        gl = sfx.pixabay("glitch1", 1.3, 0.0, 0.02)
+        if gl is not None:
+            for ev in events:
+                if ev["kind"] in ("roll",) or (ev["kind"] == "static" and ev["t"] >= story_end):
+                    put(gl, ev["t"], 0.45); px_used.append("glitch")
+        gw = sfx.pixabay("growl1", scenes[-1]["dur"] + 0.9, 0.5, 0.35)
+        if gw is not None:                                                         # the animal under the monster's voice
+            put(gw, fstart - 0.1, 0.62); px_used.append("growl")
+        wh = sfx.pixabay("whisper1", 4.2, 0.0, 0.1)
+        if wh is not None:                                                         # and a second voice, in each ear in turn
+            put(wh, fstart + 0.2, 0.42, 0.9); put(wh, fstart + 0.2 + scenes[-1]["dur"] * 0.45, 0.34, -0.9); px_used.append("whisper")
     put(_wav(main_mp3), VO, 1.0)                                                   # the narrator: one continuous take
     put(_wav(scenes[-1]["mp3"]), scenes[-1]["start"] + scenes[-1]["lead"], 1.0)    # then the whispered finale
     used = 0
@@ -244,7 +266,7 @@ def build_horror_video(story_dir: str, log=print, dread: bool = False) -> Path:
     st_mix = st_mix / max(1e-9, np.abs(st_mix).max()) * 0.92
     raw = work / "mix.raw"; raw.write_bytes((st_mix[: int(total * SR)] * 32767).astype(np.int16).tobytes())
     run(["ffmpeg", "-y", "-v", "error", "-f", "s16le", "-ar", str(SR), "-ac", "2", "-i", str(raw), "-af", "loudnorm=I=-15:TP=-1.5:LRA=11", str(work / "audio.wav")]); raw.unlink()
-    log(f"[horror] {used} foley cues placed on spoken words")
+    log(f"[horror] {used} foley cues placed on spoken words" + (f"; real recordings: {', '.join(sorted(set(px_used)))}" if px_used else ""))
 
     # ---- 6. captions + the end card
     rv._captions(scenes, work / "captions.ass")
@@ -254,7 +276,7 @@ def build_horror_video(story_dir: str, log=print, dread: bool = False) -> Path:
         if story.get("credit"):
             extra += (f"Dialogue: 3,{rv._ass_time(story_end + 0.7)},{rv._ass_time(total)},Cap,,0,0,0,,{{\\an2\\pos(540,1840)\\fs30\\c&H00C8C8C8&\\bord3}}{story['credit']['line']}\n")
         cap.write_text(cap.read_text(encoding="utf-8") + extra, encoding="utf-8")
-    out = sdir / f"{sdir.name}-HORROR{'2' if dread else ''}.mp4"
+    out = sdir / f"{sdir.name}-HORROR{('3' if len(set(px_used)) > 1 else '2') if dread else ''}.mp4"
     log("[horror] Final render...")
     subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", "fx.mp4", "-i", "audio.wav", "-vf", f"tpad=stop_mode=clone:stop_duration={CARD + 1:.1f},subtitles=captions.ass",
                     "-t", f"{total:.2f}", "-c:v", "libx264", "-crf", "28", "-preset", "medium", "-maxrate", "6M", "-bufsize", "12M",      # the grain is heavy: bound the bitrate (~40 MB)
