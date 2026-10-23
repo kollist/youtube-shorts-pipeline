@@ -230,11 +230,11 @@ def build_horror_video(story_dir: str, log=print, dread: bool = False) -> Path:
             put(wh, fstart + 0.2, 0.42, 0.9); put(wh, fstart + 0.2 + scenes[-1]["dur"] * 0.45, 0.34, -0.9); px_used.append("whisper")
     narr = _wav(main_mp3).copy()
     if dread:                                                                      # the narrator dips for the knock so nothing covers it
-        k0 = int((story_end * 0.5 - 0.15 - VO) * SR); k1 = k0 + int(1.5 * SR)
+        k0 = int((story_end * 0.5 - 0.05 - VO) * SR); k1 = k0 + int(1.0 * SR)
         duck = np.ones(len(narr)); a_, b_ = max(0, k0), min(len(narr), k1)
         if a_ < b_:
-            duck[a_:b_] = 0.3; r_ = int(0.12 * SR)
-            duck[max(0, a_ - r_):a_] = np.linspace(1, 0.3, len(duck[max(0, a_ - r_):a_])); duck[b_:b_ + r_] = np.linspace(0.3, 1, len(duck[b_:b_ + r_]))
+            duck[a_:b_] = 0.4; r_ = int(0.06 * SR)
+            duck[max(0, a_ - r_):a_] = np.linspace(1, 0.4, len(duck[max(0, a_ - r_):a_])); duck[b_:b_ + r_] = np.linspace(0.4, 1, len(duck[b_:b_ + r_]))
             narr *= duck
     put(narr, VO, 1.0)                                                             # the narrator: one continuous take
     put(_wav(scenes[-1]["mp3"]), scenes[-1]["start"] + scenes[-1]["lead"], 1.0)    # then the whispered finale
