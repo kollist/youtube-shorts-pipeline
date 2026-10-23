@@ -54,3 +54,6 @@ archive/outputs/
 data/caption_history.json
 *.bak
 .DS_Store
+
+# Pixabay sounds: free to use in videos but not to redistribute
+assets/sfx/pixabay_*

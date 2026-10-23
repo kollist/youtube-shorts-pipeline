@@ -58,7 +58,7 @@ Story order (8 scenes, 130-150 words total, plain spoken English):
 5. HOW IT IS WATCHED: the monitoring and procedures in plain steps - who watches, how often, what they do and what happens if they slip.
 6. THE MISTAKE: the one thing that goes wrong (from the article's incidents or procedures), told in second person - you are the one on watch.
 7. THE TURN: the moment you realise it already happened. Quiet and cold.
-8. THE SCARE: present tense, second person, the thing is RIGHT THERE; the last spoken line is short, unfinished or unexplained (14-22 words). Then ONE final sentence: a question to the viewer
+8. THE SCARE: the ENTITY speaks. The last spoken line is the creature itself talking to the viewer in FIRST PERSON ("I", "me", "you"), present tense, close and intimate, never the narrator describing it: it is right behind them and it tells them so, turned into a taunt that fits what it does (e.g. "Turn around. I am right here, inches from your neck. Go on... blink."). Short, 12-20 words, not explained. Then ONE final sentence: a question to the viewer
    (6-9 words) - it is shown as text, not spoken.
 Each scene has a "label": 1-3 plain words shown on screen (e.g. "WHAT IT IS", "WHAT IT DOES", "HOW IT'S CONTAINED", "WHO WATCHES IT", "THE MISTAKE"). Scene 1 may have label "".
 PICTURES - this is where the fear comes from: the entity (or the sign of it) is in EVERY picture from scene 2 on, never in the same place, behaving as its canon says (e.g. if it only moves unseen,
