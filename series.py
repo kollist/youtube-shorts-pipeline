@@ -58,6 +58,8 @@ def _llm_json(system: str, user: str, provider: str | None = None) -> dict:
     import claude_cli
     import openrouter_llm
     last = None
+    if "json" not in (system + user).lower():                     # Groq / OpenRouter JSON mode reject a prompt that never says "JSON" (Claude doesn't care)
+        system += "\n\nRespond with a single JSON object."
     if provider == "claude" or (provider is None and claude_cli.enabled()):
         try:
             return claude_cli.chat_json(system, user)
@@ -74,7 +76,7 @@ def _llm_json(system: str, user: str, provider: str | None = None) -> dict:
                 raw = call_groq(user, system, model=model).strip()
                 raw = re.sub(r"^```(?:json)?|```$", "", raw).strip()
                 return json.loads(raw)
-            except (token_budget.GroqBudgetExhausted, GroqGenerationError, json.JSONDecodeError) as e:
+            except Exception as e:                                # any failure of THIS model (budget, 400, bad JSON, network): try the next one
                 last = e
         if provider == "groq":
             raise RuntimeError(f"Groq couldn't produce a usable answer ({last}).")

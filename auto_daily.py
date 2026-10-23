@@ -216,10 +216,10 @@ def post(n: int, platforms: list[str], dry: bool) -> dict:
 
 
 def writer_ready() -> str | None:
-    """None if Claude Code answers (the captions are then written by it); otherwise the reason. We never post the bland template captions."""
+    """None if SOME model answers (Claude Code first, then the free Groq / OpenRouter models); otherwise the reason. We never post the bland template captions."""
     try:
-        import claude_cli
-        claude_cli.chat_json('Respond with ONLY {"ok": true}', "ping", timeout=120)
+        from series import _llm_json
+        _llm_json('Respond with ONLY a JSON object {"ok": true}', "ping")
         return None
     except Exception as e:
         return str(e)[:120]
@@ -230,7 +230,7 @@ def run_post(n: int, state: dict, dry: bool) -> None:
     if why:
         if state.get("writer_notified") != now_et().date().isoformat():
             state["writer_notified"] = now_et().date().isoformat(); _write(STATE, state)
-            notify(f"Episode {n} NOT posted", f"Claude Code is unavailable, so the captions can't be written: {why}")
+            notify(f"Episode {n} NOT posted", f"No model could write the captions (Claude Code and the free models all failed): {why}")
         log("writer_unavailable", episode=n, reason=why); return
     today = state.setdefault("posting", {"episode": n, "results": {}, "attempts": 0})
     if today.get("episode") != n:
