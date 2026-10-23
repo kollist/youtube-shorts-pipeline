@@ -56,9 +56,16 @@ def transcribe(video_path: str, model_size: str = MODEL_SIZE, cancel_event=None)
     segments, info = model.transcribe(str(video_path), word_timestamps=True)
 
     results = []
+    total = getattr(info, "duration", 0) or 0
+    last_report = t0
     for seg in segments:
         check_cancelled(cancel_event)
         results.append(_segment_to_dict(seg))
+        now = time.time()
+        if total and now - last_report >= 30:
+            last_report = now
+            print(f"[transcribe] {seg.end / total * 100:.1f}% ({seg.end:.0f}s / {total:.0f}s, "
+                  f"{len(results)} segments, {(now - t0) / 60:.1f} min elapsed)")
 
     print(f"[transcribe] Done in {time.time() - t0:.1f}s. "
           f"Detected language: {info.language} "
