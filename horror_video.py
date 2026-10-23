@@ -56,12 +56,14 @@ async def _voice(text: str, who: dict, mp3: Path, whisper: bool):
         run(["ffmpeg", "-y", "-v", "error", "-i", str(tmp), "-af", "highpass=f=170,lowpass=f=4800,vibrato=f=4.6:d=0.025,acompressor=threshold=-20dB:ratio=3:makeup=3", str(mp3)]); tmp.unlink()
     if whisper:                                                          # the finale: not a quiet voice - a VOICE WITH SOMETHING UNDER IT
         tmp = mp3.with_suffix(".w.mp3"); mp3.rename(tmp)
-        chain = ("[0:a]aresample=44100,highpass=f=80,acompressor=threshold=-26dB:ratio=4:makeup=5,asplit=3[m][d][w];"
-                 "[d]rubberband=pitch=0.62,adelay=28|28,volume=0.9[low];"                      # a second, much lower voice a hair behind: the 'it' under the voice
-                 "[w]highpass=f=3200,acompressor=threshold=-30dB:ratio=6:makeup=6,volume=0.18[air];"   # rasp of breath / sibilance, pulled forward
-                 "[m][low][air]amix=inputs=3:weights=1 1.1 0.3:normalize=0,"
-                 "acrusher=bits=12:mode=log:aa=1:mix=0.18,"                                      # a little digital grit, like a voice that is not quite coming from a throat
-                 "aecho=0.85:0.7:55|140|310:0.5|0.38|0.26,volume=1.6,alimiter=limit=0.95")
+        chain = ("[0:a]aresample=44100,highpass=f=70,acompressor=threshold=-26dB:ratio=4:makeup=4,asplit=4[a][b][c][d];"
+                 "[a]rubberband=pitch=0.80:formant=shifted[body];"                                          # the voice itself, ~4 semitones down with the throat made bigger
+                 "[b]rubberband=pitch=0.62:formant=shifted,asoftclip=type=atan:threshold=0.5,adelay=22|22,volume=0.6[growl];"   # a distorted, much lower voice just behind it: the growl
+                 "[c]rubberband=pitch=0.5:formant=shifted,lowpass=f=320,volume=0.9[sub];"                   # octave down: chest
+                 "[d]highpass=f=3200,acompressor=threshold=-30dB:ratio=6:makeup=6,volume=0.12[air];"       # a trace of breath
+                 "[body][growl][sub][air]amix=inputs=4:weights=1 0.8 0.8 0.3:normalize=0,"
+                 "bass=g=7:f=110:w=0.7,treble=g=-4:f=5000,"
+                 "aecho=0.85:0.7:60|150|330:0.45|0.34|0.22,volume=1.7,alimiter=limit=0.95")
         run(["ffmpeg", "-y", "-v", "error", "-i", str(tmp), "-filter_complex", chain, "-ar", "44100", str(mp3)]); tmp.unlink()
     return words
 

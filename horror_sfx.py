@@ -68,7 +68,20 @@ def key_jingle() -> np.ndarray:
     return reverb(out * 0.5, 0.35)
 
 
-def knock(n: int = 3, gap: float = 0.3) -> np.ndarray:
+def knock(n: int = 3, gap: float = 0.34) -> np.ndarray:
+    """Three knuckle raps on a wooden door, from real recordings (assets/sfx/knock_*.wav), a little different each time. Falls back to a synth thump."""
+    clips = sorted(_SFX_DIR.glob("knock_*.wav"))
+    if not clips:
+        return _knock_synth(n, gap)
+    out = np.zeros(int((n * gap + 0.9) * SR))
+    for k in range(n):
+        a = _load_wav(clips[k % len(clips)]); a = a / max(1e-9, np.abs(a).max()) * (1.0 if k < n - 1 else 0.85)
+        at = int(k * gap * SR + (_rng.uniform(-0.015, 0.015) * SR if k else 0)); at = max(0, at)
+        out[at:at + len(a)] += a[: len(out) - at]
+    return reverb(out, 0.12) * 0.9
+
+
+def _knock_synth(n: int = 3, gap: float = 0.3) -> np.ndarray:
     """Knuckles on a wooden door: a sharp click, then a few short wood resonances. Mostly dry so it reads even under a voice and on a phone speaker."""
     out = np.zeros(int((n * gap + 0.7) * SR))
     for k in range(n):
