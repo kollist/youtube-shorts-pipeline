@@ -20,7 +20,7 @@ import zlib
 from pathlib import Path
 
 HISTORY = Path(__file__).parent / "data" / "caption_history.json"
-AI_NOTE = "Made with AI art & voice."          # a short honest note; set to "" to leave it out
+AI_NOTE = ""          # an optional note appended to captions (e.g. "Made with AI art & voice."); empty = none
 
 POOLS = {
     "horror": {"reach": ["#reels", "#viral", "#trending", "#explorepage"],
@@ -150,7 +150,7 @@ def write_captions(info: dict, platforms: list[str] | None = None, remember: boo
     out["facebook"] = f"{fb.get('text', '').strip()}\n\n{' '.join(pick_tags(category, 'facebook', seed, remember))}{ai}"
     out["tiktok"] = f"{tt.get('text', '').strip()} {' '.join(pick_tags(category, 'tiktok', seed, remember))}"
     out["youtube_title"] = (yt.get("title") or info.get("title") or "").strip()[:100]
-    out["youtube"] = f"{yt.get('description', '').strip()}\n\n{' '.join(pick_tags(category, 'youtube', seed, remember))}\n\n{AI_NOTE}".strip()
+    out["youtube"] = f"{yt.get('description', '').strip()}\n\n{' '.join(pick_tags(category, 'youtube', seed, remember))}{chr(10) * 2 + AI_NOTE if AI_NOTE else ''}".strip()
     return out
 
 
