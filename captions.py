@@ -22,37 +22,46 @@ from pathlib import Path
 HISTORY = Path(__file__).parent / "data" / "caption_history.json"
 AI_NOTE = ""          # an optional note appended to captions (e.g. "Made with AI art & voice."); empty = none
 
+IG_REACH = ["#reels", "#viral", "#trending", "#explorepage", "#explore", "#reelsinstagram", "#trendingreels", "#fyp"]      # best-hashtags.com
+
 POOLS = {
-    "horror": {"reach": ["#reels", "#viral", "#trending", "#explorepage"],
+    "horror": {"reach": IG_REACH,
                "niche": ["#horrorstories", "#scarystories", "#creepystories", "#creepystory", "#scarystorytime", "#mystery", "#paranormal",
                          "#unexplained", "#darkstories", "#thriller", "#supernatural", "#urbanlegends", "#haunted", "#storytime"],
                "community": ["#horrorcommunity", "#horrorfans", "#creepypasta", "#horrorlovers"]},
-    "wisdom": {"reach": ["#reels", "#viral", "#trending", "#explorepage"],
+    "scp": {"reach": IG_REACH,
+            "niche": ["#scp", "#scpfoundation", "#scpstories", "#scphorror", "#analoghorror", "#creepystories", "#scarystories", "#horrorstories",
+                      "#creepypasta", "#urbanlegends", "#paranormal", "#darkstories", "#horrorstorytime"],
+            "community": ["#foundationtapes", "#scpwiki", "#horrorcommunity", "#analoghorrorseries"]},
+    "wisdom": {"reach": IG_REACH,
                "niche": ["#wisdom", "#lifelessons", "#moralstories", "#parable", "#storytelling", "#mindset", "#deepthoughts", "#fables", "#storytime"],
                "community": ["#personalgrowth", "#selfgrowth", "#motivation", "#thinkdeeper"]},
-    "facts": {"reach": ["#reels", "#viral", "#trending", "#explorepage"],
+    "facts": {"reach": IG_REACH,
               "niche": ["#didyouknow", "#facts", "#funfacts", "#mindblown", "#science", "#explained", "#learnsomethingnew", "#education", "#numbers", "#math"],
               "community": ["#sciencefacts", "#stem", "#curiosity", "#factsdaily"]},
-    "kids": {"reach": ["#reels", "#viral", "#trending", "#explorepage"],
+    "kids": {"reach": IG_REACH,
              "niche": ["#kidsstories", "#bedtimestories", "#storiesforkids", "#cartoon", "#kidscartoon", "#storytime"],
              "community": ["#momlife", "#parenting", "#kidsvideo"]},
-    "clips": {"reach": ["#reels", "#viral", "#trending", "#explorepage"],
+    "clips": {"reach": IG_REACH,
               "niche": ["#streamer", "#twitch", "#funnymoments", "#clips", "#gaming", "#streamerclips", "#livestream", "#highlights"],
               "community": ["#ishowspeed", "#speed", "#kaicenat", "#kai"]},
-    "sim": {"reach": ["#reels", "#viral", "#trending", "#explorepage"],
+    "sim": {"reach": IG_REACH,
             "niche": ["#satisfying", "#oddlysatisfying", "#simulation", "#physics", "#satisfyingvideos", "#relaxing", "#asmr", "#marbles", "#3d", "#mesmerizing"],
             "community": ["#satisfyingasmr", "#physicslovers", "#oddlysatisfyingvideos", "#calming"]},
-    "general": {"reach": ["#reels", "#viral", "#trending", "#explorepage"],
+    "general": {"reach": IG_REACH,
                 "niche": ["#storytime", "#story", "#shorts", "#interesting", "#watchthis"],
                 "community": ["#storytelling", "#creator"]},
 }
-TIKTOK_REACH = ["#fyp", "#foryou", "#foryoupage", "#viral"]
+TIKTOK_REACH = ["#fyp", "#foryou", "#foryoupage", "#viral", "#trending"]                                  # influence4you
+YOUTUBE_REACH = ["#youtubeShorts", "#viralshorts", "#shortsfeed", "#trendingshorts", "#dailyshorts", "#viral", "#trending"]   # techprevue + your list
 
 
 def category_for(genre: str = "", fmt: str = "", name: str = "", text: str = "") -> str:
     blob = f"{genre} {fmt} {name} {text}".lower()
     if name.startswith("sim-") or fmt == "sim" or any(w in blob for w in ("simulation", "marble", "satisfying", "physics sim")):
         return "sim"
+    if "scp" in blob.split() or "scp-" in blob or "scp foundation" in blob or fmt == "scp":
+        return "scp"
     if fmt == "parable" or "parable" in blob or "fable" in blob:
         return "wisdom"
     if any(w in blob for w in ("horror", "thriller", "supernatural", "mystery", "creepy", "scary", "yearbook", "haunt", "ghost")) or name.startswith("motion-"):
@@ -82,7 +91,7 @@ def _remember(platform: str, tags: list[str]) -> None:
 
 
 def pick_tags(category: str, platform: str, seed_text: str = "", remember: bool = True) -> list[str]:
-    """Instagram: 1 reach + 3 niche + 1 community. Facebook: 1 reach + 2 niche. TikTok: 2 reach + 2 niche. YouTube: #shorts + 2 niche.
+    """Instagram: 1 reach + 3 niche + 1 community. Facebook: 1 reach + 2 niche. TikTok: 2 reach + 2 niche. YouTube: #Shorts + 2 niche + 1 reach.
     Within those slots, picks the least-recently-used tags, so consecutive posts don't carry the same block."""
     pool = POOLS.get(category, POOLS["general"])
     rng = random.Random(zlib.crc32(f"{seed_text}|{platform}".encode()))
@@ -97,7 +106,7 @@ def pick_tags(category: str, platform: str, seed_text: str = "", remember: bool 
     elif platform == "tiktok":
         tags = take(TIKTOK_REACH, 2) + take(pool["niche"], 2)
     else:                                                   # youtube
-        tags = ["#shorts"] + take(pool["niche"], 2)
+        tags = ["#Shorts"] + take(pool["niche"], 2) + take(YOUTUBE_REACH, 1)
     if remember:
         _remember(platform, tags)
     return tags
