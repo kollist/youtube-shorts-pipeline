@@ -204,9 +204,11 @@ def build_horror_video(story_dir: str, log=print, dread: bool = False) -> Path:
         if jolt:
             hb_b = sfx.heartbeat(reveal - jolt - 1.2, 132, 132)
             put(shape(hb_b, [(0, 0.5), (len(hb_b) / SR, 0)]), jolt + 1.2)
-        breath_px = lambda: sfx.pixabay('breath', 6.5, 0.8, 0.8)
-        if breath_px() is not None: px_used.append('breath')
-        for frac, snd, pan, g in ((0.30, breath_px() is not None and breath_px or sfx.breath, -0.95, 0.9), (0.43, sfx.door_creak, 0.9, 0.45), (0.50, sfx.knock, -1.0, 1.5), (0.66, breath_px() is not None and breath_px or sfx.breath, 0.95, 0.95), (0.78, sfx.door_creak, -0.9, 0.5)):
+        behind = [lambda k=k: sfx.pixabay("behind", 6.5, 0.0, 0.6, pick=k) for k in (0, 1)]       # something close behind you, one ear then the other (real recording if present)
+        if behind[0]() is not None: px_used.append("behind")
+        def _slot(k):
+            return behind[k] if behind[k]() is not None else sfx.breath
+        for frac, snd, pan, g in ((0.30, _slot(0), -0.95, 0.8), (0.43, sfx.door_creak, 0.9, 0.45), (0.50, sfx.knock, -1.0, 1.5), (0.66, _slot(1), 0.95, 0.8), (0.78, sfx.door_creak, -0.9, 0.5)):
             put(snd(), story_end * frac, g, pan)                                   # sounds from behind you, in one ear, on no word
     fstart = scenes[-1]["start"] + scenes[-1]["lead"]
     if dread:                                                                      # real recordings (Pixabay) layered where the research says the fear is
