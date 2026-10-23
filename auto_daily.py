@@ -4,9 +4,9 @@ auto_daily.py - one new Foundation Tapes episode a day, built ahead of the eveni
 How a day goes (all times US Eastern, whatever your Mac's clock says):
   from 10:00  - if no finished, unposted episode is waiting, take the next SCP number from data/scp_queue.json, write it, make the pictures,
                 render the normal cut and the YouTube-quality cut
-  20:00-23:30 - run safety checks, then post: YouTube (YouTube-quality file), Facebook, Instagram, TikTok (normal file). Then a Mac notification.
-  A failed platform is retried on later runs (up to 3 attempts). TikTok failures are not retried: while TikTok's app is unaudited it cannot post
-  to a public account, so that one is for you to upload by hand - the notification says so.
+  20:00-23:30 - run safety checks, then post: YouTube (YouTube-quality file), Facebook, Instagram, and TikTok as a DRAFT in your inbox (normal file).
+  Then a Mac notification. A failed platform is retried on later runs (up to 3 attempts). TikTok drafts: until TikTok approves the app, direct posts are
+  private-only, so open TikTok, paste the caption (python auto_daily.py caption copies it) and press Post. A TikTok failure is not retried.
 Nothing is deleted after posting. Media older than 10 days is cleaned up.
 
 Run by launchd every 20 minutes (see launchd/com.shorts.foundation-tapes-daily.plist); safe to run by hand:
@@ -192,6 +192,14 @@ def post(n: int, platforms: list[str], dry: bool) -> dict:
     results = {}
     for plat in platforms:
         video = yt if plat == "youtube" else normal
+        if plat == "tiktok":                                              # unaudited app: a draft in your TikTok inbox, which you publish with one tap
+            try:
+                import social_tiktok
+                (DATA / "tiktok_caption.txt").write_text(c["caps"]["tiktok"], encoding="utf-8")
+                results["tiktok"] = {"ok": True, **social_tiktok.post_draft(str(video), c["caps"]["tiktok"])}
+            except Exception as e:
+                results["tiktok"] = {"ok": False, "error": str(e)}
+            continue
         out = post_video(str(video), c["title"], c["summary"], [plat], "public", aigc=True, captions=c["caps"], category=c["category"],
                          youtube_license="creativeCommon")
         results.update(out["results"])
@@ -241,8 +249,8 @@ def run_post(n: int, state: dict, dry: bool) -> None:
         p: {"url": r.get("url"), "id": r.get("id")} for p, r in today["results"].items() if r.get("ok")}}, indent=2), encoding="utf-8")
     state["posted_date"] = now_et().date().isoformat(); state.pop("posting", None); state.pop("ready", None)
     _write(STATE, state)
-    marks = " ".join(f"{p.capitalize()} {'OK' if p in ok else 'FAILED'}" for p in PLATFORMS)
-    extra = "  TikTok: upload by hand." if "tiktok" not in ok else ""
+    marks = " ".join(f"{p.capitalize()} {('draft' if p == 'tiktok' else 'OK') if p in ok else 'FAILED'}" for p in PLATFORMS)
+    extra = "  TikTok: draft is in your inbox - open the app, paste the caption (auto_daily.py caption), press Post." if "tiktok" in ok else "  TikTok failed: upload by hand."
     urls = {p: today["results"][p].get("url") for p in ok if today["results"][p].get("url")}
     log("posted", episode=n, title=story["title"], urls=urls, failed=[p for p in PLATFORMS if p not in ok])
     notify(f"Episode {n} posted: {story['title'][:40]}", marks + extra + "  Review it; run 'auto_daily.py remake' to redo it.")
@@ -337,7 +345,7 @@ def remake(n: int) -> None:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); sub = ap.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run"); r.add_argument("--now", action="store_true"); r.add_argument("--dry-run", action="store_true"); r.add_argument("--episode", type=int)
-    sub.add_parser("status"); sub.add_parser("pause"); sub.add_parser("resume")
+    sub.add_parser("caption"); sub.add_parser("status"); sub.add_parser("pause"); sub.add_parser("resume")
     q = sub.add_parser("queue"); q.add_argument("numbers", nargs="+")
     m = sub.add_parser("remake"); m.add_argument("episode", type=int)
     a = ap.parse_args()
@@ -345,6 +353,9 @@ if __name__ == "__main__":
         run(a.now, a.dry_run, a.episode)
     elif a.cmd == "status":
         status()
+    elif a.cmd == "caption":
+        txt = (DATA / "tiktok_caption.txt").read_text(encoding="utf-8") if (DATA / "tiktok_caption.txt").exists() else ""
+        subprocess.run(["pbcopy"], input=txt.encode()); print("Copied the latest TikTok caption to your clipboard:\n\n" + txt)
     elif a.cmd == "pause":
         DATA.mkdir(exist_ok=True); PAUSE.write_text("paused"); print("Paused. The daily job does nothing until: python auto_daily.py resume")
     elif a.cmd == "resume":
