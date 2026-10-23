@@ -102,7 +102,7 @@ New accounts: post a couple a day, not dozens - Facebook rate-limits bursts.
 - Root `*.py` - the app (categories above); `web_static/` - the dashboard (`app.js`, `series.js`, `activity.js`, styles).
 - `stories/` - series and episode scripts (`story.json` is tracked; pictures and videos are generated and ignored).
 - `research/` - format studies (what performs, with the data behind it).
-- `archive/` - retired experiments kept for reference (Studio tools, physics simulations, 3D explainers, a paid cloud route, X posting). Nothing imports from it.
+- `archive/outputs/social_log.jsonl.bak` - backup of the post log. The retired experiments (Studio tools, simulations, paid route) were deleted; they remain in git history.
 - Not in git: `.env`, tokens, `models/`, `input/`, `output/`, `transcripts/`, generated episode media.
 
 Third-party licences: `THIRD_PARTY.md`.
