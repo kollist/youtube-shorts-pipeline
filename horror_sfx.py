@@ -68,12 +68,20 @@ def key_jingle() -> np.ndarray:
     return reverb(out * 0.5, 0.35)
 
 
-def knock(n: int = 3, gap: float = 0.24) -> np.ndarray:
-    out = np.zeros(int((n * gap + 0.6) * SR))
+def knock(n: int = 3, gap: float = 0.3) -> np.ndarray:
+    """Knuckles on a wooden door: a sharp click, then a few short wood resonances. Mostly dry so it reads even under a voice and on a phone speaker."""
+    out = np.zeros(int((n * gap + 0.7) * SR))
     for k in range(n):
-        at = int(k * gap * SR); t = _t(0.25)
-        out[at:at + len(t)] += (np.sin(2 * np.pi * 150 * t) * np.exp(-22 * t) + _lp(_rng.normal(0, 1, len(t)), 5) * np.exp(-70 * t) * 0.6)
-    return reverb(out * 0.7, 0.55)
+        at = int((k * gap + _rng.uniform(-0.02, 0.02)) * SR) if k else 0
+        t = _t(0.22); g = _rng.uniform(0.85, 1.0)
+        click = _rng.normal(0, 1, len(t)) * np.exp(-420 * t)                                              # the hit itself
+        wood = sum(a * np.sin(2 * np.pi * f * t + _rng.uniform(0, 6)) * np.exp(-d * t)
+                   for f, a, d in ((190, 1.0, 38), (410, 0.8, 55), (780, 0.5, 80), (1350, 0.3, 110)))   # hollow door panel
+        body = np.sin(2 * np.pi * 95 * t) * np.exp(-30 * t) * 0.6                                         # thud behind it
+        seg = (click * 0.9 + wood * 0.9 + body) * g
+        out[at:at + len(seg)] += seg
+    out = out / (np.abs(out).max() + 1e-9)
+    return reverb(out * 0.9, 0.18) * 0.9
 
 
 def door_creak(dur: float = 1.6) -> np.ndarray:

@@ -202,7 +202,7 @@ def build_horror_video(story_dir: str, log=print, dread: bool = False) -> Path:
         if jolt:
             hb_b = sfx.heartbeat(reveal - jolt - 1.2, 132, 132)
             put(shape(hb_b, [(0, 0.5), (len(hb_b) / SR, 0)]), jolt + 1.2)
-        for frac, snd, pan, g in ((0.30, sfx.breath, -0.95, 0.5), (0.43, sfx.door_creak, 0.9, 0.45), (0.50, sfx.knock, -0.8, 0.5), (0.66, sfx.breath, 0.95, 0.55), (0.78, sfx.door_creak, -0.9, 0.5)):
+        for frac, snd, pan, g in ((0.30, sfx.breath, -0.95, 0.5), (0.43, sfx.door_creak, 0.9, 0.45), (0.50, sfx.knock, -1.0, 0.8), (0.66, sfx.breath, 0.95, 0.55), (0.78, sfx.door_creak, -0.9, 0.5)):
             put(snd(), story_end * frac, g, pan)                                   # sounds from behind you, in one ear, on no word
     put(_wav(main_mp3), VO, 1.0)                                                   # the narrator: one continuous take
     put(_wav(scenes[-1]["mp3"]), scenes[-1]["start"] + scenes[-1]["lead"], 1.0)    # then the whispered finale
