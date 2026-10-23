@@ -43,7 +43,7 @@ PLATFORMS = ["youtube", "facebook", "instagram", "tiktok"]
 MAX_ATTEMPTS = 3
 KEEP_DAYS = 10
 
-QUEUE, STATE, LOG, PAUSE, LOCK = (DATA / n for n in ("scp_queue.json", "auto_state.json", "auto_log.jsonl", "auto_pause", "auto.lock"))
+QUEUE, STATE, LOG, PAUSE, LOCK, HOLD = (DATA / n for n in ("scp_queue.json", "auto_state.json", "auto_log.jsonl", "auto_pause", "auto.lock", "auto_hold.json"))
 
 
 # ---------------------------------------------------------------- small helpers
@@ -102,10 +102,18 @@ def episodes() -> list[int]:
     return list(range(1, len(sj["arc"]) + 1))
 
 
+def held(n: int) -> bool:
+    """data/auto_hold.json = {"3": "2026-10-31"}: episode 3 is finished but must not post before that US-Eastern date (e.g. a Halloween episode built early)."""
+    until = _read(HOLD, {}).get(str(n))
+    return bool(until) and now_et().date().isoformat() < until
+
+
 def ready_episode() -> int | None:
-    """The lowest-numbered episode that has a finished video and has not been posted."""
+    """The lowest-numbered episode that has a finished video, is not held, and has not been posted."""
     for n in episodes():
         d = ep_dir(n)
+        if held(n):
+            continue
         if (d / "story.json").exists() and not (d / "posted.json").exists() and (d / f"{d.name}-HORROR.mp4").exists():
             return n
     return None
@@ -322,7 +330,7 @@ def run(now: bool = False, dry: bool = False, episode: int | None = None) -> Non
 
 def status() -> None:
     state = _read(STATE, {}); print("paused:", PAUSE.exists()); print("queue :", queue() or "(empty)")
-    print("ready :", ready_episode() or "(none)"); print("state :", {k: v for k, v in state.items() if k != "posting"})
+    print("ready :", ready_episode() or "(none)"); print("held  :", _read(HOLD, {}) or "(none)"); print("state :", {k: v for k, v in state.items() if k != "posting"})
     for line in LOG.read_text(encoding="utf-8").splitlines()[-30:][::-1] if LOG.exists() else []:
         row = json.loads(line)
         if row["kind"] == "posted":
