@@ -1,0 +1,156 @@
+{
+  "title": "Scp-119 The Microwave",
+  "format": "scp",
+  "title_lines": [
+    "SCP-119",
+    "THE MICROWAVE"
+  ],
+  "audience": "horror",
+  "style": "dark anime key art, painterly cinematic horror illustration, a concrete-and-fluorescent-light government facility at night, moody lighting with deep shadows and one cold light source, rich detail, film still quality, vertical composition, absolutely no text, no letters, no numbers, no signs with writing",
+  "tape_label": "FOUNDATION ARCHIVE - SCP-119 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-119",
+    "author": "elrosth",
+    "url": "https://scp-wiki.wikidot.com/scp-119",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-119 by elrosth - scp-wiki.wikidot.com/scp-119 - CC BY-SA 3.0"
+  },
+  "poster_tag": "THE OVEN THAT AGES YOU",
+  "post_caption": "This ordinary microwave can age you 31 million years. Would you press start?",
+  "summary": "Foundation orientation tape for SCP-119.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "Foundation junior researcher, 24, white lab coat over grey uniform, ID badge clipped to the pocket, tired eyes, short dark hair"
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "Low-angle shot of {Hero} standing in a dark concrete room, a faint white microwave oven glowing dimly far behind, empty dark space above for the title. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "A kitchen microwave, ordinary in every way, can age whatever you put inside it by thirty-one million years."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "WHAT IT DOES",
+      "image_prompt": "A small white microwave on a steel table at the edge of frame, its digital timer glowing green, an apple inside visibly shriveling, a researcher's shadow nearby. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "That is because its core gives off no microwaves, only a radiation that speeds up time, so thirty seconds becomes fifteen minutes."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "WHY IT'S DANGEROUS",
+      "image_prompt": "Dusty vineyard cellar with old wine bottles on racks, the microwave half hidden among crates in the background, its timer glowing faintly. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "A vineyard used it to sell wine older than the company itself, until lawsuits bankrupted them and an agent bought it."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "HOW IT'S CONTAINED",
+      "image_prompt": "Heavy steel door with a keypad in a Foundation corridor, through a narrow window the unplugged microwave sits in the dark with its door hanging open, cord coiled on the floor. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "So the secret organization that locks away things that should not exist keeps it unplugged, door open, in a locked room."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "WHO WATCHES IT",
+      "image_prompt": "{Hero} at an observation window, disinfectant bottle on a shelf, reflected in the glass the microwave glows faintly behind, slightly closer than before. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Before each test it is soaked in disinfectant, and someone watches through the window, ready to stop it."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "THE MISTAKE",
+      "image_prompt": "Over-the-shoulder view of {Hero} pressing buttons on the microwave, its door wide open, an eerie pale light spilling out across the hero's face and hands. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "But tonight you switch it on with the door open, and you stay standing right in front of it."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "THE TURN",
+      "image_prompt": "Close-up of {Hero}'s thin wrinkled hands trembling, the microwave's glowing timer blurred in the background, a cold blue tint over the room. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Then you notice your hands are wrinkled, and the timer says you have been standing here for years."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "Huge microwave oven looming right behind {Hero}, door open, blinding light pouring out, timer glowing, in sharp focus, the hero unaware and looking away. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Stay right where you are. Thirty seconds is all I need, and you will be old. Hold still."
+        }
+      ]
+    }
+  ]
+}

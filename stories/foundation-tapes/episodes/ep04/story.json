@@ -1,0 +1,156 @@
+{
+  "title": "Scp-4153 The Wax Troupe",
+  "format": "scp",
+  "title_lines": [
+    "SCP-4153",
+    "THE WAX TROUPE"
+  ],
+  "audience": "horror",
+  "style": "dark anime key art, painterly cinematic horror illustration, a concrete-and-fluorescent-light government facility at night, moody lighting with deep shadows and one cold light source, rich detail, film still quality, vertical composition, absolutely no text, no letters, no numbers, no signs with writing",
+  "tape_label": "SITE-09 ARCHIVE - SCP-4153 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-4153",
+    "author": "The Great Hippo",
+    "url": "https://scp-wiki.wikidot.com/scp-4153",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-4153 by The Great Hippo - scp-wiki.wikidot.com/scp-4153 - CC BY-SA 3.0"
+  },
+  "poster_tag": "THE MONSTERS ARE ALIVE",
+  "post_caption": "Living wax monsters hide in haunted houses near you. Would you notice which one is real?",
+  "summary": "Foundation orientation tape for SCP-4153.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "Foundation agent, mid-30s, rumpled grey suit, loosened tie, tired eyes, ID badge clipped to the lapel"
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "Low-angle shot of {Hero} in a dark haunted-house corridor, a faint pale wax Count Dracula silhouette far behind, empty dark space at the top for the title. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "In 1993, police arrested intruders at a haunted house, then realized the monster faces weren't makeup. They were wax, and alive."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "WHAT IT IS",
+      "image_prompt": "Dim haunted-house corridor, a wax-pale Werewolf face softly melting and reshaping in the shadowed background while {Hero} walks past, unaware. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "They are an acting troupe of living wax figures playing Dracula, Frankenstein's Monster and the Werewolf, reshaping their faces and moving wax objects from afar."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "WHERE THEY HIDE",
+      "image_prompt": "Neon carnival haunted-house entrance at night, laughing crowd, a wax Frankenstein's Monster half hidden behind a dripping fake-blood prop at the frame edge, {Hero} watching. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "They hide at haunted houses and carnivals across North America, making their own fake blood and gore, so nobody looks twice."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "HOW IT'S CONTAINED",
+      "image_prompt": "Site-09 holding corridor, {Hero} escorting a bed-sheet-draped wax figure toward a cell; in the steel doors pale wax face. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "A secret organization that locks away things that should not exist took them to Site-09."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "WHO WATCHES IT",
+      "image_prompt": "Dark monitoring room, {Hero} at screens of haunted-house sightings; on one screen's edge a wax Werewolf peeks from behind bushes. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Task force Iota-10 hunts every sighting near horror attractions and brings each one in."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "THE MISTAKE",
+      "image_prompt": "Interrogation room, {Hero} across a table from a wax figure in bed-sheets with a raised hand; behind the one-way glass, a second wax face half hidden. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Now you are Agent West. The prisoner whispers, look into my eyes, and you shrug, because he is wearing bed-sheets."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "THE TURN",
+      "image_prompt": "Dark Site-09 corridor, emergency lights flickering, {Hero} frozen holding a dead phone; far down the hall a wax Frankenstein's Monster stands, closer than before. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Then he laughs and says they were already here, and the whole site goes quiet."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "{Hero} facing away, unaware, while a huge sharp-focus wax Count Dracula looms inches behind their neck, melting wax dripping, smeared fake blood on his hands. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Look into my eyes. No, behind you. I'm close enough to touch your neck. Enjoy the show. Would you have noticed the wax in time?"
+        }
+      ]
+    }
+  ]
+}

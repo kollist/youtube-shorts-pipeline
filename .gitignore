@@ -59,3 +59,6 @@ data/caption_history.json
 assets/sfx/pixabay_*
 data/auto_*
 data/scp_queue.json
+data/auto.lock
+data/tiktok_caption.txt
+branding/*_raw.png
