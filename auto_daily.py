@@ -248,9 +248,11 @@ def run_post(n: int, state: dict, dry: bool) -> None:
     state["posted_date"] = now_et().date().isoformat(); state.pop("posting", None); state.pop("ready", None)
     _write(STATE, state)
     marks = " ".join(f"{p.capitalize()} {('draft' if p == 'tiktok' else 'OK') if p in ok else 'FAILED'}" for p in PLATFORMS)
-    extra = "  TikTok: draft is in your inbox - open the app, paste the caption (auto_daily.py caption), press Post." if "tiktok" in ok else "  TikTok failed: upload by hand."
+    errors = {p: str(today["results"].get(p, {}).get("error", ""))[:300] for p in PLATFORMS if p not in ok}
+    extra = ("  TikTok: draft is in your inbox - open the app, paste the caption (auto_daily.py caption), press Post." if "tiktok" in ok
+             else f"  TikTok failed ({errors.get('tiktok', '')[:90]}): upload by hand.")
     urls = {p: today["results"][p].get("url") for p in ok if today["results"][p].get("url")}
-    log("posted", episode=n, title=story["title"], urls=urls, failed=[p for p in PLATFORMS if p not in ok])
+    log("posted", episode=n, title=story["title"], urls=urls, failed=[p for p in PLATFORMS if p not in ok], errors=errors)
     notify(f"Episode {n} posted: {story['title'][:40]}", marks + extra + "  Review it; run 'auto_daily.py remake' to redo it.")
 
 
