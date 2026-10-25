@@ -19,6 +19,7 @@ LABEL = "TikTok"
 API = os.environ.get("TIKTOK_API_BASE", "https://open.tiktokapis.com")
 SINGLE_UPLOAD_MAX = 64 * 1024 * 1024   # TikTok: up to 64 MB can go in one request
 CHUNK = 32 * 1024 * 1024               # bigger files: chunks of 5-64 MB, the last one absorbs the remainder (up to 128 MB)
+UNAUDITED = "unaudited_client_can_only_post_to_private_accounts"
 PRIVACY_FOR = {"public": "PUBLIC_TO_EVERYONE", "unlisted": "MUTUAL_FOLLOW_FRIENDS", "private": "SELF_ONLY"}
 
 
@@ -62,6 +63,13 @@ def check_connection() -> str:
     return f"Connected as {name}{note}"
 
 
+def _as_draft(video_path: str, caption: str) -> dict:
+    r = post_draft(video_path, caption)
+    r["note"] = ("TikTok only allows public posts from approved apps, so the video was sent to your TikTok INBOX as a draft: open TikTok, paste the caption "
+                 "(it is not carried over) and press Post. " + r.get("note", "")).strip()
+    return r
+
+
 def post(video_path: str, caption: str, privacy: str = "public", aigc: bool = False, **_) -> dict:
     info = _creator_info()
     options = info.get("privacy_level_options") or ["SELF_ONLY"]
@@ -77,11 +85,18 @@ def post(video_path: str, caption: str, privacy: str = "public", aigc: bool = Fa
         chunk = CHUNK
         total = size // chunk  # the last chunk absorbs the remainder (TikTok allows it to be larger)
 
-    init = http("POST", f"{API}/v2/post/publish/video/init/", headers=_headers(), json={
-        "post_info": {"title": caption[:2200], "privacy_level": level, "is_aigc": bool(aigc)},
-        "source_info": {"source": "FILE_UPLOAD", "video_size": size, "chunk_size": chunk, "total_chunk_count": total},
-    }).json()
+    try:
+        init = http("POST", f"{API}/v2/post/publish/video/init/", headers=_headers(), json={
+            "post_info": {"title": caption[:2200], "privacy_level": level, "is_aigc": bool(aigc)},
+            "source_info": {"source": "FILE_UPLOAD", "video_size": size, "chunk_size": chunk, "total_chunk_count": total},
+        }).json()
+    except SocialError as e:
+        if UNAUDITED in str(e):                              # app not approved yet: a draft in the inbox still works, and YOU publish it
+            return _as_draft(video_path, caption)
+        raise
     if init.get("error", {}).get("code", "ok") != "ok":
+        if init["error"].get("code") == UNAUDITED:
+            return _as_draft(video_path, caption)
         raise SocialError(f"TikTok refused the post: {init['error']}")
     publish_id, upload_url = init["data"]["publish_id"], init["data"]["upload_url"]
 
