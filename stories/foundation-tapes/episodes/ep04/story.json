@@ -6,7 +6,7 @@
     "THE WAX TROUPE"
   ],
   "audience": "horror",
-  "style": "dark anime key art, painterly cinematic horror illustration, a concrete-and-fluorescent-light government facility at night, moody lighting with deep shadows and one cold light source, rich detail, film still quality, vertical composition, absolutely no text, no letters, no numbers, no signs with writing",
+  "style": "dark photorealistic found-footage horror photograph, desaturated, heavy 35mm film grain, crushed blacks, one harsh light source, unsettling, vertical composition, absolutely no text, no letters, no numbers, no timestamps, no overlays",
   "tape_label": "SITE-09 ARCHIVE - SCP-4153 - CONFIDENTIAL",
   "music": {
     "mood": "eerie"
@@ -36,7 +36,7 @@
       "voice": "en-US-ChristopherNeural",
       "rate": "-6%",
       "pitch": "-4Hz",
-      "look": "Foundation agent, mid-30s, rumpled grey suit, loosened tie, tired eyes, ID badge clipped to the lapel"
+      "look": "Short dark brown hair, dark Foundation jacket with high collar, seen from behind."
     }
   },
   "scenes": [
@@ -46,7 +46,7 @@
       "kind": "intro",
       "rule_no": 0,
       "label": "",
-      "image_prompt": "Low-angle shot of {Hero} in a dark haunted-house corridor, a faint pale wax Count Dracula silhouette far behind, empty dark space at the top for the title. {style}",
+      "image_prompt": "Wide grainy CCTV frame of an empty dark haunted house corridor, large black empty area at top, tiny pale glossy wax figure with melted smooth face standing far away, faint cold light, crushed blacks, film grain, desaturated {style}",
       "lines": [
         {
           "who": "Narrator",
@@ -60,7 +60,7 @@
       "kind": "rule",
       "rule_no": 1,
       "label": "WHAT IT IS",
-      "image_prompt": "Dim haunted-house corridor, a wax-pale Werewolf face softly melting and reshaping in the shadowed background while {Hero} walks past, unaware. {style}",
+      "image_prompt": "Close detail of wax drips and smeared pale yellow wax handprints on a carnival wall, fake blood splatter, one dim flashlight glow, nobody in frame, crushed blacks, heavy film grain, desaturated {style}",
       "lines": [
         {
           "who": "Narrator",
@@ -74,7 +74,7 @@
       "kind": "rule",
       "rule_no": 2,
       "label": "WHERE THEY HIDE",
-      "image_prompt": "Neon carnival haunted-house entrance at night, laughing crowd, a wax Frankenstein's Monster half hidden behind a dripping fake-blood prop at the frame edge, {Hero} watching. {style}",
+      "image_prompt": "Empty carnival haunted-house stage at night, rubber monster masks on the floor, one wrong detail: a glossy pale wax puddle shaped like footprints, single dim red emergency light, heavy grain, desaturated {style}",
       "lines": [
         {
           "who": "Narrator",
@@ -88,7 +88,7 @@
       "kind": "rule",
       "rule_no": 3,
       "label": "HOW IT'S CONTAINED",
-      "image_prompt": "Site-09 holding corridor, {Hero} escorting a bed-sheet-draped wax figure toward a cell; in the steel doors pale wax face. {style}",
+      "image_prompt": "High-corner black-and-white CCTV of an empty interrogation room, tiny motionless pale wax figure draped in a bed-sheet seated far away, glossy melted face, grainy, crushed blacks {style}",
       "lines": [
         {
           "who": "Narrator",
@@ -102,7 +102,7 @@
       "kind": "rule",
       "rule_no": 4,
       "label": "WHO WATCHES IT",
-      "image_prompt": "Dark monitoring room, {Hero} at screens of haunted-house sightings; on one screen's edge a wax Werewolf peeks from behind bushes. {style}",
+      "image_prompt": "POV flashlight beam through haze down a dark Site corridor, far end a tall pale yellow wax figure with smooth half-formed face, dripping hands, half swallowed by darkness, heavy grain, desaturated {style}",
       "lines": [
         {
           "who": "Narrator",
@@ -116,7 +116,7 @@
       "kind": "rule",
       "rule_no": 5,
       "label": "THE MISTAKE",
-      "image_prompt": "Interrogation room, {Hero} across a table from a wax figure in bed-sheets with a raised hand; behind the one-way glass, a second wax face half hidden. {style}",
+      "image_prompt": "Over-the-shoulder, out-of-focus back of {Hero}, short dark brown hair, dark Foundation jacket; a pale glossy wax figure with smooth melted face stands in a dark doorway, one cold light, heavy grain {style}",
       "lines": [
         {
           "who": "Narrator",
@@ -130,7 +130,7 @@
       "kind": "twist",
       "rule_no": 6,
       "label": "THE TURN",
-      "image_prompt": "Dark Site-09 corridor, emergency lights flickering, {Hero} frozen holding a dead phone; far down the hall a wax Frankenstein's Monster stands, closer than before. {style}",
+      "image_prompt": "Over-the-shoulder, blurred back of {Hero} in dark Foundation jacket, closer in darkness a tall pale melted wax figure with smooth blank face, dripping hands, lit by one red emergency light, grain {style}",
       "lines": [
         {
           "who": "Narrator",
@@ -144,7 +144,7 @@
       "kind": "twist",
       "rule_no": 6,
       "label": "",
-      "image_prompt": "{Hero} facing away, unaware, while a huge sharp-focus wax Count Dracula looms inches behind their neck, melting wax dripping, smeared fake blood on his hands. {style}",
+      "image_prompt": "Dark CCTV-like frame, tall pale yellow wax figure with smooth half-melted face looming very close, out of focus, lit only by one red light, wax dripping, crushed blacks, heavy grain, desaturated {style}",
       "lines": [
         {
           "who": "Narrator",
@@ -152,5 +152,6 @@
         }
       ]
     }
-  ]
+  ],
+  "entity_look": "Humanoid figure of pale yellow wax, glossy and slightly melted, face smooth and half-formed like a mask, stitched monster features, tall stiff posture, drips of wax running from its hands."
 }

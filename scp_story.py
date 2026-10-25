@@ -16,9 +16,23 @@ import requests
 
 from series import STORIES_DIR, VOICES, _llm_json, _write, slugify
 
-STYLE = ("dark anime key art, painterly cinematic horror illustration, a concrete-and-fluorescent-light government facility at night, "
-         "moody lighting with deep shadows and one cold light source, rich detail, film still quality, vertical composition, "
-         "absolutely no text, no letters, no numbers, no signs with writing")
+STYLE = ("dark photorealistic found-footage horror photograph, desaturated, heavy 35mm film grain, crushed blacks, one harsh light source, "
+         "unsettling, vertical composition, absolutely no text, no letters, no numbers, no timestamps, no overlays")
+
+PICTURE_RULES = """PICTURES - the fear comes from what you almost see. These are PHOTOGRAPHS from found footage and security cameras, never illustrations, and NEVER a portrait of a person facing the camera.
+Shot types - use a different one for every scene:
+ (a) "cctv": a grainy black-and-white security-camera frame from a high corner, wide, the place mostly empty, the entity tiny and perfectly still, far from the camera;
+ (b) "pov": the viewer's point of view with a flashlight beam cutting through haze down a corridor or into a room, the entity at the far end, half swallowed by darkness;
+ (c) "shoulder": over-the-shoulder - the back of {Hero}'s head, out of focus, in the foreground; the entity in a dark doorway or at the edge of the light;
+ (d) "evidence": a close detail of what it leaves behind (marks, scratches, wax drips, a handprint, an open door, an unplugged machine) in dim light, nobody in frame;
+ (e) "empty": the empty room where it should be, with one wrong detail.
+Order: scene 1 (the poster) = "empty" or "cctv", wide and dark, a faint shape far away, a large empty dark area at the top for the title. Scenes 2-4 = evidence / cctv / empty (the entity absent or tiny).
+Scenes 5-6 = pov / cctv (far away, partly hidden). Scene 7 = shoulder (closer than before, still mostly dark). Scene 8 = shoulder or cctv: the entity very close but in darkness, lit by ONE red or cold light,
+partly out of focus - never a bright, sharp, full-body close-up, never touching the hero.
+Every prompt: ONE strong light source (flashlight beam, emergency light, screen glow), crushed blacks, heavy film grain, desaturated, photorealistic, 40 words max, ending with {style}.
+Describe the entity ONLY with traits from the article and repeat its key physical traits in every prompt that shows it (the picture model forgets). "entity_look" = 25 words: shape, skin, face (hidden or not), size, what is wrong with it.
+"hero_look" = hair colour and a dark Foundation jacket, 12 words, no face. Use {Hero} only in shoulder shots, as "the back of {Hero}".
+"""
 
 
 def fetch_scp(number: str) -> dict:
@@ -68,15 +82,14 @@ Story order (8 scenes, 130-150 words total, plain spoken English):
 8. THE SCARE: the ENTITY speaks. The last spoken line is the creature itself talking to the viewer in FIRST PERSON ("I", "me", "you"), present tense, close and intimate, never the narrator describing it: it is right behind them and it tells them so, turned into a taunt that fits what it does (e.g. "Turn around. I am right here, inches from your neck. Go on... blink."). Short, 12-20 words, not explained. Then ONE final sentence: a question to the viewer
    (6-9 words) - it is shown as text, not spoken.
 Each scene has a "label": 1-3 plain words shown on screen (e.g. "WHAT IT IS", "WHAT IT DOES", "HOW IT'S CONTAINED", "WHO WATCHES IT", "THE MISTAKE"). Scene 1 may have label "".
-PICTURES - this is where the fear comes from: the entity (or the sign of it) is in EVERY picture from scene 2 on, never in the same place, behaving as its canon says (e.g. if it only moves unseen,
-slightly closer each time). Scenes 2-7: small / background / edge of frame / reflected / half hidden. The FINAL picture shows it right behind the hero, large, in focus, the hero unaware.
-Describe the entity only with traits from the article. Picture 1 = poster: hero low-angle, entity faint behind, empty dark space at the top for the title.
-"image_prompt" = one clear moment, max 45 words, ending with {style}; use {Hero} for the character (a Foundation guard or junior researcher, 20 words: age, uniform, one detail).
+__PICTURE_RULES__
 Respond with ONLY this JSON:
-{"title_lines": ["SCP-173", "THE SCULPTURE"], "poster_tag": "2-4 word tag under the title, e.g. THE STATUE THAT MOVES", "hero_look": "...", "tape_label": "<the site named in the article> ARCHIVE - <ITEM> - CONFIDENTIAL" (max 44 characters; if no site is named: FOUNDATION ARCHIVE - <ITEM> - CONFIDENTIAL),
+{"title_lines": ["SCP-173", "THE SCULPTURE"], "poster_tag": "2-4 word tag under the title, e.g. THE STATUE THAT MOVES", "hero_look": "...", "entity_look": "...", "tape_label": "<the site named in the article> ARCHIVE - <ITEM> - CONFIDENTIAL" (max 44 characters; if no site is named: FOUNDATION ARCHIVE - <ITEM> - CONFIDENTIAL),
  "caption": "Instagram hook line (max 90 chars) + one question",
  "scenes": [{"kind": "intro|rule|twist", "rule_no": 0, "label": "WHAT IT IS", "narration": "...", "image_prompt": "... {style}"}]}
 (kind: scene 1 "intro"; scenes 2-6 "rule" with rule_no 1..5 in order; scenes 7-8 "twist" with rule_no 6.)"""
+
+SYSTEM = SYSTEM.replace("__PICTURE_RULES__", PICTURE_RULES)
 
 
 def create_scp_story(number: str, voice: str = "adult_man", log=print, dest: Path | None = None) -> Path:
@@ -111,6 +124,38 @@ def create_scp_story(number: str, voice: str = "adult_man", log=print, dest: Pat
     for s in sc:
         log(f"   [{s['kind']} {s['rule_no']}] {s['lines'][0]['text']}")
     return folder
+
+
+RESTYLE_SYSTEM = """You rewrite ONLY the picture prompts for an existing SCP horror short. Keep the story: you are given the narration of each scene and the article facts.
+""" + PICTURE_RULES + """
+Respond with ONLY JSON: {"entity_look": "...", "hero_look": "...", "image_prompts": ["... {style}", ... one per scene, in order]}"""
+
+
+def restyle_pictures(ep_dir, log=print) -> Path:
+    """Rewrites every scene's image prompt in the current photographic found-footage style (script untouched), updates the style, and removes the old pictures
+    so the next make_episode / generate_images draws new ones. Use it on an episode made in the older anime style."""
+    import shutil
+    ep_dir = Path(ep_dir)
+    story = json.loads((ep_dir / "story.json").read_text(encoding="utf-8"))
+    art = fetch_scp(re.sub(r"\D", "", story["credit"]["item"]))
+    scenes = story["scenes"]
+    listing = "\n".join(f"{i}. [{s.get('label') or 'poster'}] {' '.join(l['text'] for l in s['lines'])}" for i, s in enumerate(scenes, 1))
+    out = _llm_json(RESTYLE_SYSTEM, f"ARTICLE ({art['item']}):\n{art['text']}\n\nSCENES ({len(scenes)}):\n{listing}")
+    prompts = out.get("image_prompts") or []
+    if len(prompts) != len(scenes):
+        raise RuntimeError(f"The writer returned {len(prompts)} picture prompts for {len(scenes)} scenes - try again.")
+    for sc, pr in zip(scenes, prompts):
+        sc["image_prompt"] = pr if "{style}" in pr else pr.rstrip() + " {style}"
+    story["style"] = STYLE
+    if out.get("hero_look"):
+        story["characters"]["Hero"]["look"] = out["hero_look"]
+    story["entity_look"] = out.get("entity_look", "")
+    (ep_dir / "story.json").write_text(json.dumps(story, indent=2, ensure_ascii=False), encoding="utf-8")
+    shutil.rmtree(ep_dir / "images", ignore_errors=True)
+    for f in list(ep_dir.glob("*.mp4")):
+        f.unlink()
+    log(f"[scp] {story['credit']['item']}: {len(prompts)} picture prompts rewritten in the found-footage style")
+    return ep_dir
 
 
 if __name__ == "__main__":
