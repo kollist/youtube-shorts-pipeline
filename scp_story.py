@@ -95,7 +95,18 @@ SYSTEM = SYSTEM.replace("__PICTURE_RULES__", PICTURE_RULES)
 def create_scp_story(number: str, voice: str = "adult_man", log=print, dest: Path | None = None) -> Path:
     art = fetch_scp(number)
     log(f"[scp] {art['item']} - author credit: {art['author'] or '(not found)'} - {len(art['text'])} chars of article")
-    out = _llm_json(SYSTEM, f"ARTICLE ({art['item']}):\n{art['text']}")
+    user = f"ARTICLE ({art['item']}):\n{art['text']}"
+    out = _llm_json(SYSTEM, user)
+    count = lambda o: sum(len(str(x.get("narration", "")).split()) for x in o.get("scenes", []))
+    for _ in range(2):                                     # a long article tempts the writer to cram: 107-second videos have happened. Make it shorter, twice at most.
+        n_words = count(out)
+        if n_words <= 170:
+            break
+        log(f"[scp] script is {n_words} words (target 130-150, about {n_words / 2.5:.0f}s) - asking for a shorter one")
+        out = _llm_json(SYSTEM, user + f"\n\nYOUR LAST ATTEMPT WAS {n_words} WORDS - FAR TOO LONG (it becomes a {n_words / 2.5:.0f}-second video). Every scene's narration must be ONE or TWO short sentences, about 17 words. "
+                                      "Total 130-150 words. Keep every other rule and the same JSON.")
+    if count(out) > 190:
+        raise RuntimeError(f"The writer kept the script at {count(out)} words (it must be about 140) - try again.")
     scenes = [s for s in out.get("scenes", []) if s.get("narration") and s.get("image_prompt")]
     if len(scenes) < 6:
         raise RuntimeError("The writer returned too few scenes - try again.")

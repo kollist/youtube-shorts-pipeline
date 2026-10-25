@@ -1,0 +1,156 @@
+{
+  "title": "Scp-106 The Old Man",
+  "format": "scp",
+  "title_lines": [
+    "SCP-106",
+    "THE OLD MAN"
+  ],
+  "audience": "horror",
+  "style": "dark photorealistic found-footage horror photograph, desaturated, heavy 35mm film grain, crushed blacks, one harsh light source, unsettling, vertical composition, absolutely no text, no letters, no numbers, no timestamps, no overlays",
+  "tape_label": "FOUNDATION ARCHIVE - SCP-106 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-106",
+    "author": "Gears",
+    "url": "https://scp-wiki.wikidot.com/scp-106",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-106 by Gears - scp-wiki.wikidot.com/scp-106 - CC BY-SA 3.0"
+  },
+  "poster_tag": "HE WALKS THROUGH WALLS",
+  "post_caption": "He waits for days, then walks through your wall. Would you notice the quiet?",
+  "summary": "Foundation orientation tape for SCP-106.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "short dark brown hair, dark Foundation jacket with collar up, seen only from behind"
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "Empty concrete containment hall, wide and dark, large empty black space above, tiny hunched rotting elderly figure far away at the end, one dim red emergency light, crushed blacks, heavy grain, desaturated, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Something has waited motionless in the dark for days: an old man, rotting alive."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "WHAT IT DOES",
+      "image_prompt": "Close detail of a concrete wall with spreading black rust and rot, a dark oozing handprint dissolving the surface, nobody in frame, one weak flashlight glow, crushed blacks, heavy grain, desaturated, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Everything it touches corrodes and crumbles, and it slips through solid walls like water."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "WHY IT'S DANGEROUS",
+      "image_prompt": "Grainy black-and-white security camera, high corner, wide empty corridor, tiny hunched black rotting elderly figure upside down on the distant ceiling, perfectly still, one flickering light, heavy grain, desaturated, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "It cripples its victims, then drags them into a pocket world inside the walls. No one goes after them."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "HOW IT'S CONTAINED",
+      "image_prompt": "Empty chamber with nested steel shells suspended in the air on magnetic supports, one shell door slightly open, dark corroded stain on the floor beneath, one cold white light, crushed blacks, heavy grain, desaturated, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "So the Foundation, which locks away impossible things, floats it in forty layers of lead-lined steel."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "WHO WATCHES IT",
+      "image_prompt": "POV flashlight beam through haze into a round chamber filled with dark liquid and tangled steel supports, a hunched rotting elderly figure with hollow eyes half swallowed by darkness far away, heavy grain, desaturated, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Sixteen fluid-filled chambers surround it, watched around the clock, with lights ready to flood the room instantly."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "THE MISTAKE",
+      "image_prompt": "Grainy black-and-white security camera, high corner, empty monitoring room, banks of dark screens, one screen glowing, a tiny hunched rotting elderly figure barely visible in a far doorway, heavy grain, desaturated, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "But tonight you are on watch, and it all goes quiet. You relax. You should not."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "THE TURN",
+      "image_prompt": "Over-the-shoulder, out-of-focus back of {Hero} in foreground with dark jacket sleeve spotted with rust, dark doorway ahead, hunched rotting elderly figure with sunken hollow eyes at the edge of the light, one cold glow, heavy grain, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Then you notice rust blooming on your sleeve. Quiet was never safety. It was the lure."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "Grainy security camera view over the back of {Hero}, very close behind, a hunched rotting elderly figure with black decayed skin and hollow eyes emerging from a wall, lit by one red light, out of focus, heavy grain, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "I am in the wall behind you. Lean back, just a little. I only want to touch you. Would you have noticed in time?"
+        }
+      ]
+    }
+  ]
+}
