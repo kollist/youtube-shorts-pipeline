@@ -15,9 +15,11 @@ The scary version of the rules format. Same story + pictures as rules_video.py, 
 import argparse
 import asyncio
 import json
+import random
 import re
 import shutil
 import subprocess
+import zlib
 from pathlib import Path
 
 import numpy as np
@@ -46,14 +48,15 @@ def _tension(sc: dict) -> float:
     return 0.92 if not sc.get("final") else 1.0
 
 
-async def _voice(text: str, who: dict, mp3: Path, whisper: bool):
+async def _voice(text: str, who: dict, mp3: Path, whisper: bool, damage: float = 0.0):
     words = await rv._tts(text, who["voice"], who.get("rate", "+0%"), who.get("pitch", "+0Hz"), mp3)
     toks = text.split()
     if len(toks) == len(words):
         words = [(a, b, tk) for (a, b, _), tk in zip(words, toks)]
     if not whisper:                                                      # an old training tape: narrow band, a little wobble, squashed
         tmp = mp3.with_suffix(".t.mp3"); mp3.rename(tmp)
-        run(["ffmpeg", "-y", "-v", "error", "-i", str(tmp), "-af", "highpass=f=170,lowpass=f=4800,vibrato=f=4.6:d=0.025,acompressor=threshold=-20dB:ratio=3:makeup=3", str(mp3)]); tmp.unlink()
+        run(["ffmpeg", "-y", "-v", "error", "-i", str(tmp), "-af", (f"highpass=f=170,lowpass=f={int(4800 - 1500 * damage)},vibrato=f=4.6:d={0.025 + 0.02 * damage:.3f},"            # every tape the narrator is a little worse: darker, wobblier, a faint echo of someone else
+                      + (f"aecho=0.8:0.5:{int(25 + 55 * damage)}:{0.10 + 0.22 * damage:.2f}," if damage > 0.15 else "") + "acompressor=threshold=-20dB:ratio=3:makeup=3"), str(mp3)]); tmp.unlink()
     if whisper:                                                          # the finale: not a quiet voice - a VOICE WITH SOMETHING UNDER IT
         tmp = mp3.with_suffix(".w.mp3"); mp3.rename(tmp)
         chain = ("[0:a]aresample=44100,highpass=f=70,acompressor=threshold=-26dB:ratio=4:makeup=4,asplit=4[a][b][c][d];"
@@ -77,6 +80,17 @@ def build_horror_video(story_dir: str, log=print, dread: bool = True, yt: bool =
     sdir = Path(story_dir).resolve()
     story = json.loads((sdir / "story.json").read_text(encoding="utf-8"))
     work = sdir / "build_horror"; work.mkdir(exist_ok=True)
+    try:
+        import story_variety as _sv
+        damage = _sv.narrator_damage(int(story.get("tape_no") or 0))
+    except Exception:
+        damage = 0.0
+    prof = (story.get("scare_profile") or "classic") if dread else "classic"          # where the scare lands (story_variety.PROFILES); old episodes have none = classic
+    if prof not in ("classic", "late", "quiet", "false_calm", "double"):
+        prof = "classic"
+    jr = random.Random(zlib.crc32(story.get("title", "").encode()))
+    varied = bool(story.get("scare_profile"))                                          # new-style tapes move the ambient sounds around; old ones keep their timings
+    knock_frac = 0.5 + (jr.uniform(-0.12, 0.08) if varied else 0.0)
     narr = story["characters"]["Narrator"]; whisper_voice = {**VOICES["creepy_whisper"], "rate": "-26%", "pitch": "-24Hz"}      # slower and lower: it takes its time
     label = story.get("tape_label") or f"{(story.get('title_lines') or [story['title']])[-1]} - NIGHT STAFF ORIENTATION - 1994".upper()[:60]
 
@@ -95,7 +109,7 @@ def build_horror_video(story_dir: str, log=print, dread: bool = True, yt: bool =
     main_in, fin_in = scenes_in[:-1], scenes_in[-1]
     texts = [sc["lines"][0]["text"] for sc in main_in]
     main_mp3 = work / "voice_main.mp3"
-    words = asyncio.run(_voice(" ".join(texts), narr, main_mp3, False))
+    words = asyncio.run(_voice(" ".join(texts), narr, main_mp3, False, damage))
     VO = 0.05                                                                          # the voice starts a hair after the first picture
     n_tok = sum(len(t.split()) for t in texts); ratio = len(words) / max(1, n_tok)    # if the engine merged/split a word, scale the slices
     bounds, k = [], 0
@@ -148,7 +162,7 @@ def build_horror_video(story_dir: str, log=print, dread: bool = True, yt: bool =
     final = scenes[-1]
     reveal = final["start"]
     turn0 = next((s for s in scenes if s["kind"] == "twist" and not s["final"]), None)
-    jolt = (turn0["start"] + 0.45) if (dread and turn0) else None
+    jolt = (turn0["start"] + 0.45) if (dread and turn0 and prof in ("classic", "false_calm", "double")) else None
     events = []
     for sc in scenes:
         if sc["kind"] == "rule" and sc["rule_no"] >= 3:
@@ -208,7 +222,8 @@ def build_horror_video(story_dir: str, log=print, dread: bool = True, yt: bool =
         if behind[0]() is not None: px_used.append("behind")
         def _slot(k):
             return behind[k] if behind[k]() is not None else sfx.breath
-        for frac, snd, pan, g in ((0.30, _slot(0), -0.95, 0.8), (0.43, sfx.door_creak, 0.9, 0.45), (0.50, sfx.knock, -1.0, 1.5), (0.66, _slot(1), 0.95, 0.8), (0.78, sfx.door_creak, -0.9, 0.5)):
+        jt = (lambda f: f + jr.uniform(-0.05, 0.05)) if varied else (lambda f: f)
+        for frac, snd, pan, g in ((jt(0.30), _slot(0), -0.95, 0.8), (jt(0.43), sfx.door_creak, 0.9, 0.45), (knock_frac, sfx.knock, -1.0, 1.5), (jt(0.66), _slot(1), 0.95, 0.8), (jt(0.78), sfx.door_creak, -0.9, 0.5)):
             put(snd(), story_end * frac, g, pan)                                   # sounds from behind you, in one ear, on no word
     fstart = scenes[-1]["start"] + scenes[-1]["lead"]
     if dread:                                                                      # real recordings (Pixabay) layered where the research says the fear is
@@ -217,8 +232,9 @@ def build_horror_video(story_dir: str, log=print, dread: bool = True, yt: bool =
             span = max(4.0, silence_at - 0.5 - story_end * 0.35); vb = vb[: int(span * SR)]
             put(shape(vb, [(0, 0), (2.5, 0.14), (len(vb) / SR - 2, 0.2), (len(vb) / SR, 0)]), story_end * 0.35, 1.0, -0.45); px_used.append("voices")
         sc_ = sfx.pixabay("scare1", 3.2, 0.0, 0.05)
-        if sc_ is not None and jolt:
-            put(sc_, jolt - 0.02, 0.8); px_used.append("scare")
+        hit_t = (jolt if jolt and prof == "classic" else reveal) if prof != "quiet" else None            # classic: at the mid-story jolt; otherwise at the reveal; quiet: none
+        if sc_ is not None and hit_t is not None:
+            put(sc_, hit_t - 0.02, 0.8); px_used.append("scare")
         sw = sfx.pixabay("swell1", 3.0, 0.0, 0.2)
         if sw is not None:                                                         # a ghostly swell on the tape moments (roll, final static)
             for ev in events:
@@ -235,7 +251,7 @@ def build_horror_video(story_dir: str, log=print, dread: bool = True, yt: bool =
             put(wh, fstart + 0.2, 0.42, 0.9); put(wh, fstart + 0.2 + scenes[-1]["dur"] * 0.45, 0.34, -0.9); px_used.append("whisper")
     narr = _wav(main_mp3).copy()
     if dread:                                                                      # the narrator dips for the knock so nothing covers it
-        k0 = int((story_end * 0.5 - 0.05 - VO) * SR); k1 = k0 + int(1.0 * SR)
+        k0 = int((story_end * knock_frac - 0.05 - VO) * SR); k1 = k0 + int(1.0 * SR)
         duck = np.ones(len(narr)); a_, b_ = max(0, k0), min(len(narr), k1)
         if a_ < b_:
             duck[a_:b_] = 0.4; r_ = int(0.06 * SR)
@@ -257,21 +273,34 @@ def build_horror_video(story_dir: str, log=print, dread: bool = True, yt: bool =
         if sc["kind"] == "rule" and sc["rule_no"] >= 1:                           # a low hit on each rule number, a little quieter early
             put(np.sin(2 * np.pi * (46 + 38 * np.exp(-np.arange(int(0.6 * SR)) / SR * 14)) * np.arange(int(0.6 * SR)) / SR) * np.exp(-np.arange(int(0.6 * SR)) / SR * 7), sc["start"] - 0.05, 0.28 + 0.07 * sc["rule_no"])
     turn = next((s for s in scenes if s["kind"] == "twist" and not s["final"]), None)
-    if turn:                                                                       # a smaller scare earlier, so the big one is not the only thing to flinch at
+    if turn and prof != "quiet":                                                                       # a smaller scare earlier, so the big one is not the only thing to flinch at
         put(sfx.scream_stab(0.4), turn["start"] + turn["lead"] + 0.2, 0.3)
         put(sfx.static_burst(0.18), turn["start"] + turn["lead"] + 0.18, 0.5)
     big = sfx.real_scream(len(story.get('title', ''))) if sfx.real_scream() is not None else sfx.jump_scream()
-    if jolt:
+    if prof == "quiet":
+        pass                                                                       # no scream at all: the heartbeat, the silence and the whisper are the scare
+    elif prof == "false_calm" and jolt:
+        put(big, jolt - 0.02, 0.35)                                                # a small stab that FEELS like the scare...
+        put(big, reveal - 0.02, 1.15)                                              # ...then the real one, once you have relaxed
+    elif prof == "double" and jolt:
+        put(big, jolt - 0.02, 1.0)
+        put(sfx.real_scream(len(story.get('title', '')) + 3) if sfx.real_scream() is not None else sfx.jump_scream(), reveal - 0.02, 1.1)
+    elif jolt:
         put(big, jolt - 0.02, 1.15)                                                  # THE jump scare: mid-story, right after the heartbeat stops dead
     else:
-        put(big, reveal - 0.02, 1.15)
+        put(big, reveal - 0.02, 1.15)                                                # late: it all lands at the reveal
     st = sfx.sting(1.1)                                                            # the ONE sting: its rise ends just before the reveal picture
-    put(st, reveal - 1.1 - 0.08, 0.5 if jolt else 0.85)
+    put(st, reveal - 1.1 - 0.08, 0.5 if jolt and prof in ("classic", "double") else 0.85)
     fin = story.get("finale_sfx") or ("snap" if story.get("format") == "scp" and "173" in json.dumps(story.get("credit", {})) else "scream")
     voice_end = final["start"] + final["lead"] + final["dur"]
-    if fin == "snap":
+    ft = story.get("finale_type")                                                  # how the last line ends decides what comes right after it (old tapes: always the stab)
+    if ft in ("unfinished", "countdown"):
+        put(sfx.static_burst(0.3), voice_end + 0.02, 0.9)                          # a hard cut mid-word / mid-number
+    elif ft in ("confession", "lullaby", "narrator_is_it"):
+        pass                                                                        # nothing: it ends in silence, then the tape dies
+    elif fin == "snap":
         put(sfx.snap(), voice_end + 0.06, 1.0)
-    elif fin == "scream":
+    elif fin == "scream" or ft in ("taunt", "command", "mimic"):
         put(sfx.scream_stab(), voice_end + 0.06, 0.8)
     put(sfx.tape_stop(0.8), story_end - 0.1, 0.8)
     put(sfx.static_burst(0.6), story_end, 0.5)
@@ -283,11 +312,17 @@ def build_horror_video(story_dir: str, log=print, dread: bool = True, yt: bool =
 
     # ---- 6. captions + the end card
     rv._captions(scenes, work / "captions.ass")
+    cap = work / "captions.ass"
+    extra = ""
     if question:
-        cap = work / "captions.ass"
-        extra = (f"Dialogue: 3,{rv._ass_time(story_end + 0.7)},{rv._ass_time(total)},Cap,,0,0,0,,{{\\an5\\pos(540,960)\\fs84\\fad(200,0)}}{question.upper().replace('?', '?')}\n")
-        if story.get("credit"):
-            extra += (f"Dialogue: 3,{rv._ass_time(story_end + 0.7)},{rv._ass_time(total)},Cap,,0,0,0,,{{\\an2\\pos(540,1840)\\fs30\\c&H00C8C8C8&\\bord3}}{story['credit']['line']}\n")
+        extra += (f"Dialogue: 3,{rv._ass_time(story_end + 0.7)},{rv._ass_time(total)},Cap,,0,0,0,,{{\\an5\\pos(540,960)\\fs84\\fad(200,0)}}{question.upper().replace('?', '?')}\n")
+    note = (story.get("archivist_note") or "").strip()
+    if note:                                                                        # the archivist thread: "TAPE 07" and a one-line note that gets stranger tape by tape
+        extra += (f"Dialogue: 3,{rv._ass_time(story_end + 1.5)},{rv._ass_time(total)},Cap,,0,0,0,,{{\\an5\\pos(540,1540)\\fs46\\c&H007090FF&\\bord6\\3c&H00000000&\\shad3\\fad(900,0)}}"
+                  + note.replace("  -  ", "\\N") + "\n")
+    if story.get("credit"):
+        extra += (f"Dialogue: 3,{rv._ass_time(story_end + 0.7)},{rv._ass_time(total)},Cap,,0,0,0,,{{\\an2\\pos(540,1840)\\fs30\\c&H00C8C8C8&\\bord3}}{story['credit']['line']}\n")
+    if extra:
         cap.write_text(cap.read_text(encoding="utf-8") + extra, encoding="utf-8")
     out = sdir / f"{sdir.name}-HORROR{'' if dread else '-classic'}{'-YT' if yt else ''}.mp4"
     log("[horror] Final render...")

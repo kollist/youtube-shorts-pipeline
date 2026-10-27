@@ -64,3 +64,5 @@ data/tiktok_caption.txt
 branding/*_raw.png
 exports/
 legal_site/
+data/variety_state.json
+data/picture_style_state.json

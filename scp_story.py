@@ -91,19 +91,49 @@ Respond with ONLY this JSON:
 
 SYSTEM = SYSTEM.replace("__PICTURE_RULES__", PICTURE_RULES)
 
+_A, _D = SYSTEM.index("Story order (8 scenes"), SYSTEM.index("Respond with ONLY this JSON:")
+_HEAD, _JSON_TAIL = SYSTEM[:_A], SYSTEM[_D:]
 
-def create_scp_story(number: str, voice: str = "adult_man", log=print, dest: Path | None = None) -> Path:
+
+def build_system(shape: str = "orientation", finale: str = "taunt", picture_style: str = "") -> tuple[str, bool]:
+    """The writer's instructions for THIS episode: the story shape, the kind of last line and the picture look. Returns (instructions, finale_has_a_question).
+    Any problem falls back to the original instructions."""
+    try:
+        import picture_styles as ps
+        import story_variety as sv
+        beat_text, question = sv.beats(shape, finale)
+        labels = f'Each scene has a "label": 1-3 plain words shown on screen (e.g. {sv.SHAPE_LABELS.get(shape, sv.SHAPE_LABELS["orientation"])}). Scene 1 may have label "".\n'
+        rules = ps.rules_text(picture_style) if picture_style in ps.STYLES else PICTURE_RULES
+        return _HEAD + "Story order (8 scenes, 130-150 words total, plain spoken English):\n" + beat_text + "\n" + labels + rules + _JSON_TAIL, question
+    except Exception:
+        return SYSTEM, True
+
+
+def create_scp_story(number: str, voice: str = "adult_man", log=print, dest: Path | None = None, variety_override: dict | None = None) -> Path:
     art = fetch_scp(number)
     log(f"[scp] {art['item']} - author credit: {art['author'] or '(not found)'} - {len(art['text'])} chars of article")
     user = f"ARTICLE ({art['item']}):\n{art['text']}"
-    out = _llm_json(SYSTEM, user)
+    folder_name = Path(dest).name if dest else ""
+    tape_no = int(m.group(1)) if (m := re.fullmatch(r"ep(\d+)", folder_name)) else 0
+    try:                                                    # variety: a different shape / ending / scare / picture look from the last few tapes (never fatal)
+        import picture_styles as ps
+        import story_variety as sv
+        variety = sv.choose(f"{art['item']}|{tape_no}")
+        variety["picture_style"] = ps.pick_style(f"{art['item']}|{tape_no}")
+        variety.update(variety_override or {})            # tests / manual control: {"shape": ..., "finale": ..., "profile": ..., "picture_style": ...}
+    except Exception as e:
+        log(f"[scp] variety unavailable ({e}); using the classic tape")
+        variety = {"shape": "orientation", "finale": "taunt", "profile": "classic", "picture_style": ""}
+    system, _question = build_system(variety["shape"], variety["finale"], variety["picture_style"])
+    log(f"[scp] this tape: shape={variety['shape']}, ending={variety['finale']}, scare={variety['profile']}, pictures={variety['picture_style'] or 'default'}")
+    out = _llm_json(system, user)
     count = lambda o: sum(len(str(x.get("narration", "")).split()) for x in o.get("scenes", []))
     for _ in range(2):                                     # a long article tempts the writer to cram: 107-second videos have happened. Make it shorter, twice at most.
         n_words = count(out)
         if n_words <= 170:
             break
         log(f"[scp] script is {n_words} words (target 130-150, about {n_words / 2.5:.0f}s) - asking for a shorter one")
-        out = _llm_json(SYSTEM, user + f"\n\nYOUR LAST ATTEMPT WAS {n_words} WORDS - FAR TOO LONG (it becomes a {n_words / 2.5:.0f}-second video). Every scene's narration must be ONE or TWO short sentences, about 17 words. "
+        out = _llm_json(system, user + f"\n\nYOUR LAST ATTEMPT WAS {n_words} WORDS - FAR TOO LONG (it becomes a {n_words / 2.5:.0f}-second video). Every scene's narration must be ONE or TWO short sentences, about 17 words. "
                                       "Total 130-150 words. Keep every other rule and the same JSON.")
     if count(out) > 190:
         raise RuntimeError(f"The writer kept the script at {count(out)} words (it must be about 140) - try again.")
@@ -127,6 +157,18 @@ def create_scp_story(number: str, voice: str = "adult_man", log=print, dest: Pat
              "music": {"mood": "eerie"}, "motion": "pan", "caption_colors": {}, "caption_size": 84, "caption_words": 3, "credit": credit,
              "poster_tag": str(out.get("poster_tag") or "FOUNDATION ORIENTATION TAPE").upper()[:34], "post_caption": out.get("caption", ""), "summary": f"Foundation orientation tape for {art['item']}.",
              "characters": {"Narrator": {**VOICES[voice], "rate": "+6%", "pitch": "-3Hz", "look": ""}, "Hero": {**VOICES[voice], "look": out.get("hero_look", "")}}, "scenes": sc}
+    kind_word = {"orientation": "orientation tape for", "incident_report": "incident report on", "survivor": "survivor's statement about",
+                 "day_log": "research log on", "safety_video": "staff safety briefing for", "cold_open": "orientation tape for"}.get(variety["shape"], "orientation tape for")
+    story["summary"] = f"Foundation {kind_word} {art['item']}."
+    if variety["picture_style"]:
+        import picture_styles as ps
+        story["style"] = ps.style_string(variety["picture_style"])
+    story.update({"shape": variety["shape"], "finale_type": variety["finale"], "scare_profile": variety["profile"], "picture_style": variety["picture_style"], "tape_no": tape_no})
+    try:                                                    # the archivist thread: a short note on this tape's end card, and a narrator who degrades a little with every tape
+        import story_variety as sv
+        story["archivist_note"] = sv.archivist_note(tape_no)
+    except Exception:
+        story["archivist_note"] = ""
     _write(folder / "story.json", story)
     (folder / "credit.txt").write_text(
         f"{credit['line']}\n\nThis video is an adaptation of {art['item']} from the SCP Foundation wiki (https://scp-wiki.wikidot.com), written by {art['author'] or 'its author'}.\n"
@@ -137,12 +179,12 @@ def create_scp_story(number: str, voice: str = "adult_man", log=print, dest: Pat
     return folder
 
 
-RESTYLE_SYSTEM = """You rewrite ONLY the picture prompts for an existing SCP horror short. Keep the story: you are given the narration of each scene and the article facts.
-""" + PICTURE_RULES + """
+RESTYLE_HEAD = "You rewrite ONLY the picture prompts for an existing SCP horror short. Keep the story: you are given the narration of each scene and the article facts.\n"
+RESTYLE_TAIL = """
 Respond with ONLY JSON: {"entity_look": "...", "hero_look": "...", "image_prompts": ["... {style}", ... one per scene, in order]}"""
 
 
-def restyle_pictures(ep_dir, log=print) -> Path:
+def restyle_pictures(ep_dir, log=print, style_key: str = "") -> Path:
     """Rewrites every scene's image prompt in the current photographic found-footage style (script untouched), updates the style, and removes the old pictures
     so the next make_episode / generate_images draws new ones. Use it on an episode made in the older anime style."""
     import shutil
@@ -151,13 +193,17 @@ def restyle_pictures(ep_dir, log=print) -> Path:
     art = fetch_scp(re.sub(r"\D", "", story["credit"]["item"]))
     scenes = story["scenes"]
     listing = "\n".join(f"{i}. [{s.get('label') or 'poster'}] {' '.join(l['text'] for l in s['lines'])}" for i, s in enumerate(scenes, 1))
-    out = _llm_json(RESTYLE_SYSTEM, f"ARTICLE ({art['item']}):\n{art['text']}\n\nSCENES ({len(scenes)}):\n{listing}")
+    import picture_styles as ps
+    key = style_key or story.get("picture_style") or ps.pick_style(story["credit"]["item"])
+    system = RESTYLE_HEAD + ps.rules_text(key) + RESTYLE_TAIL
+    out = _llm_json(system, f"ARTICLE ({art['item']}):\n{art['text']}\n\nSCENES ({len(scenes)}):\n{listing}")
     prompts = out.get("image_prompts") or []
     if len(prompts) != len(scenes):
         raise RuntimeError(f"The writer returned {len(prompts)} picture prompts for {len(scenes)} scenes - try again.")
     for sc, pr in zip(scenes, prompts):
         sc["image_prompt"] = pr if "{style}" in pr else pr.rstrip() + " {style}"
-    story["style"] = STYLE
+    story["style"] = ps.style_string(key)
+    story["picture_style"] = key
     if out.get("hero_look"):
         story["characters"]["Hero"]["look"] = out["hero_look"]
     story["entity_look"] = out.get("entity_look", "")
