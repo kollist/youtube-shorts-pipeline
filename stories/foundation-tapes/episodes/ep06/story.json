@@ -1,0 +1,156 @@
+{
+  "title": "Scp-049 The Plague Doctor",
+  "format": "scp",
+  "title_lines": [
+    "SCP-049",
+    "THE PLAGUE DOCTOR"
+  ],
+  "audience": "horror",
+  "style": "dark photorealistic found-footage horror photograph, desaturated, heavy 35mm film grain, crushed blacks, one harsh light source, unsettling, vertical composition, absolutely no text, no letters, no numbers, no timestamps, no overlays",
+  "tape_label": "SITE-19 ARCHIVE - SCP-049 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-049",
+    "author": "Jade",
+    "url": "https://scp-wiki.wikidot.com/scp-049",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-049 by Jade - scp-wiki.wikidot.com/scp-049 - CC BY-SA 3.0"
+  },
+  "poster_tag": "THE CURE THAT KILLS",
+  "post_caption": "He thinks you're sick, and his cure is one touch. Would you let him close enough?",
+  "summary": "Foundation orientation tape for SCP-049.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "short dark hair, black Foundation jacket with high collar, shoulders slightly hunched"
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "Wide dark empty stone cellar, large black empty space at top, far away a tall figure in a beaked ceramic mask and dark robes, black doctor's bag, barely visible, one dim lamp, crushed blacks, heavy grain, desaturated, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "A man in a plague doctor's mask was found calmly taking notes while corpses attacked the police. The mask grew out of its body."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "WHAT IT DOES",
+      "image_prompt": "Close detail of a pale lifeless hand lying on a cold concrete floor beside a scattered black leather glove, single flashlight beam, nobody in frame, crushed blacks, heavy grain, desaturated, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "It believes people are sick with the Pestilence, and one touch of its skin stops a body completely."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "WHY IT'S DANGEROUS",
+      "image_prompt": "Grainy black-and-white security camera frame from a high corner, dim old house room, tiny still figure in a beaked mask and dark robes far away, slumped bodies on the floor, heavy grain, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Then it operates on the dead, and they rise empty and obedient. Police found several in Montauban."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "HOW IT'S CONTAINED",
+      "image_prompt": "Empty sealed containment cell, steel door, lone chair facing the wall, one wrong detail: a black doctor's bag left open on the floor, single cold emergency light, crushed blacks, heavy grain, desaturated, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "So a secret group that hides the impossible keeps it sedated in a sealed cell at Site-19, collared whenever it moves."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "WHO WATCHES IT",
+      "image_prompt": "Flashlight beam through haze down a concrete corridor, far end a tall figure in a beaked ceramic mask and dark robes half swallowed by darkness, restraint harness chains on the floor, heavy grain, desaturated, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Two armed guards go along, and if it turns aggressive, they use lavender to calm it."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "THE MISTAKE",
+      "image_prompt": "Grainy black-and-white security camera frame from a high corner, long corridor, tiny motionless figure in a beaked mask and dark robes at the far end, a lone guard's flashlight on the floor, heavy grain, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Tonight that guard is you, and when it says you carry the Pestilence, you cough, just once."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "Over-the-shoulder, out-of-focus back of {Hero}, dark hair, black Foundation jacket, in foreground; in a dark doorway a tall beaked ceramic mask and dark robes at the edge of a flashlight beam, heavy grain, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "The room goes quiet. Your radio is silent, and something warm rests on your neck."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "Grainy security camera frame, tall figure in a beaked ceramic mask and dark robes very close behind a hunched guard, lit only by one red emergency light, partly out of focus, mostly darkness, heavy grain, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Do not move, friend. My hand is already on your neck. Hold still, and let me cure you."
+        }
+      ]
+    }
+  ]
+}
