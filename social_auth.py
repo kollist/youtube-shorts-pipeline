@@ -37,10 +37,33 @@ TIKTOK_SCOPES = "user.info.basic,video.publish,video.upload"
 
 # ---------------- Meta (Facebook + Instagram) ----------------
 
+def _clean_token(raw: str) -> str:
+    """Tidies a pasted token (spaces, line breaks, quotes, a 'Bearer ' prefix) and refuses text that cannot be a Facebook user token, with a plain-words reason
+    instead of Facebook's cryptic 'Expected 1 . in the input' error."""
+    t = (raw or "").strip()
+    if t.lower().startswith("bearer "):
+        t = t[7:]
+    t = "".join(t.split()).strip("\"'`")
+    if not t:
+        raise SocialError("The token box is empty. Paste the User token from the Graph API Explorer.")
+    if t.startswith("IG"):
+        raise SocialError("That looks like an Instagram-login token (it starts with 'IG'). Use the FACEBOOK one: in the Graph API Explorer pick your app, "
+                          "choose 'User Token' (not 'Page Token'), and press Generate Access Token. It starts with 'EAA'.")
+    if "." in t and t.count(".") >= 1 and t.startswith("ey"):
+        raise SocialError("That is a JWT-style string, not a Facebook access token. Facebook user tokens start with 'EAA' and have no dots.")
+    if len(t) < 60:
+        raise SocialError(f"That is only {len(t)} characters - far too short for a token (they are about 200). Copy the whole token with the copy button, not a selection.")
+    if not t.startswith("EAA"):
+        raise SocialError(f"That doesn't look like a Facebook user token (it starts with '{t[:3]}'; they start with 'EAA'). "
+                          "Check you copied the 'Access Token' field in the Graph API Explorer, not the App ID, App Secret or a Page ID.")
+    return t
+
+
 def login_meta(user_token: str, app_id: str, app_secret: str, page_id: str | None = None) -> dict:
     """Short-lived user token -> long-lived user token -> that user's Pages, each
     with a Page token that doesn't expire. Saves the chosen Page's id/token (and its
     linked Instagram account, if any) into .env."""
+    user_token = _clean_token(user_token)
     long_lived = http("GET", f"{GRAPH}/oauth/access_token", params={
         "grant_type": "fb_exchange_token", "client_id": app_id, "client_secret": app_secret, "fb_exchange_token": user_token,
     }).json()["access_token"]
