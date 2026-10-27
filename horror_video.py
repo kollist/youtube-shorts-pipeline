@@ -320,6 +320,13 @@ def build_horror_video(story_dir: str, log=print, dread: bool = True, yt: bool =
     if note:                                                                        # the archivist thread: "TAPE 07" and a one-line note that gets stranger tape by tape
         extra += (f"Dialogue: 3,{rv._ass_time(story_end + 1.5)},{rv._ass_time(total)},Cap,,0,0,0,,{{\\an5\\pos(540,1540)\\fs46\\c&H007090FF&\\bord6\\3c&H00000000&\\shad3\\fad(900,0)}}"
                   + note.replace("  -  ", "\\N") + "\n")
+    try:                                                                            # a reason to come back: which tape is next (the queue head at the time this tape is built)
+        nxt = json.loads((Path(__file__).parent / "data" / "scp_queue.json").read_text(encoding="utf-8")).get("queue", [])
+    except (OSError, json.JSONDecodeError):
+        nxt = []
+    if nxt and story.get("format") == "scp":
+        extra += (f"Dialogue: 3,{rv._ass_time(story_end + 2.2)},{rv._ass_time(total)},Cap,,0,0,0,,{{\\an5\\pos(540,1330)\\fs40\\c&H00E6E6E6&\\bord5\\3c&H00000000&\\shad2\\fad(700,0)}}"
+                  f"NEXT TAPE  -  SCP-{str(nxt[0]).zfill(3)}\n")
     if story.get("credit"):
         extra += (f"Dialogue: 3,{rv._ass_time(story_end + 0.7)},{rv._ass_time(total)},Cap,,0,0,0,,{{\\an2\\pos(540,1840)\\fs30\\c&H00C8C8C8&\\bord3}}{story['credit']['line']}\n")
     if extra:
