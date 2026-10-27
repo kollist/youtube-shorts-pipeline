@@ -278,6 +278,14 @@ def run(now: bool = False, dry: bool = False, episode: int | None = None) -> Non
         print("[auto] another run is in progress"); return
     subprocess.Popen(["caffeinate", "-i", "-w", str(os.getpid())])         # don't let the Mac sleep mid-render
     t = now_et(); today = t.date().isoformat(); state = _read(STATE, {})
+    if not dry and state.get("snapshot_date") != today:                           # once a day: record every posted episode's views so tapes can be compared at the same age
+        try:
+            import variety_report
+            n = variety_report.snapshot()
+            state["snapshot_date"] = today; _write(STATE, state)
+            log("metrics_snapshot", episodes=n)
+        except Exception as e:                                                    # never let bookkeeping get in the way of posting
+            log("metrics_snapshot_failed", error=str(e)[:160])
     try:
         if dry:
             n = episode or ready_episode()

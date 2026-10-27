@@ -66,3 +66,6 @@ exports/
 legal_site/
 data/variety_state.json
 data/picture_style_state.json
+data/metrics_history.jsonl
+data/manual_metrics.json
+data/variety_report.md
