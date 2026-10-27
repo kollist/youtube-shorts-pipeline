@@ -70,6 +70,15 @@ def login_meta(user_token: str, app_id: str, app_secret: str, page_id: str | Non
     pages = http("GET", f"{GRAPH}/me/accounts", params={
         "fields": "id,name,access_token,instagram_business_account", "access_token": long_lived,
     }).json().get("data", [])
+    if not pages:                                            # some logins (Pages run through a Business portfolio) list nothing in /me/accounts but can still reach the Page by its id
+        pid = page_id or env("FACEBOOK_PAGE_ID")
+        if pid:
+            try:
+                direct = http("GET", f"{GRAPH}/{pid}", params={"fields": "id,name,access_token,instagram_business_account", "access_token": long_lived}).json()
+                if direct.get("access_token"):
+                    pages = [direct]
+            except SocialError:
+                pass
     if not pages:
         raise SocialError("This login manages no Facebook Pages. Make sure you ticked the Page when approving "
                           "the permissions (pages_show_list, pages_manage_posts, pages_read_engagement).")
