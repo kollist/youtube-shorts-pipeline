@@ -208,7 +208,12 @@ def main() -> None:
         rows = []
         latest = {ep: h[-1] for ep, h in _history().items()}
         for e in _episodes():
-            rows.append({**e, "views": (latest.get(e["ep"]) or {}).get("views", {})})
+            v = dict((latest.get(e["ep"]) or {}).get("views", {}))
+            for plat in PLATFORMS:                                      # typed-in numbers count here too
+                m = (_manual().get(plat) or {}).get(e["ep"])
+                if m is not None and m >= v.get(plat, -1):
+                    v[plat] = int(m)
+            rows.append({**e, "views": v})
     else:
         snapshot()
         rows = collect()
