@@ -29,6 +29,7 @@ import horror_sfx as sfx
 import rules_video as rv
 from music import SR
 from series import VOICES
+from shots import motion_clip_path
 from story_video import W, H, FPS, probe_duration, run
 
 CUES = [  # (regex on the spoken word, cue name) - at most one per scene (two in the finale)
@@ -74,6 +75,16 @@ async def _voice(text: str, who: dict, mp3: Path, whisper: bool, damage: float =
 def _wav(mp3: Path) -> np.ndarray:
     raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(mp3), "-f", "f32le", "-ac", "1", "-ar", str(SR), "-"], capture_output=True).stdout
     return np.frombuffer(raw, dtype=np.float32)
+
+
+def _motion_shot(src: Path, length: float, out: Path) -> None:
+    """Fit a dropped-in video clip to its scene: crop to 9:16, slow it down (up to 1.6x) if it is shorter than the narration, hold its
+    last frame if still short, trim if longer. No fades - the tape degradation is applied over the whole video afterwards."""
+    dur = probe_duration(src)
+    stretch = min(1.6, length / dur) if dur < length else 1.0
+    vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS},setpts={stretch:.4f}*PTS,"
+          f"tpad=stop_mode=clone:stop_duration={length:.2f},trim=duration={length:.2f},setpts=PTS-STARTPTS,format=yuv420p")
+    run(["ffmpeg", "-y", "-v", "error", "-i", str(src), "-vf", vf, "-an", "-c:v", "libx264", "-crf", "20", "-preset", "medium", str(out)])
 
 
 def build_horror_video(story_dir: str, log=print, dread: bool = True, yt: bool = False) -> Path:
@@ -139,6 +150,20 @@ def build_horror_video(story_dir: str, log=print, dread: bool = True, yt: bool =
     # ---- 3. shots: calm early (long), quicker later
     clips = []
     for sc in scenes:
+        mclip = motion_clip_path(sdir, sc["i"])                                       # a real video clip dropped on this scene replaces its picture
+        if mclip.exists():
+            skip = 0.0
+            if sc["i"] == 1:                                                           # keep the 2.8 s title poster, then the clip
+                skip = min(2.8, sc["len"] * 0.55)
+                poster = rv._poster(story, sc["image"], work / "poster.png") if sc["image"].exists() else None
+                if poster:
+                    clip = work / "s1_poster.mp4"; rv._shot(poster, skip, -1, clip); clips.append(clip)
+                else:
+                    skip = 0.0
+            clip = work / f"s{sc['i']}_motion.mp4"
+            _motion_shot(mclip, sc["len"] - skip, clip); clips.append(clip)
+            log(f"[horror] scene {sc['i']}: using your clip")
+            continue
         if not sc["image"].exists():
             raise RuntimeError(f"Missing picture {sc['image'].name} - make the pictures first.")
         target = 4.3 - 1.6 * min(1.0, _tension(sc))
