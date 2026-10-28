@@ -853,3 +853,11 @@ body.s-lock { overflow: hidden; }
 .ac-card input, .ac-card textarea { background: #0c0c0e; color: #eee; border: 1px solid var(--s-line, #2a2a30); border-radius: 10px; padding: 8px 10px; font: 13px/1.45 var(--font-sans, system-ui); box-sizing: border-box; }
 .ac-card input:focus, .ac-card textarea:focus { outline: none; border-color: var(--accent-dim, #8aa800); }
 .ac-card a { color: #b8e04a; text-decoration: none; font-size: 12px; } .ac-card a:hover { text-decoration: underline; }
+
+.daily-content { display: grid; gap: 10px; }
+.daily-status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border, #444); }
+.daily-status.paused { border-color: #d9822b; }
+.daily-table { width: 100%; border-collapse: collapse; }
+.daily-table th, .daily-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border, #333); }
+.daily-recent { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+#daily-queue { width: 100%; }

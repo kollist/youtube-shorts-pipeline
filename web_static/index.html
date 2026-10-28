@@ -30,6 +30,7 @@
   <a href="#clips" class="page-tab" data-page="clips">Clips <span id="clip-count"></span></a>
   <a href="#series" class="page-tab" data-page="series">Series</a>
   <a href="#analytics" class="page-tab" data-page="analytics">Analytics</a>
+  <a href="#daily" class="page-tab" data-page="daily">Daily job</a>
   <a href="#accounts" class="page-tab" data-page="accounts">Accounts</a>
 </nav>
 
@@ -297,6 +298,14 @@
     </section>
   </div>
 
+  <div class="page" id="page-daily">
+    <section class="panel" id="daily-panel">
+      <h2>Daily job</h2>
+      <div class="field-hint">The automatic one-episode-a-day job. Pause stops all posting until you resume. The queue is the list of SCP numbers it builds next, in order.</div>
+      <div id="daily-content" class="daily-content">Loading…</div>
+    </section>
+  </div>
+
   <div class="page" id="page-accounts">
     <section class="panel" id="accounts-panel">
       <h2>Accounts</h2>
@@ -355,5 +364,6 @@
 <script src="/static/app.js"></script>
 <script src="/static/series.js"></script>
 <script src="/static/accounts.js"></script>
+<script src="/static/daily.js"></script>
 </body>
 </html>

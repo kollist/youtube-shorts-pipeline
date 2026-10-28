@@ -99,7 +99,7 @@ const autoPrivacyField = document.getElementById("auto-privacy-field");
 // show/hide rather than separate server-rendered pages). ---
 const pageTabs = document.querySelectorAll(".page-tab");
 const pages = document.querySelectorAll(".page");
-const VALID_PAGES = new Set(["run", "discover", "input", "filler", "clips", "series", "analytics", "accounts"]);
+const VALID_PAGES = new Set(["run", "discover", "input", "filler", "clips", "series", "analytics", "daily", "accounts"]);
 let discoverLoadedOnce = false;
 let inputLoadedOnce = false;
 let fillerLoadedOnce = false;
@@ -116,6 +116,7 @@ function showPage(name) {
   }
   if (name === "analytics") loadAnalytics();
   if (name === "series" && typeof loadSeries === "function") loadSeries();
+  if (name === "daily" && typeof loadDaily === "function") loadDaily();
   if (name === "accounts" && typeof loadAccounts === "function") loadAccounts();
 }
 

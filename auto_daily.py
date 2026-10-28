@@ -327,6 +327,39 @@ def run(now: bool = False, dry: bool = False, episode: int | None = None) -> Non
         fcntl.flock(lock, fcntl.LOCK_UN)
 
 
+def panel() -> dict:
+    """Everything the dashboard's Daily job panel shows."""
+    hold, rows = _read(HOLD, {}), []
+    for n in episodes():
+        d = ep_dir(n)
+        story = _read(d / "story.json", {})
+        rows.append({"number": n, "title": story.get("title", ""), "scp": (story.get("credit") or {}).get("item", ""),
+                     "built": (d / f"{d.name}-HORROR.mp4").exists(), "posted": (d / "posted.json").exists(), "hold": hold.get(str(n), "")})
+    recent = []
+    for line in LOG.read_text(encoding="utf-8").splitlines()[-80:][::-1] if LOG.exists() else []:
+        try:
+            r = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if r.get("kind") in ("posted", "build_done", "build_failed", "post_partial", "blocked", "writer_unavailable"):
+            recent.append({k: r[k] for k in ("at", "kind", "episode", "title", "error", "failed") if k in r})
+    return {"paused": PAUSE.exists(), "queue": queue(), "ready": ready_episode(), "episodes": rows[-10:][::-1], "recent": recent[:8],
+            "now_et": now_et().strftime("%a %H:%M"), "window": "builds from 10:00, posts 20:00-23:30 (US Eastern)"}
+
+
+def set_paused(on: bool) -> None:
+    DATA.mkdir(exist_ok=True)
+    PAUSE.write_text("paused") if on else PAUSE.unlink(missing_ok=True)
+
+
+def set_hold(n: int, until: str | None) -> None:
+    h = _read(HOLD, {})
+    h.pop(str(n), None)
+    if until:
+        h[str(n)] = until
+    _write(HOLD, h)
+
+
 def status() -> None:
     state = _read(STATE, {}); print("paused:", PAUSE.exists()); print("queue :", queue() or "(empty)")
     print("ready :", ready_episode() or "(none)"); print("held  :", _read(HOLD, {}) or "(none)"); print("state :", {k: v for k, v in state.items() if k != "posting"})

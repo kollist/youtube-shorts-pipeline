@@ -784,6 +784,38 @@ def _story_caption_info(slug: str, story: dict) -> dict:
             "category": captions.category_for(genre, story.get("format", ""), slug, story["title"])}
 
 
+# ---------------------------------------------------------------- Daily job tab: pause, queue, hold
+@app.get("/api/daily")
+async def daily_overview():
+    import auto_daily
+    return auto_daily.panel()
+
+
+@app.post("/api/daily/pause")
+async def daily_pause(payload: dict):
+    import auto_daily
+    auto_daily.set_paused(bool(payload.get("paused")))
+    return auto_daily.panel()
+
+
+@app.post("/api/daily/queue")
+async def daily_queue(payload: dict):
+    import auto_daily
+    nums = [re.sub(r"\D", "", str(x)) for x in payload.get("queue", [])]
+    auto_daily.save_queue(list(dict.fromkeys(n.zfill(3) for n in nums if n)))
+    return auto_daily.panel()
+
+
+@app.post("/api/daily/hold")
+async def daily_hold(payload: dict):
+    import auto_daily
+    until = payload.get("until") or None
+    if until and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(until)):
+        raise HTTPException(status_code=400, detail="Date must look like 2026-10-31.")
+    auto_daily.set_hold(int(payload["episode"]), until)
+    return auto_daily.panel()
+
+
 # ---------------------------------------------------------------- Accounts tab: connect YouTube / Facebook / Instagram / TikTok
 _tiktok_login = {"state": None}
 
