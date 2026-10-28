@@ -77,6 +77,9 @@ def _wav(mp3: Path) -> np.ndarray:
     return np.frombuffer(raw, dtype=np.float32)
 
 
+SHOW_ARCHIVIST_NOTE = False                                                          # the "TAPE 07 - ..." line on the end card; switched off at the user's request (stories still store it)
+
+
 def _motion_shot(src: Path, length: float, out: Path) -> None:
     """Fit a dropped-in video clip to its scene: crop to 9:16, slow it down (up to 1.6x) if it is shorter than the narration, hold its
     last frame if still short, trim if longer. No fades - the tape degradation is applied over the whole video afterwards."""
@@ -333,7 +336,7 @@ def build_horror_video(story_dir: str, log=print, dread: bool = True, yt: bool =
     extra = ""
     if question:
         extra += (f"Dialogue: 3,{rv._ass_time(story_end + 0.7)},{rv._ass_time(total)},Cap,,0,0,0,,{{\\an5\\pos(540,960)\\fs84\\fad(200,0)}}{question.upper().replace('?', '?')}\n")
-    note = (story.get("archivist_note") or "").strip()
+    note = (story.get("archivist_note") or "").strip() if SHOW_ARCHIVIST_NOTE else ""
     if note:                                                                        # the archivist thread: "TAPE 07" and a one-line note that gets stranger tape by tape
         extra += (f"Dialogue: 3,{rv._ass_time(story_end + 1.5)},{rv._ass_time(total)},Cap,,0,0,0,,{{\\an5\\pos(540,1540)\\fs46\\c&H007090FF&\\bord6\\3c&H00000000&\\shad3\\fad(900,0)}}"
                   + note.replace("  -  ", "\\N") + "\n")
