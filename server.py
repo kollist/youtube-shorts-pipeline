@@ -788,7 +788,17 @@ def _story_caption_info(slug: str, story: dict) -> dict:
 @app.get("/api/daily")
 async def daily_overview():
     import auto_daily
-    return auto_daily.panel()
+    return await asyncio.to_thread(auto_daily.panel)
+
+
+@app.post("/api/daily/tiktok-resend")
+async def daily_tiktok_resend(payload: dict):
+    import auto_daily
+    try:
+        note = await asyncio.to_thread(auto_daily.resend_tiktok_draft, int(payload["episode"]))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)[:300])
+    return {"note": note}
 
 
 @app.post("/api/daily/pause")

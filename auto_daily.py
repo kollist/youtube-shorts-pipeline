@@ -327,6 +327,33 @@ def run(now: bool = False, dry: bool = False, episode: int | None = None) -> Non
         fcntl.flock(lock, fcntl.LOCK_UN)
 
 
+def tiktok_status(n: int) -> str:
+    """What TikTok says about episode n's draft: 'in your inbox' (delivered, not posted yet), 'posted by you', 'failed', or '' when unknown."""
+    pid = (((_read(ep_dir(n) / "posted.json", {}).get("results") or {}).get("tiktok")) or {}).get("id")
+    if not pid:
+        return ""
+    try:
+        import social_tiktok
+        from social_common import http
+        d = http("POST", f"{social_tiktok.API}/v2/post/publish/status/fetch/", headers=social_tiktok._headers(), json={"publish_id": pid}).json().get("data", {})
+    except Exception as e:
+        return f"unknown ({str(e)[:60]})"
+    return {"SEND_TO_USER_INBOX": "in your inbox, not posted yet", "PUBLISH_COMPLETE": "posted from the draft", "FAILED": f"failed: {d.get('fail_reason', '')}"}.get(d.get("status"), str(d.get("status") or "unknown"))
+
+
+def resend_tiktok_draft(n: int) -> str:
+    import social_tiktok
+    d = ep_dir(n)
+    video = d / f"{d.name}-HORROR.mp4"
+    if not video.exists():
+        raise RuntimeError("This episode's video file is gone (it is cleaned up after a few days).")
+    r = social_tiktok.post_draft(str(video), "")
+    pj = _read(d / "posted.json", {})
+    pj.setdefault("results", {})["tiktok"] = {"url": None, "id": r["id"]}
+    _write(d / "posted.json", pj)
+    return r["note"]
+
+
 def panel() -> dict:
     """Everything the dashboard's Daily job panel shows."""
     hold, rows = _read(HOLD, {}), []
@@ -334,7 +361,8 @@ def panel() -> dict:
         d = ep_dir(n)
         story = _read(d / "story.json", {})
         rows.append({"number": n, "title": story.get("title", ""), "scp": (story.get("credit") or {}).get("item", ""),
-                     "built": (d / f"{d.name}-HORROR.mp4").exists(), "posted": (d / "posted.json").exists(), "hold": hold.get(str(n), "")})
+                     "built": (d / f"{d.name}-HORROR.mp4").exists(), "posted": (d / "posted.json").exists(), "hold": hold.get(str(n), ""),
+                     "tiktok": tiktok_status(n) if n > len(episodes()) - 5 else ""})
     recent = []
     for line in LOG.read_text(encoding="utf-8").splitlines()[-80:][::-1] if LOG.exists() else []:
         try:

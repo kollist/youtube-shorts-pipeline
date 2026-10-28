@@ -19,7 +19,7 @@ function renderDaily(d) {
     const hold = e.posted ? "" : e.hold
       ? `<button class="s-btn" data-release="${e.number}">Release</button>`
       : `<input type="date" data-hold-date="${e.number}"> <button class="s-btn" data-hold="${e.number}">Hold until</button>`;
-    return `<tr><td>${e.number}</td><td>${esc(e.scp)} ${esc(e.title)}</td><td>${state}</td><td>${hold}</td></tr>`;
+    return `<tr><td>${e.number}</td><td>${esc(e.scp)} ${esc(e.title)}</td><td>${state}</td><td>${e.tiktok ? esc(e.tiktok) + ` <button class="s-btn" data-resend="${e.number}">Resend</button>` : ""}</td><td>${hold}</td></tr>`;
   }).join("");
   const recent = d.recent.map((r) => `<li><b>${esc(r.kind)}</b> ${r.episode ? "ep " + r.episode : ""} <span class="s-note">${esc(r.at)} ${esc(r.title || r.error || "")}</span></li>`).join("");
   dailyEl.innerHTML = `
@@ -32,7 +32,7 @@ function renderDaily(d) {
     <textarea id="daily-queue" rows="3" placeholder="SCP numbers, e.g. 939, 087, 023">${esc(d.queue.join(", "))}</textarea>
     <div class="s-row"><button class="s-btn primary" id="daily-save">Save queue</button><span class="s-note">${d.queue.length} left</span></div>
     <h3>Episodes</h3>
-    <table class="daily-table"><tr><th>#</th><th>SCP</th><th>State</th><th></th></tr>${eps}</table>
+    <table class="daily-table"><tr><th>#</th><th>SCP</th><th>State</th><th>TikTok draft</th><th></th></tr>${eps}</table>
     <h3>Recent activity</h3><ul class="daily-recent">${recent || "<li class='s-note'>Nothing yet.</li>"}</ul>`;
   dailyEl.querySelector("#daily-toggle").onclick = async () => { const r = await dailyApi("/api/daily/pause", { paused: !d.paused }); if (r) renderDaily(r); };
   dailyEl.querySelector("#daily-save").onclick = async () => {
@@ -43,6 +43,11 @@ function renderDaily(d) {
     const until = dailyEl.querySelector(`[data-hold-date="${b.dataset.hold}"]`).value;
     if (!until) { alert("Pick a date first."); return; }
     const r = await dailyApi("/api/daily/hold", { episode: +b.dataset.hold, until }); if (r) renderDaily(r);
+  });
+  dailyEl.querySelectorAll("[data-resend]").forEach((b) => b.onclick = async () => {
+    b.disabled = true; b.textContent = "Sending (1-2 min)...";
+    const r = await dailyApi("/api/daily/tiktok-resend", { episode: +b.dataset.resend });
+    if (r) { alert(r.note); loadDaily(); } else { b.disabled = false; b.textContent = "Resend"; }
   });
   dailyEl.querySelectorAll("[data-release]").forEach((b) => b.onclick = async () => {
     const r = await dailyApi("/api/daily/hold", { episode: +b.dataset.release, until: null }); if (r) renderDaily(r);
