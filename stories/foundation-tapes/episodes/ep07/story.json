@@ -1,0 +1,162 @@
+{
+  "title": "Scp-939 With Many Voices",
+  "format": "scp",
+  "title_lines": [
+    "SCP-939",
+    "WITH MANY VOICES"
+  ],
+  "audience": "horror",
+  "style": "1990s handheld camcorder VHS home video freeze frame shot at night in a dark house, lit only by the small camcorder light, low resolution, tracking distortion, washed-out colours, blown highlights, tape smear, deep black shadows, photorealistic, absolutely no text, no letters, no numbers, no timestamps, no watermarks, vertical composition",
+  "tape_label": "ARMED BIO-CONT AREA-14 - SCP-939 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-939",
+    "author": "EchoFourDelta",
+    "url": "https://scp-wiki.wikidot.com/scp-939",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-939 by EchoFourDelta - scp-wiki.wikidot.com/scp-939 - CC BY-SA 3.0"
+  },
+  "poster_tag": "THE VOICE THAT LURES",
+  "post_caption": "A voice calling for help is the last thing they hear. Would you follow it?",
+  "summary": "Foundation incident report on SCP-939.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "short black hair, dark Foundation jacket with a small pulse monitor on the collar"
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "90s camcorder footage, wide dark concrete corridor, faint tall translucent red shape far away at the end, one flickering green exit light, large empty black area at top, tracking lines. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "This report was never meant to leave the archive. It describes SCP-939, blind predators a secret organization locks away because they should not exist."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "INCIDENT 1",
+      "image_prompt": "90s camcorder footage, empty night corridor, a lone dropped flashlight on the floor, wet red smears trailing into darkness, timestamp overlay, one beam of light, no creature visible. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "The first entry says staff heard a colleague begging for help overnight, and went toward it. But these animals copy the voices of people they kill."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "THE DAMAGE",
+      "image_prompt": "90s camcorder footage, a cracked protective helmet on a wet concrete floor, tooth punctures in it, one harsh overhead light, red-tinted puddle, tiny blurred red shape far behind. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "One bite to the skull or neck kills, and with no eyes, the voice is their lure."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "THE RESPONSE",
+      "image_prompt": "90s camcorder footage, thick laminated observation window with electrified mesh, condensation running down, dark cell beyond, one dim infrared glow, faint claw scratches on the glass, no creature visible. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "So the Foundation sealed them in Armed Bio-Containment Area-14, cold wet cells behind electrified glass, sedated before any contact."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "PROCEDURE",
+      "image_prompt": "90s camcorder footage, a pulse monitor on a steel table, flatline on a small green screen, dark decontamination chamber behind, one cold light, translucent red tall shape barely visible through frosted glass. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Now staff wear two pulse monitors. If both stop, the wearer is presumed dead, and every word they speak afterward is ignored."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "NOT IN THE REPORT",
+      "image_prompt": "90s camcorder footage, hazy fog-filled hallway, hazmat suit hanging on a hook, one flickering light, tall eyeless translucent red figure with glowing fangs half hidden in the mist far away. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "What I keep skipping is the breath, a drug that blocks new memories, so survivors cannot say what they heard."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "THE LAST ENTRY",
+      "image_prompt": "90s camcorder footage, the back of {Hero} at a desk, a typed page glowing under one desk lamp, dark office, a tall translucent red eyeless shape with spined back standing in the far doorway. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "I did not write the last entry. It says you have heard this voice before, and will not remember."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "90s camcorder footage, extreme close, out of focus tall translucent red eyeless head, glowing red fangs, spined ridge, lit by one dim red light, heavy tracking lines, darkness around, not touching anyone. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Five. Four. Three. Two."
+        }
+      ]
+    }
+  ],
+  "shape": "incident_report",
+  "finale_type": "countdown",
+  "scare_profile": "classic",
+  "picture_style": "camcorder",
+  "tape_no": 7,
+  "archivist_note": "TAPE 07  -  A label was changed. The handwriting is almost mine."
+}
