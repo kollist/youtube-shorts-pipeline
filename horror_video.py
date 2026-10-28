@@ -152,16 +152,8 @@ def build_horror_video(story_dir: str, log=print, dread: bool = True, yt: bool =
     for sc in scenes:
         mclip = motion_clip_path(sdir, sc["i"])                                       # a real video clip dropped on this scene replaces its picture
         if mclip.exists():
-            skip = 0.0
-            if sc["i"] == 1:                                                           # keep the 2.8 s title poster, then the clip
-                skip = min(2.8, sc["len"] * 0.55)
-                poster = rv._poster(story, sc["image"], work / "poster.png") if sc["image"].exists() else None
-                if poster:
-                    clip = work / "s1_poster.mp4"; rv._shot(poster, skip, -1, clip); clips.append(clip)
-                else:
-                    skip = 0.0
             clip = work / f"s{sc['i']}_motion.mp4"
-            _motion_shot(mclip, sc["len"] - skip, clip); clips.append(clip)
+            _motion_shot(mclip, sc["len"], clip); clips.append(clip)
             log(f"[horror] scene {sc['i']}: using your clip")
             continue
         if not sc["image"].exists():
