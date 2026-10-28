@@ -186,7 +186,7 @@ function viewStudio(s, ep) {
 function animateBox(s, ep) {
   const have = (ep.motion_clips || []).length;
   return `<details class="s-box s-animate" data-slug="${escapeHtml(s.slug)}" data-number="${ep.number}" data-clips="${(ep.motion_clips || []).join(",")}"><summary>Animate with free web tools ${have ? `(${have} clips in use)` : ""}</summary>
-    <p class="s-note">Free daily credits on Kling or Google Flow turn a picture into a ~5 second moving clip. Claude writes a motion prompt for each scene and marks the best 3-4 to animate. For each one: download the picture, paste it with the prompt into the tool's <b>image-to-video</b>, download the clip, drop it here. Free allowances change often - check the tool's page.</p>
+    <p class="s-note">Free daily credits on Kling or Google Flow turn a picture into a ~5 second moving clip. Claude writes a motion prompt for each scene and marks the best 3-4 to animate. For each one: download the picture, paste it with the prompt into the tool's <b>image-to-video</b>, download the clip, drop it here. <b>Uploading does not rebuild the video</b>: press <b>Render tape</b> afterwards (a scene with a clip uses it instead of its picture). Free allowances change often - check the tool's page.</p>
     <div class="s-row wrap"><button class="s-btn primary" data-act="shots-plan">Write motion prompts with Claude</button><span class="s-note s-shots-status"></span></div>
     <div class="s-shots" data-loaded="0"></div></details>`;
 }
@@ -204,7 +204,7 @@ function renderShots(box, shots) {
   box.querySelector(".s-shots").innerHTML = shots.map((x) => `
     <div class="s-shot ${x.hero ? "hero" : ""}">
       ${x.has_picture ? `<a href="/media/stories/${x.picture}" download="scene${x.scene}.png"><img src="/media/stories/${x.picture}" alt="Scene ${x.scene}" loading="lazy"></a>` : ""}
-      <div class="s-shot-head"><b>Scene ${x.scene}</b> ${clips.includes(x.scene) ? `<span class="series-chip ok">clip in use 🎬</span>` : ""} ${x.hero ? `<span class="series-chip ok">animate this one</span>` : `<span class="series-chip">keeps depth motion</span>`} <span class="s-note">~${x.seconds}s of narration</span></div>
+      <div class="s-shot-head"><b>Scene ${x.scene}</b> ${clips.includes(x.scene) ? `<span class="series-chip ok">clip saved 🎬 - press Render tape to put it in the video</span>` : ""} ${x.hero ? `<span class="series-chip ok">animate this one</span>` : `<span class="series-chip">keeps depth motion</span>`} <span class="s-note">~${x.seconds}s of narration</span></div>
       <textarea data-shot-prompt="${x.scene}" rows="6">${escapeHtml(x.prompt)}</textarea>
       <div class="s-row wrap">
         <button class="s-btn" data-act="shot-copy" data-scene="${x.scene}">Copy prompt</button>
