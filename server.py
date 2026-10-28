@@ -801,6 +801,13 @@ async def daily_tiktok_resend(payload: dict):
     return {"note": note}
 
 
+@app.post("/api/daily/mark-posted")
+async def daily_mark_posted(payload: dict):
+    import auto_daily
+    auto_daily.mark_posted(int(payload["episode"]), list(payload.get("platforms") or auto_daily.PLATFORMS))
+    return await asyncio.to_thread(auto_daily.panel)
+
+
 @app.post("/api/daily/pause")
 async def daily_pause(payload: dict):
     import auto_daily

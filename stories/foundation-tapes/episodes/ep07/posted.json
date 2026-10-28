@@ -15,7 +15,8 @@
     },
     "tiktok": {
       "url": null,
-      "id": "v_inbox_file~v2.7701659231909513234"
+      "id": null,
+      "manual": true
     }
   }
 }

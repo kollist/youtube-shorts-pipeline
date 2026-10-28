@@ -327,9 +327,23 @@ def run(now: bool = False, dry: bool = False, episode: int | None = None) -> Non
         fcntl.flock(lock, fcntl.LOCK_UN)
 
 
+def mark_posted(n: int, platforms: list[str]) -> None:
+    """Records that the user posted episode n by hand on these platforms (creates posted.json if the episode had none, so the job never posts it again)."""
+    d = ep_dir(n); pj = _read(d / "posted.json", {})
+    pj.setdefault("at", now_et().isoformat(timespec="seconds"))
+    for p in platforms:
+        if p in PLATFORMS:
+            pj.setdefault("results", {})[p] = {"url": None, "id": None, "manual": True}
+    _write(d / "posted.json", pj)
+    h = _read(HOLD, {}); h.pop(str(n), None); _write(HOLD, h)
+
+
 def tiktok_status(n: int) -> str:
     """What TikTok says about episode n's draft: 'in your inbox' (delivered, not posted yet), 'posted by you', 'failed', or '' when unknown."""
-    pid = (((_read(ep_dir(n) / "posted.json", {}).get("results") or {}).get("tiktok")) or {}).get("id")
+    tt = ((_read(ep_dir(n) / "posted.json", {}).get("results") or {}).get("tiktok")) or {}
+    if tt.get("manual"):
+        return "posted by hand"
+    pid = tt.get("id")
     if not pid:
         return ""
     try:

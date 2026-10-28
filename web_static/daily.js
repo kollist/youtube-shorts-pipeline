@@ -19,7 +19,7 @@ function renderDaily(d) {
     const hold = e.posted ? "" : e.hold
       ? `<button class="s-btn" data-release="${e.number}">Release</button>`
       : `<input type="date" data-hold-date="${e.number}"> <button class="s-btn" data-hold="${e.number}">Hold until</button>`;
-    return `<tr><td>${e.number}</td><td>${esc(e.scp)} ${esc(e.title)}</td><td>${state}</td><td>${e.tiktok ? esc(e.tiktok) + ` <button class="s-btn" data-resend="${e.number}">Resend</button>` : ""}</td><td>${hold}</td></tr>`;
+    return `<tr><td>${e.number}</td><td>${esc(e.scp)} ${esc(e.title)}</td><td>${state}</td><td>${e.tiktok ? esc(e.tiktok) + (e.tiktok === "posted by hand" ? "" : ` <button class="s-btn" data-resend="${e.number}">Resend</button>`) + (e.tiktok.startsWith("in your inbox") ? ` <button class="s-btn" data-mark="${e.number}" data-plats="tiktok">I posted it by hand</button>` : "") : ""}</td><td>${hold} ${e.posted ? "" : `<button class="s-btn" data-mark="${e.number}" data-plats="">I posted this by hand</button>`}</td></tr>`;
   }).join("");
   const recent = d.recent.map((r) => `<li><b>${esc(r.kind)}</b> ${r.episode ? "ep " + r.episode : ""} <span class="s-note">${esc(r.at)} ${esc(r.title || r.error || "")}</span></li>`).join("");
   dailyEl.innerHTML = `
@@ -48,6 +48,11 @@ function renderDaily(d) {
     b.disabled = true; b.textContent = "Sending (1-2 min)...";
     const r = await dailyApi("/api/daily/tiktok-resend", { episode: +b.dataset.resend });
     if (r) { alert(r.note); loadDaily(); } else { b.disabled = false; b.textContent = "Resend"; }
+  });
+  dailyEl.querySelectorAll("[data-mark]").forEach((b) => b.onclick = async () => {
+    if (!b.dataset.plats && !confirm(`Mark episode ${b.dataset.mark} as posted on every platform? The daily job will never post it.`)) return;
+    const r = await dailyApi("/api/daily/mark-posted", { episode: +b.dataset.mark, platforms: b.dataset.plats ? [b.dataset.plats] : [] });
+    if (r) renderDaily(r);
   });
   dailyEl.querySelectorAll("[data-release]").forEach((b) => b.onclick = async () => {
     const r = await dailyApi("/api/daily/hold", { episode: +b.dataset.release, until: null }); if (r) renderDaily(r);
