@@ -1,0 +1,162 @@
+{
+  "title": "Scp-087 The Stairwell",
+  "format": "scp",
+  "title_lines": [
+    "SCP-087",
+    "THE STAIRWELL"
+  ],
+  "audience": "horror",
+  "style": "thermal imaging camera footage, FLIR false-colour heat map, cold deep blue and purple background, warm orange-white human heat signatures, low resolution, noise, photorealistic, absolutely no text, no letters, no numbers, no timestamps, no watermarks, vertical composition",
+  "tape_label": "FOUNDATION ARCHIVE - SCP-087 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-087",
+    "author": "Zaeyde",
+    "url": "https://scp-wiki.wikidot.com/scp-087",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-087 by Zaeyde - scp-wiki.wikidot.com/scp-087 - CC BY-SA 3.0"
+  },
+  "poster_tag": "THE STAIRS THAT NEVER END",
+  "post_caption": "A child cries 200 meters down a staircase with no bottom. Would you go down?",
+  "summary": "Foundation staff safety briefing for SCP-087.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "Short dark hair, dark Foundation jacket, seen only from behind, no face."
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "WELCOME",
+      "image_prompt": "Thermal camera footage, wide and dark, narrow stairwell far below, a faint cold black blank face with no pupils, nostrils or mouth barely visible, large empty dark area above, one dim heat glow. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Welcome to the team, where we lock away things that should not exist! Yours is a staircase behind a janitor's door."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "REMEMBER",
+      "image_prompt": "Thermal camera footage, steep stairs and a semicircular landing, a faint warm handprint on the rail, no entity, one weak glow far down the steps. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Remember, it is pitch dark, and every landing turns you around to keep descending, with no bottom found."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "WHY IT MATTERS",
+      "image_prompt": "Thermal camera footage, a dark stairwell shaft dropping endlessly, a warm orange breath cloud drifting upward, a tiny cold black speck far below, one heat source. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "We take this seriously: two hundred meters down, a child seems to be pleading, yet nobody gets closer."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "STAYING SAFE",
+      "image_prompt": "Thermal camera footage, reinforced steel door in a campus corridor, warm seams glowing around padded edges, one orange glow at the lock, entity absent. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "So, safety! A reinforced steel door, an electric lock, and six centimeters of foam padding."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "YOUR CHECKLIST",
+      "image_prompt": "Thermal camera footage, far-off corridor, warm footprints glowing toward a half-open door, a cold black blank face with no pupils, nostrils or mouth barely visible in shadow. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Your checklist: keep it locked, let nobody in. Four prisoners explored it, and after the last, nobody may."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "NEVER",
+      "image_prompt": "Thermal camera footage, the back of {Hero} with a warm orange outline at the top of steps, far below a cold black blank face with no pupils, nostrils or mouth, partly hidden. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Never go down. Every explorer met a face with no pupils, nose, or mouth."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "LISTEN",
+      "image_prompt": "Thermal camera footage, dark stairwell landing, warm footprints fading toward a cold black blank face with no pupils, nostrils or mouth, closer now, mostly dark, one faint heat glow. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "If you are hearing this, I can stop pretending. Afterward, people heard knocking from inside."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "BEHIND YOU",
+      "image_prompt": "Thermal camera footage, cold black pale blank face with no pupils, nostrils or mouth, inches away in darkness, partly out of focus, lit by one faint orange glow, nothing touching. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "I have no mouth, yet you hear me begging, don't you? Come down. I am only one step behind you. Did you just hear knocking?"
+        }
+      ]
+    }
+  ],
+  "shape": "safety_video",
+  "finale_type": "taunt",
+  "scare_profile": "quiet",
+  "picture_style": "thermal",
+  "tape_no": 8,
+  "archivist_note": "TAPE 08  -  Fixed the log to match. Then the audio changed."
+}

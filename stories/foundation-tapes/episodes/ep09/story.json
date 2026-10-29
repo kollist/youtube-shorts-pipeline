@@ -1,0 +1,162 @@
+{
+  "title": "Scp-023 The Black Dog",
+  "format": "scp",
+  "title_lines": [
+    "SCP-023",
+    "THE BLACK DOG"
+  ],
+  "audience": "horror",
+  "style": "cinematic found-footage horror photograph, over-the-shoulder composition, shallow depth of field, one cold light source, heavy film grain, photorealistic, absolutely no text, no letters, no numbers, no timestamps, no watermarks, vertical composition",
+  "tape_label": "FOUNDATION ARCHIVE - SCP-023 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-023",
+    "author": "Pig_catapult",
+    "url": "https://scp-wiki.wikidot.com/scp-023",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-023 by Pig_catapult - scp-wiki.wikidot.com/scp-023 - CC BY-SA 3.0"
+  },
+  "poster_tag": "ONE LOOK, ONE YEAR",
+  "post_caption": "One look, and someone you love dies in exactly a year. Would you meet its eyes?",
+  "summary": "Foundation research log on SCP-023.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "Short brown hair, dark Foundation jacket, seen only from behind."
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "Over-the-shoulder photograph, back of {Hero} out of focus low in frame, long dark corridor crossroads far ahead, tiny shaggy black dog with orange-red glowing eyes, large empty black space above, one dim red light. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Day one. A secret organization that locks away things that should not exist took in a black dog with burning orange eyes."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "DAY 2",
+      "image_prompt": "Photograph over the shoulder of {Hero}, out of focus; dark corridor floor with scorched ash footprints and a faint orange-red glow under a closed door, no creature visible, one red emergency light. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Day two. Meet its eyes, and you or someone in your family dies exactly one year after you look away."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "DAY 3",
+      "image_prompt": "Over the shoulder of {Hero}, out of focus, a steel autopsy table under one harsh lamp, a sheet-covered body, grey ash spilling from the sheet's edge, no creature visible. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Day three. Its victims look untouched, but the autopsies found every organ replaced with packed ash."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "DAY 4",
+      "image_prompt": "Over the shoulder of {Hero}, out of focus, a hand reaching toward a door handle at a corridor crossroads, three painted false doors, one real door, camera above, one dim light, creature absent. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Day four. So it sits in a crossroads of corridors, three false doors, one real, or it walks through walls."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "DAY 5",
+      "image_prompt": "Over the shoulder of {Hero}, out of focus, far down a dark corridor a huge shaggy black dog with burning orange-red eyes half hidden behind a doorframe, prominent teeth, one red light. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Day five. Rubber covers its eyes, changed one at a time after dark; whoever looks pays within a year."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "DAY 6",
+      "image_prompt": "Over the shoulder of {Hero} facing a dim monitor, on screen a tiny distant shaggy black dog half hidden in darkness, two orange-red glowing eyes, only the screen's glow lighting the room. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Day six. Tired, I checked the camera feed on a monitor, the one thing banned after the last incident."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "DAY 7",
+      "image_prompt": "Over the shoulder of {Hero}, frozen, a huge shaggy black dog with burning orange-red eyes and prominent teeth standing mostly in darkness in a doorway ahead, one red light behind. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Day seven. Short entry, because it already happened: I met its eyes, and the year has started."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "NEXT ENTRY",
+      "image_prompt": "Out of focus, huge shaggy black canine with burning orange-red eyes and prominent teeth very close behind the shoulder of {Hero}, not touching, mostly in darkness, lit by one red light. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "I let the rubber fade, and I wanted you to look. Now someone you love is counted."
+        }
+      ]
+    }
+  ],
+  "shape": "day_log",
+  "finale_type": "confession",
+  "scare_profile": "false_calm",
+  "picture_style": "shoulder",
+  "tape_no": 9,
+  "archivist_note": "TAPE 09  -  The dust was wiped from one case. Only that one."
+}
