@@ -1,0 +1,162 @@
+{
+  "title": "Scp-1048 The Builder Bear",
+  "format": "scp",
+  "title_lines": [
+    "SCP-1048",
+    "THE BUILDER BEAR"
+  ],
+  "audience": "horror",
+  "style": "green night-vision infrared camera footage, glowing white eyes reflecting the infrared light, grainy, bloom, vignette, photorealistic, absolutely no text, no letters, no numbers, no timestamps, no watermarks, vertical composition",
+  "tape_label": "SITE 24 ARCHIVE - SCP-1048 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-1048",
+    "author": "trennerdios",
+    "url": "https://scp-wiki.wikidot.com/scp-1048",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-1048 by trennerdios - scp-wiki.wikidot.com/scp-1048 - CC BY-SA 3.0"
+  },
+  "poster_tag": "THE BEAR EVERYONE LOVES",
+  "post_caption": "The cutest thing in Site 24 is also the deadliest. Would you have reported the bear?",
+  "summary": "Foundation orientation tape for SCP-1048.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "short brown hair, dark Foundation jacket, seen from behind"
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "Wide dark concrete corridor in green night vision footage, a tiny worn teddy bear silhouette far away at the end, large empty black area above, one faint infrared glow, photorealistic {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "In Site 24, a secret base for things that should not exist, a teddy bear thirty-three centimetres tall walks the halls alone."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "WHAT IT DOES",
+      "image_prompt": "Green night vision photo of a janitor's mop closet floor, a small crayon drawing on paper beside a mop bucket, tiny fabric footprints, no bear visible, one infrared light, photorealistic {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "It hugs people by the leg and draws them pictures, and everyone loves it, even convicts."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "WHY IT'S DANGEROUS",
+      "image_prompt": "Green night vision footage of a dark hallway floor, dropped guard helmets and radios, pale ear-shaped lumps scattered on the tiles, one infrared light, nothing else visible, photorealistic {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "But seven months later it started building copies. One, made of human ears, shrieked, and the guards suffocated beneath growing ears."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "HOW IT'S CONTAINED",
+      "image_prompt": "Green night vision photo of an empty containment room, door hanging open, a tiny chair and a small dusty handprint on the wall, one infrared light, photorealistic {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Now the original has vanished somewhere inside the base, and the order is to destroy every copy on sight."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "WHO WATCHES IT",
+      "image_prompt": "Green night vision, far away, the back of {Hero} at a security desk with dark monitors, a tiny bear-shaped shadow on one screen, partly hidden by a pillar, one infrared light, photorealistic {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "So no teddy bears are allowed in at all, and anything shaped like one must be reported to security immediately."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "THE MISTAKE",
+      "image_prompt": "Green night vision, distant dim office, the back of {Hero} at a desk, a small stitched teddy bear with button eyes half hidden behind a crate in the far corner, one infrared light, photorealistic {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "And tonight, on watch, you see a small bear in the corner and decide it is only a toy."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "Green night vision, dark bunk room, a sleeper's pillow and blanket, two small reflective button eyes low near the bedside, mostly black, stitched bear shape barely visible, one infrared light, photorealistic {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Then you reach up, and your ear is gone, and the corner is empty."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "Green night vision, extreme darkness, two glowing button eyes of a small stitched teddy bear very close to the lens, out of focus, split seams, lit by one infrared light, photorealistic {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "I am not the narrator. I have been reading you this file so you would stay still."
+        }
+      ]
+    }
+  ],
+  "shape": "orientation",
+  "finale_type": "narrator_is_it",
+  "scare_profile": "quiet",
+  "picture_style": "nightvision",
+  "tape_no": 11,
+  "archivist_note": "TAPE 08  -  Fixed the log to match. Then the audio changed."
+}

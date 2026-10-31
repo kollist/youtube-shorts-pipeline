@@ -1,0 +1,178 @@
+{
+  "title": "Scp-682 The Hating Beast",
+  "format": "scp",
+  "title_lines": [
+    "SCP-682",
+    "THE HATING BEAST"
+  ],
+  "audience": "horror",
+  "style": "endless empty office rooms with damp yellow carpet and humming fluorescent lights, no windows, wrong proportions, liminal space, photorealistic, absolutely no text, no letters, no numbers, no timestamps, no watermarks, vertical composition",
+  "tape_label": "FOUNDATION ARCHIVE - SCP-682 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-682",
+    "author": "Spy",
+    "url": "https://scp-wiki.wikidot.com/scp-682",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-682 by Spy - scp-wiki.wikidot.com/scp-682 - CC BY-SA 3.0"
+  },
+  "poster_tag": "THE CREATURE THAT CAN'T DIE",
+  "post_caption": "It was 87% destroyed and still kept walking. Would you survive a night on watch?",
+  "summary": "Foundation orientation tape for SCP-682.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "short black hair, dark Foundation jacket with high collar, seen only from behind"
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "Vast dark empty office floor stretching too far, flickering fluorescent tubes, far away a faint huge hunched reptilian shape, rotting hide, empty black space above, photorealistic found footage, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "In forty seconds, something that hates you will begin to eat you. Let me explain. This is SCP-682, a huge reptile-like creature that a secret organization cannot kill."
+        }
+      ],
+      "motion_prompt": "Slow push-in down the empty office floor. The distant hunched shape breathes, its shoulders rising and falling slightly. Fluorescent tubes flicker irregularly, dust drifting in the light.",
+      "hero": true
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "WHAT IT DOES",
+      "image_prompt": "Doorway opening into another identical office room, wet greenish slime trail across yellow carpet, scraps of rotted grey-green flesh, one buzzing fluorescent light, photorealistic footage, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "It regenerates from anything, even acid, and has been seen walking and speaking with its body eighty-seven percent destroyed."
+        }
+      ],
+      "motion_prompt": "Slow forward glide through the doorway. Nothing else moves but the slime, which glistens and creeps slightly along the carpet. The buzzing light flickers, faint dust floating.",
+      "hero": false
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "WHY IT'S DANGEROUS",
+      "image_prompt": "Office desk with a toppled microphone on stand, dark smears across carpet in shape of dragged footprints, single flickering ceiling light, empty cubicles beyond, photorealistic footage, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "And it hates every living thing. When a doctor questioned it about murdered farmers, it tore into the man holding the microphone."
+        }
+      ],
+      "motion_prompt": "Gentle handheld drift toward the toppled microphone. The microphone stand wobbles slightly and settles. The ceiling light flickers, casting shifting shadows across the cubicles.",
+      "hero": false
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "HOW IT'S CONTAINED",
+      "image_prompt": "Thick steel-plated door at the end of an endless office corridor, acid dripping beneath it, pale green glow leaking from the gap, corroded carpet, one light, photorealistic footage, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "So they keep it in a steel room, flooded with acid until it cannot move."
+        }
+      ],
+      "motion_prompt": "Slow push-in toward the steel door. Acid drips steadily from beneath it. The green glow pulses faintly, and thin vapor curls along the corroded carpet.",
+      "hero": false
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "WHO WATCHES IT",
+      "image_prompt": "Far down a dim office aisle between cubicles, a huge hunched reptilian silhouette, rotting grey-green hide, partly hidden behind a partition, one cold overhead light, photorealistic footage, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "No one may speak to it, any movement is met with full force, and it has already escaped six times."
+        }
+      ],
+      "motion_prompt": "Static camera with slight handheld sway. The silhouette behind the partition slowly shifts its weight and lowers its head. The cold light flickers, dust drifting through the aisle.",
+      "hero": false
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "THE MISTAKE",
+      "image_prompt": "Back of {Hero} at a monitoring desk in a empty office, monitors glowing, far away between cubicles a huge hunched reptile shape with scarred rotting hide, partly hidden, one light, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Tonight you are on watch, and you notice the acid has gone still, and you lean closer to the glass."
+        }
+      ],
+      "motion_prompt": "Slow push-in over the watcher's shoulder. The person leans slightly closer to the monitors, hair shifting. Screens flicker softly, and the distant reptile shape subtly moves behind the cubicles.",
+      "hero": true
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "NOW",
+      "image_prompt": "Dark office floor, huge hunched reptilian creature, rotting grey-green scarred hide, exposed muscle, ruined throat, much closer between cubicles, mostly in shadow, one dim light, photorealistic footage, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "The forty seconds have begun. The acid is gone, and something is breathing."
+        }
+      ],
+      "motion_prompt": "Slow push-in toward the creature in shadow. Its chest heaves with one deep breath, ruined throat twitching. The dim light flickers, and faint mist drifts across the floor.",
+      "hero": true
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "Enormous reptilian creature, rotting scarred grey-green hide, gill slits in nostrils, very close in darkness, out of focus, lit by one flickering fluorescent tube, empty office, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "You were never watching it. It was watching yo—"
+        }
+      ],
+      "motion_prompt": "Slow push-in, slightly handheld. The creature's gill-slit nostrils flare as it exhales, and its head tilts closer. The fluorescent tube flickers harshly, breath fogging the dark air.",
+      "hero": true
+    }
+  ],
+  "shape": "cold_open",
+  "finale_type": "unfinished",
+  "scare_profile": "classic",
+  "picture_style": "liminal",
+  "tape_no": 10,
+  "archivist_note": "TAPE 07  -  A label was changed. The handwriting is almost mine."
+}

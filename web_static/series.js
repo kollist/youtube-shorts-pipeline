@@ -69,7 +69,7 @@ function viewList() {
 function viewSeries(s) {
   const cover = seriesCover(s);
   const nextEp = s.episodes.find((e) => !e.video && !e.posted);
-  const eps = s.episodes.map((ep) => {
+  const card = (ep) => {
     const img = firstImage(ep);
     const dots = [ep.has_script, ep.has_script && ep.images_done.length === ep.scene_count, !!ep.preview, !!ep.video]
       .map((on, i) => `<i class="${on ? "on" : ""}" title="${["script", "pictures", "preview", "video"][i]}"></i>`).join("");
@@ -82,7 +82,18 @@ function viewSeries(s) {
         <div class="s-dots">${dots}</div>
       </div>
     </article>`;
-  }).join("");
+  };
+  // Posted episodes lose their pictures and videos (they are deleted to save space), so as poster cards they would sit next to the
+  // unposted ones as empty tiles. They go into a compact archive instead: one line each, with the links to where they went live.
+  const posted = s.episodes.filter((e) => e.posted), active = s.episodes.filter((e) => !e.posted);
+  const when = (e) => { const d = new Date((e.posted && e.posted.at) || ""); return isNaN(d) ? "" : d.toLocaleDateString(undefined, { month: "short", day: "numeric" }); };
+  const places = (e) => Object.entries((e.posted && e.posted.results) || {}).map(([plat, r]) => r && r.url
+    ? `<a class="s-chip-link" href="${escapeHtml(r.url)}" target="_blank" rel="noopener">${escapeHtml(plat)}</a>`
+    : `<span class="s-chip-link off" title="${r && r.manual ? "posted by hand" : "no link saved"}">${escapeHtml(plat)}${r && r.manual ? " ✋" : ""}</span>`).join("");
+  const archive = posted.length ? `<details class="s-archive"><summary>Posted (${posted.length})</summary>
+      ${posted.slice().reverse().map((e) => `<div class="s-arow"><b>${e.number}</b><span class="s-atitle">${escapeHtml(e.title || e.planned_title || "Untitled")}</span><span class="s-note">${escapeHtml(when(e))}</span><span class="s-achips">${places(e)}</span></div>`).join("")}
+    </details>` : "";
+  const eps = active.map(card).join("");
   return `
     <button class="s-back" data-act="back">← All series</button>
     <header class="s-banner" style="${bg(cover, s.title)}">
@@ -102,8 +113,9 @@ function viewSeries(s) {
         <div class="s-note">Writes it, makes the pictures and renders the video (about 15-40 min on this Mac). Then you review it and press Post.</div>` : `<div class="s-note">Every episode has a video ✓</div>`}
       </div>
     </header>
-    <h2 class="s-h2">Episodes</h2>
-    <div class="s-strip">${eps}</div>`;
+    <h2 class="s-h2">Up next</h2>
+    ${eps ? `<div class="s-strip">${eps}</div>` : `<p class="s-note">Nothing in progress - every episode is posted.</p>`}
+    ${archive}`;
 }
 
 function studioStageHtml(ep) {

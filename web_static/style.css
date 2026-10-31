@@ -861,3 +861,12 @@ body.s-lock { overflow: hidden; }
 .daily-table th, .daily-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border, #333); }
 .daily-recent { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
 #daily-queue { width: 100%; }
+
+.s-archive { margin: 18px 0; border: 1px solid var(--border, #333); border-radius: 10px; padding: 4px 14px; }
+.s-archive summary { cursor: pointer; padding: 10px 0; font-weight: 600; }
+.s-arow { display: grid; grid-template-columns: 32px 1fr auto auto; gap: 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--border, #2a2a2a); }
+.s-atitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.s-achips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.s-chip-link { font-size: 12px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--border, #444); text-decoration: none; color: inherit; }
+.s-chip-link.off { opacity: .55; }
+@media (max-width: 600px) { .s-arow { grid-template-columns: 28px 1fr; } .s-achips { grid-column: 2; justify-content: flex-start; } }
