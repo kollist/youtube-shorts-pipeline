@@ -1,0 +1,162 @@
+{
+  "title": "Scp-409 The Crystal",
+  "format": "scp",
+  "title_lines": [
+    "SCP-409",
+    "THE CRYSTAL"
+  ],
+  "audience": "horror",
+  "style": "harsh direct on-camera flash photograph at night, red-eye effect, overexposed foreground, pitch black background beyond the flash, evidence photo, film grain, photorealistic, absolutely no text, no letters, no numbers, no timestamps, no watermarks, vertical composition",
+  "tape_label": "FOUNDATION ARCHIVE - SCP-409 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-409",
+    "author": "Dr Gears",
+    "url": "https://scp-wiki.wikidot.com/scp-409",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-409 by Dr Gears - scp-wiki.wikidot.com/scp-409 - CC BY-SA 3.0"
+  },
+  "poster_tag": "THE CRYSTAL THAT SPREADS",
+  "post_caption": "One touch, and three hours later you are turning to crystal. Would you have noticed in time?",
+  "summary": "Foundation research log on SCP-409.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "Short dark hair, dark Foundation jacket, seen only from behind, no face visible."
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "Wide harsh flash photograph of a dark containment room, far away a pale translucent glassy quartz crystal, five feet tall, in an open granite case on a white plinth, huge empty black area above. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Day one. They dug it out from under shards several feet deep, and many of the diggers were lost. It looks like plain quartz, five feet tall."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "DAY 2",
+      "image_prompt": "Harsh flash photograph of a concrete floor, a dropped glove crusted with white glassy crystal veins, a few tiny quartz shards glittering, the dark behind it unlit, no crystal pillar in frame. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Day two. But touch it, and three hours later you begin to crystallize, inch by inch, with pain like frostbite."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "DAY 3",
+      "image_prompt": "Harsh flash photograph of a concrete wall with clear quartz shards embedded and a long scrape dragged along it, glittering fragments on the floor, far at the dark edge a faint pale crystal glint. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Day three. And then the body creaks for twenty minutes, bursts into thousands of shards, and each shard spreads it again."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "DAY 4",
+      "image_prompt": "Flash-lit dark room, a grey granite case open on a white plinth, a small pale glassy translucent quartz crystal, five feet tall, standing inside it, the rest of the room unlit black. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Day four. Only granite stops it, so it stands inside a granite case, and nothing else in the world is trusted to hold it."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "DAY 5",
+      "image_prompt": "Harsh flash photograph from a doorway down a dark corridor, sealed granite containers in the foreground, far away a pale translucent quartz crystal in its granite case, half hidden in shadow. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Day five. So nobody touches it, anything that does is quarantined, and even the tools that moved its residue go into granite too."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "DAY 6",
+      "image_prompt": "Harsh flash photograph of a torn dark jacket sleeve on the floor, white glassy crystal crusting its cuff, far behind it a pale translucent quartz crystal half hidden by a granite case, black dark around. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Day six. But I was tired, and my sleeve brushed the crystal. Three hours, I told myself. Plenty of time."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "DAY 7",
+      "image_prompt": "Harsh flash photograph, closer, a pale glassy translucent quartz crystal five feet tall in its open granite case, fine cracks across its facets, white plinth, mostly black darkness around. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Day seven. My hand burns like frost, and I can hear creaking. It already happened."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "Very close harsh flash photograph, out of focus, jagged edge of a pale translucent glassy quartz crystal, granite case rim in foreground, lit by one cold light, deep darkness around, nobody touching it. {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Do not look away from the screen, and stay exactly where you are."
+        }
+      ]
+    }
+  ],
+  "shape": "day_log",
+  "finale_type": "command",
+  "scare_profile": "classic",
+  "picture_style": "flashphoto",
+  "tape_no": 13,
+  "archivist_note": "TAPE 13  -  I played it twice. The narrator paused in new places."
+}

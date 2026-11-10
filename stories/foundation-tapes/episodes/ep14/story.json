@@ -1,0 +1,162 @@
+{
+  "title": "Scp-513 The Cowbell",
+  "format": "scp",
+  "title_lines": [
+    "SCP-513",
+    "THE COWBELL"
+  ],
+  "audience": "horror",
+  "style": "bathroom mirror at night lit by one bare bulb, slightly cracked glass, the reflection subtly wrong, every person fully clothed in dark coats, faces in shadow, photorealistic, absolutely no text, no letters, no numbers, no timestamps, no watermarks, vertical composition",
+  "tape_label": "FOUNDATION ARCHIVE - SCP-513 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-513",
+    "author": "beefwit",
+    "url": "https://scp-wiki.wikidot.com/scp-513",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-513 by beefwit - scp-wiki.wikidot.com/scp-513 - CC BY-SA 3.0"
+  },
+  "poster_tag": "THE BELL THAT SUMMONS",
+  "post_caption": "One ring of a rusty cowbell and something tall starts following you. Would you ring it?",
+  "summary": "Foundation staff safety briefing for SCP-513.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "Short black hair, dark Foundation jacket, seen from behind."
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "Wide dark empty hallway ending in a tall old mirror, a faint thin shape far away in its reflection, one dim bulb, large empty black area at the top, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Welcome, and congratulations on your new posting! Meet a rusty cowbell, held by a secret organization that locks away things that shouldn't exist."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "REMEMBER",
+      "image_prompt": "Fogged bathroom mirror with a large handprint pressed on the inside of the glass, one cold light from above, no person visible, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Remember, when it rings, everyone who hears it feels watched, and an hour later they glimpse a figure in doorways and mirrors."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "WHY IT MATTERS",
+      "image_prompt": "The back of {Hero} at a bathroom mirror, the reflection a moment late and slightly blurred, one flickering bulb, empty dark room, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "We take this seriously because it keeps returning, and every test subject but one ended up dead."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "STAYING SAFE",
+      "image_prompt": "Rusty cowbell suspended inside a clear gelatin cube in a bare concrete cell, a mirror on the far wall reflecting it, one overhead light, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "So we hang the bell in a block of gelatin, inside a soundproof cell, and staff wear earplugs and noise-canceling earmuffs."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "YOUR CHECKLIST",
+      "image_prompt": "Far down a dark corridor, a tall emaciated humanoid with huge hands half hidden behind a door frame, seen only in a distant mirror, one weak light, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Check the gelatin for tears or mold, and never let anyone who heard it fall asleep, because it attacks sleepers."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "NEVER",
+      "image_prompt": "The back of {Hero} facing a mirror while the reflection turns away, a tall thin shape far behind in the reflection, one cold light, dark room, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Never ring the bell. If you hear it, he can touch you."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "LISTEN",
+      "image_prompt": "Dark mirror, a tall emaciated humanoid with abnormally large hands and pale gaunt skin stands closer behind the empty reflection, face in shadow, one dim light, mostly black, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "If you are hearing this, I can stop pretending. The hour has already started."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "Tall emaciated humanoid, pale gaunt skin, face hidden in darkness, huge hands, very close behind a reflection's shoulder, partly out of focus, lit by one cold light, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "I cut the tape off the clapper. I wanted you to hear it, so I could touch you."
+        }
+      ]
+    }
+  ],
+  "shape": "safety_video",
+  "finale_type": "confession",
+  "scare_profile": "late",
+  "picture_style": "mirror",
+  "tape_no": 14,
+  "archivist_note": "TAPE 14  -  Tape wear shows far more plays than the log admits."
+}

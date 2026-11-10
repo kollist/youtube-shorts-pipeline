@@ -109,10 +109,10 @@ def build_system(shape: str = "orientation", finale: str = "taunt", picture_styl
         return SYSTEM, True
 
 
-def create_scp_story(number: str, voice: str = "adult_man", log=print, dest: Path | None = None, variety_override: dict | None = None) -> Path:
+def create_scp_story(number: str, voice: str = "adult_man", log=print, dest: Path | None = None, variety_override: dict | None = None, extra_note: str = "") -> Path:
     art = fetch_scp(number)
     log(f"[scp] {art['item']} - author credit: {art['author'] or '(not found)'} - {len(art['text'])} chars of article")
-    user = f"ARTICLE ({art['item']}):\n{art['text']}"
+    user = f"ARTICLE ({art['item']}):\n{art['text']}" + (f"\n\nEXTRA DIRECTION FROM THE EDITOR (follow it): {extra_note}" if extra_note else "")
     folder_name = Path(dest).name if dest else ""
     tape_no = int(m.group(1)) if (m := re.fullmatch(r"ep(\d+)", folder_name)) else 0
     try:                                                    # variety: a different shape / ending / scare / picture look from the last few tapes (never fatal)

@@ -1,0 +1,178 @@
+{
+  "title": "Scp-303 The Door Wheezer",
+  "format": "scp",
+  "title_lines": [
+    "SCP-303",
+    "THE DOOR WHEEZER"
+  ],
+  "audience": "horror",
+  "style": "flooded concrete basement, knee-deep black water like a mirror, one caged bare bulb, ripples, dripping pipes, deep shadows, photorealistic, absolutely no text, no letters, no numbers, no timestamps, no watermarks, vertical composition",
+  "tape_label": "FOUNDATION ARCHIVE - SCP-303 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-303",
+    "author": "AJAlkaline",
+    "url": "https://scp-wiki.wikidot.com/scp-303",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-303 by AJAlkaline - scp-wiki.wikidot.com/scp-303 - CC BY-SA 3.0"
+  },
+  "poster_tag": "IT WAITS BEHIND DOORS",
+  "post_caption": "Something waits behind every closed door, and you can't open it. Would you try the handle?",
+  "summary": "Foundation survivor's statement about SCP-303.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "short dark hair, black Foundation jacket with high collar, seen only from behind"
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "Wide dark flooded basement, black water, one lone bulb, faint thin reddish-brown figure far away at a doorway, large empty dark area at top, photorealistic footage, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "I should not be alive to tell you this, because a wheezing thing with a huge mouth for a face lives in our facility."
+        }
+      ],
+      "motion_prompt": "Very slow push-in down the flooded basement. The distant thin figure at the doorway stays still, barely swaying. The bulb flickers faintly, black water ripples gently, and a few dust motes drift through the air.",
+      "hero": true
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "WHAT IT DOES",
+      "image_prompt": "Rusted basement door half in black floodwater, one flickering bulb, frost on its glass, faint wet footprints in concrete ending at the water, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "It appears behind closed doors, and when you reach for the handle, a fear older than thought freezes you."
+        }
+      ],
+      "motion_prompt": "Static camera with slight handheld drift. The bulb flickers and buzzes. Small ripples spread across the black water around the door's base, and thin mist drifts upward over the frosted glass.",
+      "hero": false
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "MY TEAM",
+      "image_prompt": "Narrow flooded corridor, sealed steel decompression door, single bulb, one ripple in black water, wet footprints stopping at the door, no figure visible, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "It trapped a doctor in a storage room for five days, and thirst killed them."
+        }
+      ],
+      "motion_prompt": "Slow push-in along the corridor toward the sealed door. A single ripple spreads outward across the black water. The bulb sways slightly, casting subtle light shifts, while faint vapor drifts.",
+      "hero": false
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "WHAT WE BUILT",
+      "image_prompt": "Flooded basement with two doorways at opposite ends, a radio on a dry shelf, one hanging bulb, black water, faint reddish-brown shape under the surface, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "So we made the whole facility its cage, giving every room two exits and keeping everyone spread out on radios."
+        }
+      ],
+      "motion_prompt": "Gentle slow pan across the basement from one doorway toward the other. The faint shape beneath the surface drifts slowly. The hanging bulb swings slightly, water ripples, and light glints on the radio.",
+      "hero": false
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "OUR RULES",
+      "image_prompt": "Far away, a closed door at the end of a flooded basement, reddish-brown emaciated figure with huge toothy mouth mostly hidden in shadow beyond it, one dim bulb, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "We stayed on radio, sent witnesses to a psychiatrist, and never forced a door it stood behind."
+        }
+      ],
+      "motion_prompt": "Slow push-in toward the far door. The shadowed figure beyond it shifts its head slightly and its chest heaves in a wheeze. The dim bulb flickers, and fog drifts low over the water.",
+      "hero": false
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "MY MISTAKE",
+      "image_prompt": "Distant flooded basement, a closed door, a pale hand lying at the water's edge, thin reddish-brown figure with huge toothed mouth barely visible in darkness, one flickering bulb, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Then I ordered a prisoner to open that door, and when he refused out of terror, he was executed."
+        }
+      ],
+      "motion_prompt": "Slow pull-back from the water's edge. The pale hand twitches once, fingers curling slightly. The bulb flickers, the distant figure barely sways in the darkness, and ripples roll across the black water.",
+      "hero": true
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "TOO LATE",
+      "image_prompt": "Closer in a dark flooded basement, reflection in black water shows an emaciated reddish-brown figure with huge mouth and oversized teeth that is not above, one weak bulb, mostly dark, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Too late I understood it never meant to frighten us. It only hides, and we kept pushing."
+        }
+      ],
+      "motion_prompt": "Slow push-in toward the water. The reflected figure slowly opens its huge mouth in the black water, while the surface above stays empty. The weak bulb flickers and fine ripples distort the reflection.",
+      "hero": true
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "Very close in darkness, out of focus, emaciated reddish-brown humanoid, huge mouth of oversized human teeth, rising from black water, lit only by one cold blue screen glow, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "You are alone with this. The only light in the room is your screen. I can see it from here."
+        }
+      ],
+      "motion_prompt": "Slow handheld push-in. The out-of-focus figure rises slowly from the black water, its jaw trembling as it breathes with a wheeze. The cold blue glow flickers, and water drips from its body.",
+      "hero": true
+    }
+  ],
+  "shape": "survivor",
+  "finale_type": "mimic",
+  "scare_profile": "double",
+  "picture_style": "flooded",
+  "tape_no": 17,
+  "archivist_note": "TAPE 17  -  I locked the library tonight and checked the door twice."
+}

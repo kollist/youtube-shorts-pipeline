@@ -1,0 +1,162 @@
+{
+  "title": "Scp-3008 The Endless Ikea",
+  "format": "scp",
+  "title_lines": [
+    "SCP-3008",
+    "THE ENDLESS IKEA"
+  ],
+  "audience": "horror",
+  "style": "found-footage photograph, one flashlight beam cutting through haze, everything outside the beam pitch black, desaturated, heavy 35mm film grain, photorealistic, absolutely no text, no letters, no numbers, no timestamps, no watermarks, vertical composition",
+  "tape_label": "FOUNDATION ARCHIVE - SCP-3008 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-3008",
+    "author": "Mortos",
+    "url": "https://scp-wiki.wikidot.com/scp-3008",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-3008 by Mortos - scp-wiki.wikidot.com/scp-3008 - CC BY-SA 3.0"
+  },
+  "poster_tag": "CLOSING TIME NEVER ENDS",
+  "post_caption": "This IKEA never ends, and closing time is deadly. Would you find the exit?",
+  "summary": "Foundation orientation tape for SCP-3008.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "Short brown hair, dark Foundation jacket with high collar, seen only from behind."
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "Flashlight point of view down a pitch-dark endless furniture store aisle, beam finding a faint far-off tall faceless figure in yellow shirt and blue trousers, large empty black space above, photorealistic found footage {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Soon a voice will tell you the store is now closed, and you will not get away. Let me explain. This IKEA looks ordinary, until you step out of sight of its doors."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "WHAT IT IS",
+      "image_prompt": "Flashlight beam sweeping an endless warehouse-like furniture showroom, rows of identical bookcases vanishing into darkness, no figure visible, one cold beam of light, photorealistic found footage {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Then you are moved somewhere else without feeling it, into a store that stretches on for ten square kilometers, maybe forever."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "WHAT LIVES THERE",
+      "image_prompt": "Flashlight beam on a crude barricade of stacked wardrobes and shelves, a torn yellow shirt on the floor beside it, deep darkness beyond, only the beam lighting the scene, photorealistic found footage {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "And it is not empty. Trapped people have built fortifications, because when the lights go out, faceless employees in yellow shirts turn violent."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "HOW IT'S CONTAINED",
+      "image_prompt": "Flashlight beam across a chained steel gate and a closed glass-door store entrance in an empty night car park, no figure visible, single beam of light, photorealistic found footage {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "So the Foundation, a secret organization that locks away things that should not exist, bought the retail park and rerouted the roads."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "WHO WATCHES IT",
+      "image_prompt": "Flashlight beam on a dim guard desk with dark monitors facing glass doors, far beyond them a faint tall faceless figure in yellow shirt and blue trousers half hidden by a pillar, photorealistic found footage {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "The entrance is watched constantly, and anyone who walks out is questioned, then made to forget."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "THE MISTAKE",
+      "image_prompt": "Flashlight held by the back of {Hero}, beam on the glass doors, far behind them a pale faceless figure in yellow shirt and blue trousers, too tall, partly hidden in shadow, photorealistic found footage {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "But a man stumbles out, and you look away for ten seconds."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "NOW",
+      "image_prompt": "Shaking flashlight beam in a dark corridor catching the edge of a tall faceless figure in yellow shirt and blue trousers, smooth blank face, stretched limbs, mostly shadow, photorealistic found footage {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "And now it is happening, the voice calm and close."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "Flashlight beam trembling, very close half out of focus faceless figure in yellow shirt and blue trousers, smooth blank skin, unnaturally tall, lit only by the beam, rest of frame black, photorealistic found footage {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "The store is now closed. Please exit the buil—"
+        }
+      ]
+    }
+  ],
+  "shape": "cold_open",
+  "finale_type": "unfinished",
+  "scare_profile": "classic",
+  "picture_style": "flashlight",
+  "tape_no": 16,
+  "archivist_note": "TAPE 16  -  Whoever is changing the tapes wants me to notice."
+}

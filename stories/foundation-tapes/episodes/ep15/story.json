@@ -1,0 +1,162 @@
+{
+  "title": "Scp-022 The Morgue",
+  "format": "scp",
+  "title_lines": [
+    "SCP-022",
+    "THE MORGUE"
+  ],
+  "audience": "horror",
+  "style": "inside a stuck elevator, brushed metal walls, flickering light, doors half open onto darkness between floors, photorealistic, absolutely no text, no letters, no numbers, no timestamps, no watermarks, vertical composition",
+  "tape_label": "FOUNDATION ARCHIVE - SCP-022 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-022",
+    "author": "DrSevere",
+    "url": "https://scp-wiki.wikidot.com/scp-022",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-022 by DrSevere - scp-wiki.wikidot.com/scp-022 - CC BY-SA 3.0"
+  },
+  "poster_tag": "THE MORGUE THAT WAKES",
+  "post_caption": "A morgue drawer slides open and the dead get up. Would you step inside to look?",
+  "summary": "Foundation orientation tape for SCP-022.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "short auburn hair, dark Foundation jacket, seen from behind, no face"
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "Wide dark photograph of a stuck elevator, doors half open onto black. Far away in the gap, a faint tall sheeted corpse shape. Large empty dark area at top. One flickering ceiling light, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "A drawer slides open in a hospital basement, and the body under the sheet begins to wake. This morgue in Britain is alive."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "WHAT IT DOES",
+      "image_prompt": "Photograph inside a stuck elevator, doors half open onto black. A corner of stained white morgue sheet trails across the floor. No figure visible. One flickering light, cold steel, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "After six minutes it rises and tries to leave. It never breathes, and even without its head, the body keeps moving."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "WHY IT'S DANGEROUS",
+      "image_prompt": "Photograph of elevator buttons all lit in a dark stuck elevator, the glow the only light. Pale cold fingerprints on the metal, a stained white sheet scrap caught in the half-open doors. No figure, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "And they are real, matching bodies stolen from morgues across the country."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "HOW IT'S CONTAINED",
+      "image_prompt": "Photograph from inside a stuck elevator, doors half open onto black. Far down the corridor, a heavy steel vault door catches one flickering light. Tiny pale sheeted shape barely visible, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "So the Foundation, a secret group that locks away things that should not exist, sealed it behind a vault door."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "WHO WATCHES IT",
+      "image_prompt": "Photograph of a dark stuck elevator, a small security camera dome glowing in one corner as the only light. Far through the half-open doors, a tall sheeted pale corpse partly hidden in black, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Now cameras watch for any body that walks out, and automated systems burn it the moment it leaves."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "THE MISTAKE",
+      "image_prompt": "Photograph from behind: the back of {Hero} standing in a stuck elevator, doors half open onto black. Far ahead, a tall pale sheeted corpse partly hidden. One flickering light, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "But tonight you are on watch, and a drawer opens. You step inside to look, against orders."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "Photograph of a stuck elevator, light flickering, doorway different now. A tall stiff pale grey sheeted corpse stands closer beyond the half-open doors, face covered, mostly dark. One light, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Anything inside reappears upstairs after 183 seconds. But you never do. The morgue has kept you."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "Photograph of a tall pale grey corpse under a stained white sheet, face covered, filling the gap of elevator doors, very close but in darkness, lit by one flicker, partly out of focus, photorealistic, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Six minutes, then we rise, cold hands, no breath, no sighs. Step inside, stay with me, soon you'll walk as we."
+        }
+      ]
+    }
+  ],
+  "shape": "orientation",
+  "finale_type": "lullaby",
+  "scare_profile": "quiet",
+  "picture_style": "elevator",
+  "tape_no": 15,
+  "archivist_note": "TAPE 15  -  The narrator says a name I did not hear the first time."
+}

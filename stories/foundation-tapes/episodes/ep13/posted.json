@@ -1,0 +1,21 @@
+{
+  "at": "2026-11-02T05:39:32-05:00",
+  "results": {
+    "youtube": {
+      "url": "https://youtube.com/shorts/F8GyBdpTkF4",
+      "id": "F8GyBdpTkF4"
+    },
+    "facebook": {
+      "url": "https://www.facebook.com/reel/1146325594601164",
+      "id": "1146325594601164"
+    },
+    "instagram": {
+      "url": "https://www.instagram.com/reel/DfPG4gmlQq0/",
+      "id": "18111777905192939"
+    },
+    "tiktok": {
+      "url": null,
+      "id": "v_inbox_file~v2.7703521230947452936"
+    }
+  }
+}

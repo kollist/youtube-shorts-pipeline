@@ -1,0 +1,163 @@
+{
+  "title": "Scp-087 The Stairwell",
+  "format": "scp",
+  "title_lines": [
+    "SCP-087",
+    "THE STAIRWELL"
+  ],
+  "audience": "horror",
+  "style": "1990s handheld camcorder VHS home video freeze frame shot at night in a dark house, lit only by the small camcorder light, low resolution, tracking distortion, washed-out colours, blown highlights, tape smear, deep black shadows, photorealistic, absolutely no text, no letters, no numbers, no timestamps, no watermarks, vertical composition",
+  "tape_label": "FOUNDATION ARCHIVE - SCP-087 - CONFIDENTIAL",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "credit": {
+    "item": "SCP-087",
+    "author": "Zaeyde",
+    "url": "https://scp-wiki.wikidot.com/scp-087",
+    "license": "CC BY-SA 3.0",
+    "line": "Based on SCP-087 by Zaeyde - scp-wiki.wikidot.com/scp-087 - CC BY-SA 3.0"
+  },
+  "poster_tag": "THE STAIRS THAT NEVER END",
+  "post_caption": "A staircase that never ends, and someone crying at the bottom. Would you walk down?",
+  "summary": "Foundation incident report on SCP-087.",
+  "characters": {
+    "Narrator": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "+6%",
+      "pitch": "-3Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "en-US-ChristopherNeural",
+      "rate": "-6%",
+      "pitch": "-4Hz",
+      "look": "short dark hair, dark Foundation jacket, seen only from behind, no face"
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "a very dark concrete stairwell seen from a landing, a black iron balustrade and handrail spiralling down into a pure black void in the middle of the frame, a few pale steps fading away, one cold light on the wall, the drop below completely black, black and white, monochrome, high contrast, 90s camcorder footage, VHS grain {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "This report was never meant to leave the archive. It describes a janitorial closet door hiding an unlit staircase that descends deeper than the building allows."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "INCIDENT 1",
+      "image_prompt": "a long steep flight of concrete stairs going down and down, the steps getting dimmer and dimmer until they vanish into absolute darkness, a metal handrail on the wall, no end visible, black and white, monochrome, high contrast, 90s camcorder footage, VHS grain {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "In the first exploration, a test subject took a light down thirteen steps to a round platform, where the stairs turned and kept going, while far below a child cried."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "THE FACE",
+      "image_prompt": "the edge of a dark stair landing looking down a black stairwell shaft, flights of stairs below disappearing into the void, far below in the blackness a faint pale smear, no clear shape, black and white, monochrome, high contrast, 90s camcorder footage, VHS grain {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "It sounded two hundred meters away, yet no one got closer. Each explorer met a face with no pupils, no nostrils, no mouth."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "THE RESPONSE",
+      "image_prompt": "a plain grey steel closet door in a bright ordinary university corridor, thick foam padding visible at the edge, one fluorescent light, dark corner shadow, black and white, monochrome, high contrast, 90s camcorder footage, VHS grain {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "So the Foundation sealed the door in steel, with padding six centimeters thick."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "PROCEDURE",
+      "image_prompt": "a single bare dim bulb above a dark stairwell, steps descending under it, the light dying a few steps down into total blackness, nothing else visible, black and white, monochrome, high contrast, 90s camcorder footage, VHS grain {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Now no one enters, because any light brighter than seventy-five watts is simply swallowed."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "NOT IN THE REPORT",
+      "image_prompt": "90s camcorder footage, padded steel door seen from far down a corridor, one flickering ceiling light, a pale grey blurred face hidden in shadow beneath the door's edge, tracking lines {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "What I keep skipping is the fourth exploration, the longest: data expunged, then knocking from inside the door."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "THE LAST ENTRY",
+      "image_prompt": "the flashlight beam on the last few steps, beyond them endless stairs dropping away into pitch black, far down in the dark a very faint pale smear, no clear face, 90s camcorder footage, VHS static {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "The last entry says the knocking has ceased. I never wrote that, and you heard it too."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "90s camcorder freeze-frame, pale grey blurred face very close in darkness, shut heavy-lidded eyes, no pupils, faint closed mouth, soft vignette, lit by one dim light, out of focus, tracking lines {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "Five. Four. Three. Two."
+        }
+      ]
+    }
+  ],
+  "shape": "incident_report",
+  "finale_type": "countdown",
+  "scare_profile": "classic",
+  "picture_style": "camcorder",
+  "tape_no": 12,
+  "archivist_note": "TAPE 12  -  The narrator's voice is not always the same voice.",
+  "bed_sound": "child"
+}

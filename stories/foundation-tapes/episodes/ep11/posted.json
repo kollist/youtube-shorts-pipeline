@@ -1,0 +1,25 @@
+{
+  "at": "2026-11-02T05:15:24-05:00",
+  "results": {
+    "youtube": {
+      "url": null,
+      "id": null,
+      "manual": true
+    },
+    "facebook": {
+      "url": null,
+      "id": null,
+      "manual": true
+    },
+    "instagram": {
+      "url": null,
+      "id": null,
+      "manual": true
+    },
+    "tiktok": {
+      "url": null,
+      "id": null,
+      "manual": true
+    }
+  }
+}
