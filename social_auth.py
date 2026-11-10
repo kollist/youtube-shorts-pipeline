@@ -79,9 +79,29 @@ def login_meta(user_token: str, app_id: str, app_secret: str, page_id: str | Non
                     pages = [direct]
             except SocialError:
                 pass
+    granted_note = ""
+    if not pages:                                            # ask Facebook which Pages (and permissions) this token was really given: the Page ticked in the dialog is listed there even when /me/accounts is empty
+        try:
+            dbg = http("GET", f"{GRAPH}/debug_token", params={"input_token": long_lived, "access_token": f"{app_id}|{app_secret}"}).json().get("data", {})
+            scopes = dbg.get("scopes", [])
+            ids = []
+            for g in dbg.get("granular_scopes", []):
+                if g.get("scope") in ("pages_show_list", "pages_manage_posts", "instagram_content_publish", "instagram_basic", "business_management"):
+                    ids += [i_ for i_ in g.get("target_ids", []) if i_ not in ids]
+            for pid in ([page_id] if page_id else ids):
+                try:
+                    direct = http("GET", f"{GRAPH}/{pid}", params={"fields": "id,name,access_token,instagram_business_account", "access_token": long_lived}).json()
+                    if direct.get("access_token"):
+                        pages.append(direct)
+                except SocialError:
+                    pass
+            granted_note = (f" This token (app {dbg.get('app_id', '?')} - {dbg.get('application', '?')}) was given: {', '.join(scopes) or 'no permissions'}"
+                            + (f"; Pages ticked in the dialog: {', '.join(ids)}." if ids else "; no Page was ticked in the dialog."))
+        except SocialError:
+            pass
     if not pages:
         raise SocialError("This login manages no Facebook Pages. Make sure you ticked the Page when approving "
-                          "the permissions (pages_show_list, pages_manage_posts, pages_read_engagement).")
+                          "the permissions (pages_show_list, pages_manage_posts, instagram_basic, instagram_content_publish, business_management; pages_read_engagement too if your app offers it)." + granted_note)
     if page_id:
         pages = [p for p in pages if p["id"] == page_id]
         if not pages:
@@ -90,11 +110,20 @@ def login_meta(user_token: str, app_id: str, app_secret: str, page_id: str | Non
         listing = "\n".join(f"  {p['id']}  {p['name']}" for p in pages)
         raise SocialError(f"This login manages {len(pages)} Pages - re-run with --page-id <id>:\n{listing}")
     page = pages[0]
-    set_key(str(ENV_FILE), "FACEBOOK_PAGE_ID", page["id"])
-    set_key(str(ENV_FILE), "FACEBOOK_PAGE_ACCESS_TOKEN", page["access_token"])
+    import accounts
+    target = accounts.env_file()                              # the ACTIVE account's file (.env for the default account)
+    target.touch(exist_ok=True)
+    set_key(str(target), "FACEBOOK_PAGE_ID", page["id"])
+    set_key(str(target), "FACEBOOK_PAGE_ACCESS_TOKEN", page["access_token"])
     ig = page.get("instagram_business_account", {}).get("id")
     if ig:
-        set_key(str(ENV_FILE), "INSTAGRAM_USER_ID", ig)
+        set_key(str(target), "INSTAGRAM_USER_ID", ig)
+    elif accounts.current() != accounts.DEFAULT:              # a stale Instagram id from an earlier login must not linger
+        set_key(str(target), "INSTAGRAM_USER_ID", "")
+    if accounts.current() == accounts.DEFAULT:
+        os.environ["FACEBOOK_PAGE_ID"], os.environ["FACEBOOK_PAGE_ACCESS_TOKEN"] = page["id"], page["access_token"]
+        if ig:
+            os.environ["INSTAGRAM_USER_ID"] = ig
     return {"page": page["name"], "page_id": page["id"], "instagram_user_id": ig}
 
 

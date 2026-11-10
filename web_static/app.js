@@ -1533,9 +1533,12 @@ async function loadPostTargets() {
 // --- Post dialog: used by Series episodes. Pick the platforms right where you post.
 // NOTHING is ticked by default, the Post button stays off until you tick something, the captions are written for you
 // (and editable) per platform, and a platform that already posted is locked so a retry can't double-post.
-async function openPostDialog({ title, send, privacy = true, captionReq = null, cleanupLabel = "", exportUrl = "" }) {
-  let platforms = [];
-  try { platforms = (await (await fetch("/api/social/status")).json()).platforms; } catch (e) { alert("Could not reach the server."); return; }
+async function openPostDialog({ title, send, privacy = true, captionReq = null, cleanupLabel = "", exportUrl = "", account = "" }) {
+  let platforms = [], acctLabel = "";
+  try {
+    const st = await (await fetch("/api/social/status" + (account && account !== "default" ? `?account=${encodeURIComponent(account)}` : ""))).json();
+    platforms = st.platforms; acctLabel = account && account !== "default" ? st.account_label : "";          // the main account needs no label: nothing changes for it
+  } catch (e) { alert("Could not reach the server."); return; }
   const root = document.createElement("div");
   root.className = "pd-bg";
   root.innerHTML = `<div class="pd" role="dialog" aria-label="Post">
@@ -1549,6 +1552,7 @@ async function openPostDialog({ title, send, privacy = true, captionReq = null, 
         <span class="pd-state" data-state="${p.name}">${p.configured ? "" : "not connected"}</span>
       </label>`).join("")}</div>
     <div class="pd-quick"><button type="button" data-q="all">All connected</button><button type="button" data-q="none">None</button></div>
+    ${acctLabel ? `<p class="pd-acct">Posting as <b>${escapeHtml(acctLabel)}</b> - its own YouTube, Facebook, Instagram and TikTok (Accounts tab).</p>` : ""}
     ${captionReq ? `<div class="pd-capshead"><b>Captions</b> <span class="pd-note pd-capstatus">writing…</span>
       <button type="button" class="pd-regen" hidden>↻ Rewrite</button></div><div class="pd-caps"></div>` : ""}
     ${privacy ? `<label class="pd-privacy">Visibility

@@ -30,8 +30,9 @@ class NotConfigured(SocialError):
 
 
 def env(name: str) -> str | None:
-    value = os.environ.get(name)
-    return value.strip() if value and value.strip() else None
+    """A key for the ACTIVE account (accounts.py): the default account reads the environment, another account reads its own .env.<name>."""
+    import accounts
+    return accounts.value(name)
 
 
 def missing_env(*names: str) -> list[str]:
@@ -41,18 +42,20 @@ def missing_env(*names: str) -> list[str]:
 # ---- token store (platforms whose login expires and refreshes) ----
 
 def load_token(platform: str) -> dict | None:
+    import accounts
     try:
-        return json.loads(TOKENS_FILE.read_text(encoding="utf-8")).get(platform)
+        return json.loads(TOKENS_FILE.read_text(encoding="utf-8")).get(accounts.token_key(platform))
     except (OSError, json.JSONDecodeError):
         return None
 
 
 def save_token(platform: str, data: dict) -> None:
+    import accounts
     try:
         store = json.loads(TOKENS_FILE.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         store = {}
-    store[platform] = data
+    store[accounts.token_key(platform)] = data
     TOKENS_FILE.write_text(json.dumps(store, indent=2), encoding="utf-8")
     try:
         TOKENS_FILE.chmod(0o600)  # contains refresh tokens

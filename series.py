@@ -387,8 +387,11 @@ def list_series() -> list[dict]:
             for n, plan in enumerate(series["arc"], 1):
                 st = episode_status(sdir / "episodes" / f"ep{n:02d}")
                 eps.append({"number": n, "planned_title": plan["title"], "planned_summary": plan["summary"], **st})
+            import accounts
+            acct = accounts.for_series(sdir.name)                   # which set of channels this series posts to
             out.append({"slug": sdir.name, "title": series["title"], "logline": series.get("logline", ""), "genre": series.get("genre", ""),
-                        "characters": list(series["characters"]), "standalone": False, "format": series.get("format", "story"), "episodes": eps})
+                        "characters": list(series["characters"]), "standalone": False, "format": series.get("format", "story"), "episodes": eps,
+                        "account": acct, "account_label": next((a["label"] for a in accounts.list_accounts() if a["id"] == acct), acct)})
         elif (sdir / "story.json").exists():       # an older single story
             st = episode_status(sdir)
             out.append({"slug": sdir.name, "title": st.get("title") or sdir.name, "logline": "", "genre": "", "characters": [],

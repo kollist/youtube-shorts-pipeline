@@ -35,6 +35,7 @@ load_dotenv()
 import series as series_mod
 import shots as shots_mod
 from performance import compute_breakdowns
+import accounts
 from social_post import MODULES as SOCIAL_MODULES, platform_status, post_clip
 from pipeline import annotate_clips, run_pipeline
 from select_clips import (
@@ -768,7 +769,7 @@ async def series_post(payload: dict):
     out = await loop.run_in_executor(None, lambda: post_video(
         str(series_mod.STORIES_DIR / status["video"]), title, description, platforms,
         payload.get("privacy", "public"), aigc=True, captions=payload.get("captions") or None, category=cat,
-        youtube_license="creativeCommon" if credit else "youtube"))
+        youtube_license="creativeCommon" if credit else "youtube", account=acct))
     out["cleaned"] = []
     if payload.get("cleanup") and out.get("all_ok"):         # only when EVERY ticked platform took it
         out["cleaned"] = await loop.run_in_executor(None, lambda: series_mod.archive_posted(ep_dir, out["results"]))
@@ -778,6 +779,10 @@ async def series_post(payload: dict):
 def _story_caption_info(slug: str, story: dict) -> dict:
     import captions
     sj = series_mod.STORIES_DIR / slug / "series.json"
+    try:
+        acct = accounts.clean_name(payload.get("account")) if payload.get("account") else accounts.for_series(slug)      # the series decides, unless a button says otherwise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     genre = json.loads(sj.read_text(encoding="utf-8")).get("genre", "") if sj.exists() else ""
     first = story["scenes"][0]["lines"][0]["text"] if story.get("scenes") and story["scenes"][0].get("lines") else ""
     return {"title": story["title"], "summary": story.get("summary", ""), "hook": first,
@@ -834,31 +839,49 @@ async def daily_hold(payload: dict):
 
 
 # ---------------------------------------------------------------- Accounts tab: connect YouTube / Facebook / Instagram / TikTok
-_tiktok_login = {"state": None}
+_tiktok_login: dict[str, str | None] = {}
+
+
+def _account_id(account: str | None) -> str:
+    try:
+        return accounts.clean_name(account)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/api/accounts")
-async def accounts_overview():
-    """Setup guides + live status for every platform. Secrets are never sent: only whether a key is set."""
+async def accounts_overview(account: str = ""):
+    """Setup guides + live status for every platform, for ONE account (the main one unless ?account=name). Secrets are never sent: only whether a key is set."""
     import setup_guides as sg
     import google_auth
-    status = {p["name"]: p for p in platform_status()}
+    acct = _account_id(account)
+    status = {p["name"]: p for p in platform_status(acct)}
     out = []
     for pid, g in sg.GUIDES.items():
         covers = g.get("covers", [pid])
         out.append({"id": pid, "label": g["label"], "level": g["level"], "time": g["time"], "needs": g["needs"], "steps": g["steps"],
-                    "keys": sg.key_state(pid), "login": g["login"], "covers": covers,
+                    "notes": g.get("account_notes", []) if acct != accounts.DEFAULT else [],
+                    "keys": sg.key_state(pid, acct), "login": g["login"], "covers": covers,
                     "client_secret_file": bool(g.get("client_secret_file")), "client_secret_present": Path(google_auth.CLIENT_SECRET_FILE).exists() if g.get("client_secret_file") else None,
                     "status": [{"name": c, "label": status[c]["label"], "configured": status[c]["configured"], "missing": status[c]["missing"]} for c in covers if c in status]})
-    return {"platforms": out}
+    return {"platforms": out, "account": acct, "accounts": accounts.list_accounts()}
+
+
+@app.post("/api/accounts/create")
+async def accounts_create(payload: dict):
+    """A new set of channels (for example a second series on its own YouTube / Facebook / Instagram / TikTok)."""
+    try:
+        return accounts.create(payload.get("id") or "", payload.get("label") or "")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/api/accounts/{platform}/keys")
-async def accounts_save_keys(platform: str, payload: dict):
+async def accounts_save_keys(platform: str, payload: dict, account: str = ""):
     import setup_guides as sg
     if platform not in sg.GUIDES:
         raise HTTPException(status_code=404, detail="Unknown platform")
-    saved = sg.save_keys(platform, payload.get("values") or {})
+    saved = sg.save_keys(platform, payload.get("values") or {}, _account_id(account))
     return {"saved": saved}
 
 
@@ -873,22 +896,30 @@ async def accounts_youtube_client_secret(payload: dict):
 
 
 @app.post("/api/accounts/youtube/login")
-async def accounts_youtube_login():
-    """Opens Google's consent page in the browser on THIS computer and waits until you approve it."""
+async def accounts_youtube_login(account: str = ""):
+    """Opens Google's consent page in the browser on THIS computer and waits until you approve it. For another account the login is saved
+    in its own token file - sign in with the Google account that owns THAT channel."""
     import google_auth
     loop = asyncio.get_event_loop()
     try:
-        await loop.run_in_executor(None, google_auth.get_credentials)
+        await loop.run_in_executor(None, login)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"YouTube login failed: {e}")
     return {"ok": True}
 
 
 @app.post("/api/accounts/meta/login")
-async def accounts_meta_login(payload: dict):
+async def accounts_meta_login(payload: dict, account: str = ""):
     import social_auth
     from social_common import SocialError, env
-    app_id, app_secret = env("META_APP_ID"), env("META_APP_SECRET")
+    acct = _account_id(account)
+    with accounts.use(acct):
+        app_id, app_secret = env("META_APP_ID"), env("META_APP_SECRET")          # the app keys are shared unless this account has its own
+    acct = _account_id(account)
+
+    def login():
+        with accounts.use(acct):
+            return google_auth.get_credentials()
     if not (app_id and app_secret):
         raise HTTPException(status_code=400, detail="Save the App ID and App Secret first.")
     token = (payload.get("user_token") or "").strip()
@@ -896,38 +927,43 @@ async def accounts_meta_login(payload: dict):
         raise HTTPException(status_code=400, detail="Paste the User token from the Graph API Explorer.")
     loop = asyncio.get_event_loop()
     try:
-        r = await loop.run_in_executor(None, lambda: social_auth.login_meta(token, app_id, app_secret, (payload.get("page_id") or "").strip() or None))
+        r = await loop.run_in_executor(None, login)
     except SocialError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    import dotenv
-    dotenv.load_dotenv(override=True)                 # login_meta wrote the Page token into .env; pick it up without a restart
     return r
 
 
 @app.post("/api/accounts/tiktok/link")
-async def accounts_tiktok_link():
+async def accounts_tiktok_link(account: str = ""):
     import secrets as _secrets
+
+    def login():
+        with accounts.use(acct):
+            return social_auth.login_meta(token, app_id, app_secret, (payload.get("page_id") or "").strip() or None)
     import social_auth
     from social_common import env
-    key, redirect = env("TIKTOK_CLIENT_KEY"), env("TIKTOK_REDIRECT_URI")
-    if not (key and env("TIKTOK_CLIENT_SECRET") and redirect):
+    acct = _account_id(account)
+    with accounts.use(acct):
+        key, secret, redirect = env("TIKTOK_CLIENT_KEY"), env("TIKTOK_CLIENT_SECRET"), env("TIKTOK_REDIRECT_URI")
+    if not (key and secret and redirect):
         raise HTTPException(status_code=400, detail="Save the Client key, Client secret and Redirect URI first.")
-    _tiktok_login["state"] = _secrets.token_urlsafe(16)
-    return {"url": social_auth.tiktok_authorize_url(key, redirect, _tiktok_login["state"])}
+    _tiktok_login[acct] = _secrets.token_urlsafe(16)                   # one pending login per account
+    return {"url": social_auth.tiktok_authorize_url(key, redirect, _tiktok_login[acct])}
 
 
 @app.post("/api/accounts/tiktok/finish")
-async def accounts_tiktok_finish(payload: dict):
+async def accounts_tiktok_finish(payload: dict, account: str = ""):
     import social_auth
     from social_common import SocialError, env
-    if not _tiktok_login["state"]:
+    acct = _account_id(account)
+    if not _tiktok_login.get(acct):
         raise HTTPException(status_code=400, detail="Press 'Get login link' first.")
     loop = asyncio.get_event_loop()
     try:
-        r = await loop.run_in_executor(None, lambda: social_auth.login_tiktok(env("TIKTOK_REDIRECT_URI"), payload.get("pasted", ""), _tiktok_login["state"]))
+        r = await loop.run_in_executor(None, finish)
     except SocialError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    _tiktok_login["state"] = None
+    _tiktok_login[acct] = None
     return r
 
 
@@ -935,6 +971,10 @@ async def accounts_tiktok_finish(payload: dict):
 async def series_export_episode(slug: str, number: int):
     """MANUAL MODE: the video + every platform's caption saved in exports/<series>-epNN/, for posting by hand. Needs no accounts."""
     import export_posts
+
+    def finish():
+        with accounts.use(acct):                                        # the token is saved under this account's own name
+            return social_auth.login_tiktok(env("TIKTOK_REDIRECT_URI"), payload.get("pasted", ""), _tiktok_login[acct])
     loop = asyncio.get_event_loop()
     try:
         return await loop.run_in_executor(None, lambda: export_posts.export_episode(slug, number))
@@ -1180,23 +1220,30 @@ async def upload_video(file: UploadFile = File(...)):
 
 
 @app.get("/api/social/status")
-async def social_status():
-    """Which platforms have everything they need (keys in .env, a completed login)."""
-    return {"platforms": platform_status()}
+async def social_status(account: str = ""):
+    """Which platforms have everything they need for an account (keys in its env file, a completed login)."""
+    acct = _account_id(account)
+    label = next((a["label"] for a in accounts.list_accounts() if a["id"] == acct), acct)
+    return {"platforms": platform_status(acct), "account": acct, "account_label": label}
 
 
 @app.post("/api/social/test/{platform}")
-async def social_test(platform: str):
+async def social_test(platform: str, account: str = ""):
     """A cheap authenticated call (who am I connected as) - posts nothing."""
     module = SOCIAL_MODULES.get(platform)
     if module is None:
         raise HTTPException(status_code=404, detail="Unknown platform")
-    gone = module.missing()
-    if gone:
-        return {"ok": False, "error": f"Missing: {', '.join(gone)}"}
+    acct = _account_id(account)
+
+    def check():
+        with accounts.use(acct):
+            gone = module.missing()
+            if gone:
+                return {"ok": False, "error": f"Missing: {', '.join(gone)}"}
+            return {"ok": True, "message": module.check_connection()}
     loop = asyncio.get_event_loop()
     try:
-        return {"ok": True, "message": await loop.run_in_executor(None, module.check_connection)}
+        return await loop.run_in_executor(None, check)
     except Exception as e:
         return {"ok": False, "error": str(e)}
 

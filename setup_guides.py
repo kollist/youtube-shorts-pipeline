@@ -27,6 +27,8 @@ GUIDES = {
             {"text": "Paste the whole contents of that JSON file below and press Save. Then press Log in and approve in the browser window that opens."},
         ],
         "keys": [], "client_secret_file": True, "login": "youtube",
+        "account_notes": ["This account has its own YouTube login. Press Log in and sign in with the Google account that owns THIS series' channel (if Google asks which channel, pick this one).",
+                          "The Google Cloud project and the OAuth file above are shared. If this is a different Google account, add it as a Test user first (OAuth consent screen -> Test users)."],
     },
     "meta": {
         "label": "Facebook + Instagram", "level": "Medium", "time": "about 30 minutes", "needs": "A Facebook Page you manage, and an Instagram Professional (Creator or Business) account linked to that Page.",
@@ -34,11 +36,15 @@ GUIDES = {
             {"text": "Link your Instagram Professional account to your Facebook Page (Page settings -> Linked accounts).", "url": "https://www.facebook.com/pages/?category=your_pages"},
             {"text": "Create an app on Meta for Developers (type: Business). It stays in Development mode: that works for your own Page and account without any review.", "url": "https://developers.facebook.com/apps/creation/"},
             {"text": "App settings -> Basic: copy the App ID and App Secret into the boxes below.", "url": "https://developers.facebook.com/apps/"},
-            {"text": "Open the Graph API Explorer, pick your app, and generate a User token with: pages_show_list, pages_manage_posts, pages_read_engagement, instagram_basic, instagram_content_publish, business_management. Tick your Page when asked.", "url": "https://developers.facebook.com/tools/explorer/"},
+            {"text": "Open the Graph API Explorer, pick your app, and generate a User token with: pages_show_list, pages_manage_posts, instagram_basic, instagram_content_publish, business_management (and pages_read_engagement if your app offers it - a brand-new app often does not, and posting works without it). Tick your Page and its Instagram account when asked.", "url": "https://developers.facebook.com/tools/explorer/"},
             {"text": "Paste that token below and press Log in. It is exchanged for a Page token that doesn't expire. Instagram also needs ngrok for a temporary public link to the video: `brew install ngrok`, then `ngrok config add-authtoken ...`.", "url": "https://dashboard.ngrok.com/get-started/your-authtoken"},
         ],
         "keys": [{"env": "META_APP_ID", "label": "App ID", "secret": False}, {"env": "META_APP_SECRET", "label": "App Secret", "secret": True}],
         "login": "meta", "covers": ["facebook", "instagram"],
+        "account_notes": ["The Meta app below is shared. Its App ID and Secret are not saved again here.",
+                          "The Facebook account that owns the new Page must be allowed on the app while it is in Development mode: App roles -> Roles -> add that account as a Developer or Tester, and accept the invite. (Or create the Page from the same Facebook profile that owns the app.)",
+                          "Generate the User token while logged in as that account and tick the NEW Page and its Instagram account. Page ID: type the new Page's ID if the login manages several Pages.",
+                          "Link the new Instagram Professional account to the new Page first (Page settings -> Linked accounts)."],
     },
     "tiktok": {
         "label": "TikTok", "level": "Hard", "time": "30 minutes, then a wait for approval", "needs": "A TikTok account, and a web page you control for the app's terms and privacy pages.",
@@ -50,6 +56,8 @@ GUIDES = {
             {"text": "Press Get login link, approve in the TikTok page, copy the full address you land on (it contains ?code=...) and paste it back here."},
             {"text": "Until TikTok approves the app (submit it with a screen recording of the flow), every post is private-only, so the app sends each video to your TikTok inbox as a DRAFT: open TikTok and press Post."},
         ],
+        "account_notes": ["The TikTok app is shared: its keys are not entered again. Press Get login link, and approve with the NEW TikTok account (log out of the other one in that browser first).",
+                          "While the app is unaudited, the new TikTok account may need to be added as a target user in the app's Sandbox settings. Posts arrive in that account's inbox as drafts, as for the main account."],
         "keys": [{"env": "TIKTOK_CLIENT_KEY", "label": "Client key", "secret": False}, {"env": "TIKTOK_CLIENT_SECRET", "label": "Client secret", "secret": True},
                  {"env": "TIKTOK_REDIRECT_URI", "label": "Redirect URI (https, with trailing slash)", "secret": False}],
         "login": "tiktok",
@@ -59,26 +67,41 @@ GUIDES = {
 ALLOWED_ENV = {k["env"] for g in GUIDES.values() for k in g["keys"]}
 
 
-def key_state(platform: str) -> list[dict]:
-    """Which keys are set - never their values."""
-    return [{"env": k["env"], "label": k["label"], "secret": k["secret"], "set": bool((os.environ.get(k["env"]) or "").strip())}
-            for k in GUIDES[platform]["keys"]]
+def key_state(platform: str, account: str | None = None) -> list[dict]:
+    """Which keys are set - never their values. For another account, "inherited" = it has no value of its own and uses the main account's app key
+    (one developer app can log in several accounts)."""
+    import accounts
+    out = []
+    for k in GUIDES[platform]["keys"]:
+        own = accounts.has_own(k["env"], account)
+        shared = bool((os.environ.get(k["env"]) or "").strip())
+        out.append({"env": k["env"], "label": k["label"], "secret": k["secret"], "set": own or shared, "inherited": (not own) and shared and accounts.clean_name(account) != accounts.DEFAULT})
+    return out
 
 
-def save_keys(platform: str, values: dict) -> list[str]:
-    """Writes the given keys to .env (empty values are skipped, so re-saving doesn't wipe a key). Returns the names saved."""
+def save_keys(platform: str, values: dict, account: str | None = None) -> list[str]:
+    """Writes the given keys to the account's env file (.env for the main account; empty values are skipped, so re-saving doesn't wipe a key). Returns the names saved."""
+    import accounts
     if platform not in GUIDES:
         raise ValueError("Unknown platform")
+    acct = accounts.clean_name(account)
+    target = ENV_FILE if acct == accounts.DEFAULT else accounts.env_file(acct)
     saved = []
-    ENV_FILE.touch(exist_ok=True)
+    target.touch(exist_ok=True)
+    if acct != accounts.DEFAULT:
+        try:
+            target.chmod(0o600)
+        except OSError:
+            pass
     if any((v or "").strip() for v in (values or {}).values()):
         import shutil
-        shutil.copy2(ENV_FILE, ENV_FILE.with_name(ENV_FILE.name + ".bak"))        # one backup of the previous .env, so a wrong paste can be undone
+        shutil.copy2(target, target.with_name(target.name + ".bak"))        # one backup of the previous file, so a wrong paste can be undone
     for env_name, value in (values or {}).items():
         value = (value or "").strip()
         if env_name in ALLOWED_ENV and value and env_name in {k["env"] for k in GUIDES[platform]["keys"]}:
-            set_key(str(ENV_FILE), env_name, value)
-            os.environ[env_name] = value
+            set_key(str(target), env_name, value)
+            if acct == accounts.DEFAULT:
+                os.environ[env_name] = value                                   # another account's keys must never leak into the shared environment
             saved.append(env_name)
     return saved
 

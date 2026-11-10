@@ -101,6 +101,7 @@ function viewSeries(s) {
         <div class="s-meta">${escapeHtml(s.format === "scp" ? "SCP Foundation · CC BY-SA 3.0" : (s.genre || (s.standalone ? "Single story" : "Series")))}</div>
         <h1>${escapeHtml(s.title)}</h1>
         ${s.logline ? `<p>${escapeHtml(s.logline)}</p>` : ""}
+        ${s.account && s.account !== "default" ? `<span class="s-acct" title="This series posts to its own channels (Accounts tab)">Posts to: ${escapeHtml(s.account_label || s.account)}</span>` : ""}
         <div class="s-chips">${s.characters.map((c) => `<span>${escapeHtml(c)}</span>`).join("")}</div>
         ${s.standalone ? "" : `<div class="s-row wrap"><button class="s-btn" data-act="toggle-add">＋ Add episode</button></div>
         <div class="s-add" hidden>
@@ -404,7 +405,7 @@ seriesContentEl.addEventListener("click", async (e) => {
     loadSeries();
   } else if (act === "post") {
     const s = seriesData.series.find((x) => x.slug === base.slug), ep = s && s.episodes.find((x) => x.number === base.number);
-    openPostDialog({ title: (ep && ep.title) || "this episode", captionReq: { kind: "series", ...base }, exportUrl: `/api/series/${encodeURIComponent(base.slug)}/episode/${base.number}/export`,
+    openPostDialog({ title: (ep && ep.title) || "this episode", account: (s && s.account) || "", captionReq: { kind: "series", ...base }, exportUrl: `/api/series/${encodeURIComponent(base.slug)}/episode/${base.number}/export`,
       cleanupLabel: "Delete this episode's video and pictures after it posts everywhere (the script is kept)",
       send: async (platforms, privacy, captions, cleanup) => {
       const res = await fetch("/api/series/post", { method: "POST", headers: { "Content-Type": "application/json" },

@@ -62,9 +62,16 @@ def _stored_scopes(token_file: str) -> set:
         return set()
 
 
+def token_file_for_account() -> str:
+    """The cached login of the ACTIVE account (accounts.py): the default account keeps TOKEN_FILE, another channel has its own token.<name>.json."""
+    import accounts
+    return accounts.youtube_token_file() or TOKEN_FILE
+
+
 def get_credentials() -> Credentials:
     creds = None
     has_required_scopes = False
+    TOKEN_FILE = token_file_for_account()                 # shadows the module default on purpose: one function, any account
     if Path(TOKEN_FILE).exists():
         has_required_scopes = set(SCOPES).issubset(_stored_scopes(TOKEN_FILE))
         creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)

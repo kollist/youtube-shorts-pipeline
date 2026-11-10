@@ -20,6 +20,7 @@ import re
 import subprocess
 from pathlib import Path
 
+import accounts
 import social_facebook
 import social_instagram
 import social_tiktok
@@ -32,15 +33,19 @@ LONG_CAPTION = 2200
 
 
 def youtube_missing() -> list[str]:
-    from google_auth import CLIENT_SECRET_FILE, TOKEN_FILE
+    from google_auth import CLIENT_SECRET_FILE, TOKEN_FILE, token_file_for_account
+    if accounts.current() != accounts.DEFAULT:                 # another channel: only a finished login counts - never open a consent window in the middle of a post
+        return [] if Path(token_file_for_account()).exists() else ["login (Accounts tab -> choose this account -> YouTube -> Log in)"]
     if Path(TOKEN_FILE).exists() or Path(CLIENT_SECRET_FILE).exists():
         return []
     return [f"{CLIENT_SECRET_FILE} (see google_auth.py)"]
 
 
-def platform_status() -> list[dict]:
-    rows = [{"name": "youtube", "label": LABELS["youtube"], "missing": youtube_missing()}]
-    rows += [{"name": n, "label": m.LABEL, "missing": m.missing()} for n, m in MODULES.items()]
+def platform_status(account: str | None = None) -> list[dict]:
+    """Which platforms are ready for an account (None = the default one)."""
+    with accounts.use(account):
+        rows = [{"name": "youtube", "label": LABELS["youtube"], "missing": youtube_missing()}]
+        rows += [{"name": n, "label": m.LABEL, "missing": m.missing()} for n, m in MODULES.items()]
     for r in rows:
         r["configured"] = not r["missing"]
     return rows
@@ -72,6 +77,9 @@ def _post_one(name: str, video_path: str, title: str, description: str, privacy:
     captions (optional) = the written, possibly hand-edited text per platform: {"instagram", "facebook", "tiktok", "youtube_title", "youtube"}."""
     captions = captions or {}
     if name == "youtube":
+        gone = youtube_missing()
+        if gone:
+            raise NotConfigured(f"YouTube isn't set up for this account yet - missing: {', '.join(gone)}")
         from upload_youtube import upload_short
         r = upload_short(video_path, captions.get("youtube_title") or title, captions.get("youtube") or description,
                          privacy_status=privacy, made_for_kids=made_for_kids, license_=youtube_license)
@@ -91,8 +99,13 @@ def _post_one(name: str, video_path: str, title: str, description: str, privacy:
     return module.post(video_path, caption=caption[:LONG_CAPTION], title=(captions.get("youtube_title") or title), privacy=privacy, aigc=aigc)
 
 
-def post_clip(meta_path: str, platforms: list[str] | None = None, privacy: str = "public", delete_when_done: bool = True) -> dict:
+def post_clip(meta_path: str, platforms: list[str] | None = None, privacy: str = "public", delete_when_done: bool = True, account: str | None = None) -> dict:
     """Returns {"results": {platform: {"ok", "id", "url", "error", "skipped"}}, "all_ok", "deleted"}."""
+    with accounts.use(account):
+        return _post_clip(meta_path, platforms, privacy, delete_when_done)
+
+
+def _post_clip(meta_path: str, platforms: list[str] | None, privacy: str, delete_when_done: bool) -> dict:
     meta_path = Path(meta_path)
     platforms = [p for p in ALL_PLATFORMS if p in (platforms or ["youtube"])]  # YouTube first, fixed order after
 
@@ -137,17 +150,18 @@ def post_clip(meta_path: str, platforms: list[str] | None = None, privacy: str =
 
 def post_video(video_path: str, title: str, description: str = "", platforms: list[str] | None = None,
                privacy: str = "public", aigc: bool = False, made_for_kids: bool = False,
-               captions: dict | None = None, category: str = "", youtube_license: str = "youtube") -> dict:
-    """Any finished video file (e.g. a story from story_video.py). Nothing is deleted here."""
+               captions: dict | None = None, category: str = "", youtube_license: str = "youtube", account: str | None = None) -> dict:
+    """Any finished video file (e.g. a story from story_video.py). Nothing is deleted here. account = which set of channels (accounts.py); None = the default."""
     results = {}
-    for name in [p for p in ALL_PLATFORMS if p in (platforms or [])]:
-        try:
-            results[name] = {"ok": True, **_post_one(name, video_path, title, description, privacy, aigc, made_for_kids, captions, category, youtube_license)}
-            if name != "youtube":
-                log_post({"platform": name, "post_id": results[name]["id"], "url": results[name].get("url"), "title": title})
-        except Exception as e:
-            results[name] = {"ok": False, "error": str(e)}
-    return {"results": results, "all_ok": bool(results) and all(r["ok"] for r in results.values())}
+    with accounts.use(account):
+        for name in [p for p in ALL_PLATFORMS if p in (platforms or [])]:
+            try:
+                results[name] = {"ok": True, **_post_one(name, video_path, title, description, privacy, aigc, made_for_kids, captions, category, youtube_license)}
+                if name != "youtube":
+                    log_post({"platform": name, "account": accounts.current(), "post_id": results[name]["id"], "url": results[name].get("url"), "title": title})
+            except Exception as e:
+                results[name] = {"ok": False, "error": str(e)}
+    return {"results": results, "all_ok": bool(results) and all(r["ok"] for r in results.values()), "account": accounts.clean_name(account)}
 
 
 def _print(outcome: dict) -> None:
