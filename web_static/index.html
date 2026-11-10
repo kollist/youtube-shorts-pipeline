@@ -96,6 +96,7 @@
 
       <div class="field checkbox-field">
         <label><input id="burn-captions" type="checkbox" checked /> Burn in captions (word-by-word karaoke style)</label>
+        <label title="Blurred backdrop, the whole clip at full width, the channel handle on top, a progress bar, and a FOLLOW card for the last 2.5 seconds. Clips made with it post to the KadClipper account."><input id="clip-template-on" type="checkbox" /> KadClipper template: <input id="clip-template-handle" type="text" value="kadclipper" size="12" style="width:9em" /> (handle, no @)</label>
       </div>
 
       <div class="field checkbox-field">
@@ -165,7 +166,7 @@
   <div class="page" id="page-discover">
     <section class="panel" id="discover-panel">
       <h2>Discover <span id="discover-refresh-wrap"><button id="discover-refresh-btn" class="pill-btn">refresh</button></span></h2>
-      <div class="field-hint">Recent long streams (40+ minutes) from IShowSpeed and Kai Cenat's official channels. <b>Clip it</b> loads the stream into Run in Livestream mode with the streamer already filled in. These aren't rights-cleared: check each streamer's clipping rules, or use an official clipping campaign, before posting.</div>
+      <div class="field-hint"><b>GTA 6</b>: long streams and videos (40+ minutes) from the last two weeks, found by search; channels you have permission from (data/clip_channels.json) are marked <b>permission ✓</b>. IShowSpeed and Kai Cenat are still here as filters. <b>Clip it</b> loads the stream into Run in Livestream mode. None of this is rights-cleared: Take-Two claims GTA footage and music, so only clip streamers who allow it, and test on a throwaway account first.</div>
       <div class="discover-filters">
         <div id="discover-streamers" class="discover-pills"></div>
         <select id="discover-sort"><option value="new">Newest</option><option value="hot">Most views per day</option><option value="long">Longest</option></select>

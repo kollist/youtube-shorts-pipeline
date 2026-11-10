@@ -260,7 +260,7 @@ function buildDiscoverCard(video) {
 // --- Discover: long streams from IShowSpeed and Kai Cenat ---
 const discoverStreamersEl = document.getElementById("discover-streamers");
 const discoverSortEl = document.getElementById("discover-sort");
-let discoverStreamer = "all";
+let discoverStreamer = "GTA 6";
 let discoverVideos = [];
 
 function formatStreamLength(sec) {
@@ -289,11 +289,13 @@ function buildStreamCard(v) {
       <img src="${escapeHtml(v.thumbnail)}" alt="" loading="lazy">
       <span class="stream-badge">${formatStreamLength(v.duration_sec)}</span>
       <span class="stream-who">${escapeHtml(v.streamer)}</span>
+      ${v.allowed ? `<span class="stream-ok" title="This channel is on your permission list (data/clip_channels.json)">permission ✓</span>` : ""}
     </div>
     <div class="discover-body">
       <div class="discover-title">${escapeHtml(v.title)}</div>
       <div class="discover-meta">
         <span>${timeAgo(v.published_at)}</span>
+        ${v.channel && v.streamer === "GTA 6" ? `<span>${escapeHtml(v.channel)}</span>` : ""}
         <span>${v.view_count.toLocaleString()} views</span>
         <span>${v.view_velocity.toLocaleString()}/day</span>
       </div>
@@ -1508,9 +1510,14 @@ function selectedPlatforms() {
   return picked.length ? picked : ["youtube"];
 }
 
+let clipAcct = "";                         // the account the KadClipper template posts to ("" = the main account)
 async function loadPostTargets() {
   try {
-    const res = await fetch("/api/social/status");
+    const tpl = await (await fetch("/api/clip-template")).json();
+    clipAcct = tpl.enabled && tpl.account && tpl.account !== "default" ? tpl.account : "";
+  } catch (e) { clipAcct = ""; }
+  try {
+    const res = await fetch("/api/social/status" + (clipAcct ? `?account=${encodeURIComponent(clipAcct)}` : ""));
     if (!res.ok) return;
     socialPlatforms = (await res.json()).platforms;
   } catch (e) { return; }
@@ -1525,9 +1532,10 @@ async function loadPostTargets() {
     try { localStorage.setItem("postTargets", JSON.stringify(selectedPlatforms())); } catch (e) {}
   }));
   const off = socialPlatforms.filter((p) => !p.configured && p.name !== "youtube");
-  postTargetsNoteEl.textContent = off.length
+  const who = clipAcct ? `Posting as ${clipAcct} (KadClipper template). ` : "";
+  postTargetsNoteEl.textContent = who + (off.length
     ? `Not connected: ${off.map((p) => p.label).join(", ")} - add their keys to .env (see .env.example), then reload. Hover a greyed name to see what's missing.`
-    : "";
+    : "");
 }
 
 // --- Post dialog: used by Series episodes. Pick the platforms right where you post.
@@ -1544,6 +1552,7 @@ async function openPostDialog({ title, send, privacy = true, captionReq = null, 
   root.innerHTML = `<div class="pd" role="dialog" aria-label="Post">
     <button class="pd-x" aria-label="Close">✕</button>
     <h3>Post “${escapeHtml(title)}”</h3>
+    ${acctLabel ? `<p class="pd-acct">Posting as <b>${escapeHtml(acctLabel)}</b> - its own YouTube, Facebook, Instagram and TikTok (Accounts tab).</p>` : ""}
     <p class="pd-note">Choose where it goes. Nothing is ticked for you - posting everywhere at once on a new account can trigger spam limits.</p>
     <div class="pd-list">${platforms.map((p) => `
       <label class="pd-row ${p.configured ? "" : "off"}" title="${p.configured ? "" : escapeHtml("Not connected - missing: " + p.missing.join(", "))}">
@@ -1552,7 +1561,6 @@ async function openPostDialog({ title, send, privacy = true, captionReq = null, 
         <span class="pd-state" data-state="${p.name}">${p.configured ? "" : "not connected"}</span>
       </label>`).join("")}</div>
     <div class="pd-quick"><button type="button" data-q="all">All connected</button><button type="button" data-q="none">None</button></div>
-    ${acctLabel ? `<p class="pd-acct">Posting as <b>${escapeHtml(acctLabel)}</b> - its own YouTube, Facebook, Instagram and TikTok (Accounts tab).</p>` : ""}
     ${captionReq ? `<div class="pd-capshead"><b>Captions</b> <span class="pd-note pd-capstatus">writing…</span>
       <button type="button" class="pd-regen" hidden>↻ Rewrite</button></div><div class="pd-caps"></div>` : ""}
     ${privacy ? `<label class="pd-privacy">Visibility
@@ -1907,3 +1915,19 @@ resumeActiveRunIfAny();
 // Now that every element reference and loader function above is initialized,
 // it's safe to show whichever page the URL hash points to (or "run" if none).
 showPage(location.hash.slice(1) || "run");
+
+
+// --- KadClipper clip template switch (data/clip_template.json) ---
+(async function initClipTemplate() {
+  const on = document.getElementById("clip-template-on"), handle = document.getElementById("clip-template-handle");
+  if (!on || !handle) return;
+  try { const t = await (await fetch("/api/clip-template")).json(); on.checked = !!t.enabled; handle.value = t.handle || "kadclipper"; } catch (e) {}
+  const save = async () => {
+    try {
+      await fetch("/api/clip-template", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: on.checked, handle: handle.value.trim() || "kadclipper" }) });
+      if (typeof loadPostTargets === "function") loadPostTargets();
+    } catch (e) {}
+  };
+  on.addEventListener("change", save);
+  handle.addEventListener("change", save);
+})();

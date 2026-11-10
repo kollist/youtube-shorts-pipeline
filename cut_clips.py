@@ -12,6 +12,7 @@ Output:
     ... etc
 """
 
+import clipper_template
 import json
 import random
 import re
@@ -116,7 +117,7 @@ def _group_words_into_chunks(
     return chunks
 
 
-def _karaoke_dialogue_lines(words: list[dict]) -> list[str]:
+def _karaoke_dialogue_lines(words: list[dict], highlight: str | None = None) -> list[str]:
     lines = []
     for chunk in _group_words_into_chunks(words):
         texts = [_sanitize_word(w["text"]) for w in chunk]
@@ -131,7 +132,7 @@ def _karaoke_dialogue_lines(words: list[dict]) -> list[str]:
                 if not word_text:
                     continue
                 if j == i:
-                    parts.append(f"{{\\c{HIGHLIGHT_COLOR}\\fscx112\\fscy112}}{word_text}{{\\r}}")
+                    parts.append(f"{{\\c{highlight or HIGHLIGHT_COLOR}\\fscx112\\fscy112}}{word_text}{{\\r}}")
                 else:
                     parts.append(word_text)
             lines.append(
@@ -141,13 +142,18 @@ def _karaoke_dialogue_lines(words: list[dict]) -> list[str]:
     return lines
 
 
-def build_karaoke_ass(words: list[dict], width: int, height: int, font_size: int, margin_v: int) -> str:
+def build_karaoke_ass(words: list[dict], width: int, height: int, font_size: int, margin_v: int, tpl: dict | None = None, title: str = "", duration: float = 0.0) -> str:
+    if tpl:                                                  # the KadClipper template: its own caption style, and the hook line above the clip
+        lines = _karaoke_dialogue_lines(words, clipper_template.HIGHLIGHT)
+        t = clipper_template.title_line(title, duration) if title else None
+        return clipper_template.ass_header(tpl, width, height) + "\n".join(lines + ([t] if t else [])) + "\n"
     header = ASS_HEADER.format(width=width, height=height, font_size=font_size, margin_v=margin_v)
     return header + "\n".join(_karaoke_dialogue_lines(words)) + "\n"
 
 
 def build_karaoke_ass_for_clip(
-    segments: list[dict], clip_start: float, clip_end: float, width: int, height: int, font_size: int, margin_v: int
+    segments: list[dict], clip_start: float, clip_end: float, width: int, height: int, font_size: int, margin_v: int,
+    tpl: dict | None = None, title: str = "", duration: float = 0.0,
 ) -> str | None:
     words = []
     for seg in segments:
@@ -161,19 +167,20 @@ def build_karaoke_ass_for_clip(
             })
     if not words:
         return None
-    return build_karaoke_ass(words, width, height, font_size, margin_v)
+    return build_karaoke_ass(words, width, height, font_size, margin_v, tpl, title, duration)
 
 
 def build_subtitle_file(
     segments: list[dict], clip_start: float, clip_end: float, base_path: Path,
     width: int, height: int, font_size: int, margin_v: int,
+    tpl: dict | None = None, title: str = "", duration: float = 0.0,
 ) -> Path | None:
     """Picks word-level karaoke captions (.ass) when the transcript has
     per-word timing, falling back to plain sentence-level captions (.srt)
     for transcripts saved before that was added."""
     has_words = any(seg.get("words") for seg in segments)
     if has_words:
-        ass_text = build_karaoke_ass_for_clip(segments, clip_start, clip_end, width, height, font_size, margin_v)
+        ass_text = build_karaoke_ass_for_clip(segments, clip_start, clip_end, width, height, font_size, margin_v, tpl, title, duration)
         if not ass_text:
             return None
         path = base_path.with_suffix(".ass")
@@ -317,6 +324,15 @@ def cut_clip(
         chain += f";[{last_label}][filler]vstack=inputs=2[stacked]"
         # Only ever the content track's audio - the filler footage is muted.
         cmd += ["-filter_complex", chain, "-map", "[stacked]", "-map", "0:a?"]
+    elif vertical and clipper_template.active():
+        # The KadClipper template (clipper_template.py): blurred backdrop, the whole clip at full width, the handle on top, a progress bar,
+        # and a follow card for the last 2.5 seconds. The captions go in the free middle area under the clip.
+        chain, extra, last_label = clipper_template.filter_chain(clipper_template.active(), duration)
+        cmd += extra
+        if subtitle_path:
+            chain += f";[{last_label}]{_subtitles_filter(subtitle_path, split=False)}[capped]"
+            last_label = "capped"
+        cmd += ["-filter_complex", chain, "-map", f"[{last_label}]", "-map", "0:a?", "-t", f"{duration:.2f}"]            # an explicit output limit: the looped overlay inputs would otherwise run on
     elif vertical:
         # Center crop alone zoomed in and lost the edges of wide shots (the
         # user's "not showing everything" complaint). Instead: fill the full
@@ -445,9 +461,11 @@ def process_all_clips(
         subtitle_path = None
 
         if burn_captions and segments is not None:
+            tpl = clipper_template.active()
             subtitle_path = build_subtitle_file(
-                segments, clip["start"], clip["end"], out_dir / clip_id,
+                segments, clip["start"], clip["end"] - (2.5 if tpl else 0), out_dir / clip_id,         # the template's follow card owns the last 2.5 s: no captions under it
                 width=1080, height=1920, font_size=64, margin_v=170,
+                tpl=tpl, title=clip.get("title", ""), duration=clip["end"] - clip["start"],
             )
 
         cut_clip(

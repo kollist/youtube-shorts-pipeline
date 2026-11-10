@@ -17,10 +17,12 @@ ONE-TIME SETUP:
     3. Add it to .env as YOUTUBE_API_KEY=...
 """
 
+import html
 import json
 import os
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
@@ -82,10 +84,63 @@ def _iso_duration_seconds(iso: str) -> int:
     return d * 86400 + h * 3600 + mi * 60 + s
 
 
+# --- the GTA 6 niche: there is no fixed list of streamers for a brand-new game, so this SEARCHES for long GTA 6 streams and videos from the last two weeks,
+# and also reads every channel in data/clip_channels.json (channels that said yes to clipping - the safe list). Results from the safe list are marked.
+GTA6 = "GTA 6"
+GTA6_QUERIES = ["GTA 6 gameplay", "GTA VI live stream", "GTA 6 full playthrough"]
+GTA6_JUNK = re.compile(r"\bgta\s*(5|v)\b|before gta|pre-?load|install|trailer|react|leak|fake|android|mobile|waiting for|countdown|superhero|barred game|everything we know|breakdown|ost\b", re.I)     # not GTA 6 footage: the old game, trailers, fakes
+GTA6_TITLE = re.compile(r"\bgta\s*(6|vi)\b|grand theft auto\s*(6|vi)\b", re.I)
+CLIP_CHANNELS = Path(__file__).parent / "data" / "clip_channels.json"        # {"channels": [{"label": "...", "id": "UC..."}]}
+_GTA_CACHE: dict = {"at": 0.0, "videos": []}
+
+
+def allowed_channels() -> list[dict]:
+    try:
+        return [c for c in json.loads(CLIP_CHANNELS.read_text(encoding="utf-8")).get("channels", []) if c.get("id")]
+    except (OSError, json.JSONDecodeError):
+        return []
+
+
+def discover_gta6(days: int = 14, per_query: int = 25, force: bool = False) -> list[dict]:
+    """Long (40+ min) GTA 6 videos and streams from the last `days` days: YouTube search (100 quota units per query, so cached) + the permission list."""
+    import time
+    from datetime import timedelta
+    if not force and time.time() - _GTA_CACHE["at"] < STREAM_CACHE_SECONDS and _GTA_CACHE["videos"]:
+        return _GTA_CACHE["videos"]
+    after = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    found: dict[str, dict] = {}
+    for q in GTA6_QUERIES:
+        data = _api_get("search", part="snippet", q=q, type="video", order="viewCount", videoDuration="long", publishedAfter=after, maxResults=per_query)
+        for it in data.get("items", []):
+            sn = it["snippet"]; vid = it["id"]["videoId"]; sn["title"] = html.unescape(sn["title"])
+            if GTA6_TITLE.search(sn["title"]) and not GTA6_JUNK.search(sn["title"]):
+                found.setdefault(vid, {"video_id": vid, "title": sn["title"], "published_at": sn["publishedAt"], "channel": sn["channelTitle"], "channel_id": sn["channelId"],
+                                       "thumbnail": sn.get("thumbnails", {}).get("medium", {}).get("url", "")})
+    allowed = {c["id"] for c in allowed_channels()}
+    for c in allowed_channels():
+        for v in _recent_uploads(c["id"], max_results=15):
+            v.update(channel=c.get("label", ""), channel_id=c["id"])
+            found.setdefault(v["video_id"], v)
+    vids = list(found.values())
+    if vids:
+        ids = ",".join(v["video_id"] for v in vids[:50])
+        details = {i["id"]: i for i in _api_get("videos", part="contentDetails", id=ids).get("items", [])}
+        for v in vids:
+            v["duration_sec"] = _iso_duration_seconds(details.get(v["video_id"], {}).get("contentDetails", {}).get("duration", ""))
+        vids = _attach_stats([v for v in vids if v.get("duration_sec", 0) >= MIN_STREAM_SECONDS][:50])
+    for v in vids:
+        v.update(streamer=GTA6, url=f"https://www.youtube.com/watch?v={v['video_id']}", allowed=v.get("channel_id") in allowed)
+    vids.sort(key=lambda v: v["published_at"], reverse=True)
+    _GTA_CACHE.update(at=time.time(), videos=vids)
+    return vids
+
+
 def discover_streams(streamer: str | None = None, per_channel: int = 50, force: bool = False) -> list[dict]:
     """Recent long streams from the streamers above, newest first. Each carries its
     length, views and views per day. `streamer` filters to one of them."""
     import time
+    if streamer == GTA6:
+        return discover_gta6(force=force)
     if force or time.time() - _STREAM_CACHE["at"] > STREAM_CACHE_SECONDS or not _STREAM_CACHE["videos"]:
         collected = []
         for name, channels in STREAMER_CHANNELS.items():

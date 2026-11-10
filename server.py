@@ -517,7 +517,7 @@ async def post_input_plan(stem: str, payload: dict):
 
 @app.get("/api/discover")
 async def discover_videos(streamer: str = "all", refresh: bool = False):
-    """Recent long streams (40+ minutes) from IShowSpeed and Kai Cenat's official channels."""
+    """Recent long streams and videos (40+ minutes): GTA 6 (searched) and the IShowSpeed / Kai Cenat channels."""
     loop = asyncio.get_event_loop()
     try:
         videos = await loop.run_in_executor(None, lambda: discover_streams(streamer, force=refresh))
@@ -525,7 +525,20 @@ async def discover_videos(streamer: str = "all", refresh: bool = False):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Could not reach YouTube: {e}")
-    return {"videos": videos, "streamers": list(STREAMER_CHANNELS)}
+    return {"videos": videos, "streamers": ["GTA 6", *STREAMER_CHANNELS]}
+
+
+@app.get("/api/clip-template")
+async def clip_template_get():
+    import clipper_template
+    return clipper_template.load()
+
+
+@app.post("/api/clip-template")
+async def clip_template_set(payload: dict):
+    """Turns the KadClipper clip template on/off and sets its handle and call to action (data/clip_template.json)."""
+    import clipper_template
+    return clipper_template.save(enabled=payload.get("enabled"), handle=payload.get("handle"), cta=payload.get("cta"), account=payload.get("account"))
 
 
 @app.get("/api/token-budget")
@@ -766,6 +779,10 @@ async def series_post(payload: dict):
     cat = _story_caption_info(slug, story)["category"]
     loop = asyncio.get_event_loop()
     from social_post import post_video
+    try:
+        acct = accounts.clean_name(payload.get("account")) if payload.get("account") else accounts.for_series(slug)      # the series decides, unless a button says otherwise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     out = await loop.run_in_executor(None, lambda: post_video(
         str(series_mod.STORIES_DIR / status["video"]), title, description, platforms,
         payload.get("privacy", "public"), aigc=True, captions=payload.get("captions") or None, category=cat,
@@ -779,10 +796,6 @@ async def series_post(payload: dict):
 def _story_caption_info(slug: str, story: dict) -> dict:
     import captions
     sj = series_mod.STORIES_DIR / slug / "series.json"
-    try:
-        acct = accounts.clean_name(payload.get("account")) if payload.get("account") else accounts.for_series(slug)      # the series decides, unless a button says otherwise
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
     genre = json.loads(sj.read_text(encoding="utf-8")).get("genre", "") if sj.exists() else ""
     first = story["scenes"][0]["lines"][0]["text"] if story.get("scenes") and story["scenes"][0].get("lines") else ""
     return {"title": story["title"], "summary": story.get("summary", ""), "hook": first,
@@ -900,6 +913,11 @@ async def accounts_youtube_login(account: str = ""):
     """Opens Google's consent page in the browser on THIS computer and waits until you approve it. For another account the login is saved
     in its own token file - sign in with the Google account that owns THAT channel."""
     import google_auth
+    acct = _account_id(account)
+
+    def login():
+        with accounts.use(acct):
+            return google_auth.get_credentials()
     loop = asyncio.get_event_loop()
     try:
         await loop.run_in_executor(None, login)
@@ -915,16 +933,15 @@ async def accounts_meta_login(payload: dict, account: str = ""):
     acct = _account_id(account)
     with accounts.use(acct):
         app_id, app_secret = env("META_APP_ID"), env("META_APP_SECRET")          # the app keys are shared unless this account has its own
-    acct = _account_id(account)
-
-    def login():
-        with accounts.use(acct):
-            return google_auth.get_credentials()
     if not (app_id and app_secret):
         raise HTTPException(status_code=400, detail="Save the App ID and App Secret first.")
     token = (payload.get("user_token") or "").strip()
     if not token:
         raise HTTPException(status_code=400, detail="Paste the User token from the Graph API Explorer.")
+
+    def login():
+        with accounts.use(acct):
+            return social_auth.login_meta(token, app_id, app_secret, (payload.get("page_id") or "").strip() or None)
     loop = asyncio.get_event_loop()
     try:
         r = await loop.run_in_executor(None, login)
@@ -936,10 +953,6 @@ async def accounts_meta_login(payload: dict, account: str = ""):
 @app.post("/api/accounts/tiktok/link")
 async def accounts_tiktok_link(account: str = ""):
     import secrets as _secrets
-
-    def login():
-        with accounts.use(acct):
-            return social_auth.login_meta(token, app_id, app_secret, (payload.get("page_id") or "").strip() or None)
     import social_auth
     from social_common import env
     acct = _account_id(account)
@@ -958,6 +971,10 @@ async def accounts_tiktok_finish(payload: dict, account: str = ""):
     acct = _account_id(account)
     if not _tiktok_login.get(acct):
         raise HTTPException(status_code=400, detail="Press 'Get login link' first.")
+
+    def finish():
+        with accounts.use(acct):                                        # the token is saved under this account's own name
+            return social_auth.login_tiktok(env("TIKTOK_REDIRECT_URI"), payload.get("pasted", ""), _tiktok_login[acct])
     loop = asyncio.get_event_loop()
     try:
         r = await loop.run_in_executor(None, finish)
@@ -971,10 +988,6 @@ async def accounts_tiktok_finish(payload: dict, account: str = ""):
 async def series_export_episode(slug: str, number: int):
     """MANUAL MODE: the video + every platform's caption saved in exports/<series>-epNN/, for posting by hand. Needs no accounts."""
     import export_posts
-
-    def finish():
-        with accounts.use(acct):                                        # the token is saved under this account's own name
-            return social_auth.login_tiktok(env("TIKTOK_REDIRECT_URI"), payload.get("pasted", ""), _tiktok_login[acct])
     loop = asyncio.get_event_loop()
     try:
         return await loop.run_in_executor(None, lambda: export_posts.export_episode(slug, number))
@@ -1255,14 +1268,23 @@ async def upload_clip(payload: dict):
     platforms = payload.get("platforms")
     if not meta_path:
         raise HTTPException(status_code=400, detail="meta_path is required")
+    import clipper_template
+    try:                                                         # clips made with the KadClipper template post to ITS accounts, never the main channel
+        acct = accounts.clean_name(payload.get("account") or (clipper_template.active() or {}).get("account"))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    def run(fn, *a):
+        with accounts.use(acct):                                 # the account is a context variable: it has to be set inside the worker thread
+            return fn(*a)
 
     loop = asyncio.get_event_loop()
     if platforms and platforms != ["youtube"]:
         # Several platforms: per-platform results, never a hard failure - the
         # ones that worked stay worked, and a retry only redoes the rest.
-        return await loop.run_in_executor(None, post_clip, meta_path, platforms, privacy)
+        return await loop.run_in_executor(None, run, post_clip, meta_path, platforms, privacy)
     try:
-        result = await loop.run_in_executor(None, upload_from_meta_file, meta_path, privacy)
+        result = await loop.run_in_executor(None, run, upload_from_meta_file, meta_path, privacy)
     except YouTubeUploadLimitExceeded as e:
         raise HTTPException(status_code=429, detail=str(e))
     except Exception as e:
