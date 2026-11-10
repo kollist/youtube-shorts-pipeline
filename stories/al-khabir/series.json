@@ -1,0 +1,67 @@
+{
+  "title": "الْخُبِيرْ",
+  "slug": "al-khabir",
+  "format": "arabic",
+  "genre": "Moroccan Darija horror, one tale (khbira) per episode",
+  "premise": "One tale (khbira) per episode on a single case: an abandoned riad in the old medina with a well that sings. A first-person storyteller narrates; he is NOT called the Expert. 'الخبير' means fictional stories in Moroccan Darija. Folk beliefs used: jinn live in wells and drains and imitate voices; never answer your name at night; bismillah before entering or pouring; salt, jawi incense (bakhour), hamsa, chouafa, taleb reading Quran.",
+  "style": "found-footage horror photograph at night, one weak flashlight beam, authentic old Moroccan medina setting: zellige mosaic tiles, carved plaster and cedar, iron-studded wooden doors, brass lanterns, worn rugs, heavy film grain, crushed blacks, desaturated, photorealistic, absolutely no text, no letters, no numbers, no timestamps, no watermarks, vertical composition",
+  "music_mood": "eerie",
+  "characters": {},
+  "logline": "الْخُبِيرْ: حِكَايَةٌ وَاحِدَةٌ، بَيْتٌ وَاحِدٌ، عَشْرُ حَلَقَاتٍ.",
+  "account": "alkhobeer",
+  "arc": [
+    {
+      "title": "الخبيرة الأولى: البئر",
+      "summary": "An abandoned riad in the old medina; neighbours hear a little girl singing from an upper floor that no longer exists. The Expert enters alone and finds a covered well.",
+      "cliffhanger": "His own recording shows him standing at the well, singing in the girl's voice."
+    },
+    {
+      "title": "الخبيرة الثانية: الجار",
+      "summary": "The neighbour who vanished after he answered the voice from the well; his family speaks.",
+      "cliffhanger": "A voice on the family's phone says the Expert's name."
+    },
+    {
+      "title": "الخبيرة الثالثة: الاسم",
+      "summary": "He replays the recording every night; between the verses of the song a whisper says his own name. He remembers his grandmother's rule: if you are called by name at night, never answer, because jinn imitate voices and an answer shows them the way in. He burns jawi incense as she used to.",
+      "cliffhanger": "The voice at the door calls the name of his brother, Younes."
+    },
+    {
+      "title": "الخبيرة الرابعة: الشوافة",
+      "summary": "He goes to an old chouafa in the derb. She burns bakhour, the smoke bends toward his shadow, she refuses to say what is in the well and gives one order: bring salt and a taleb.",
+      "cliffhanger": "She says the well has already taken one voice from his family, and it is asking for the second."
+    },
+    {
+      "title": "الخبيرة الخامسة: الطالب",
+      "summary": "A taleb agrees to recite Quran at the riad at fajr. The well repeats every verse back, a half-second late and in a child's voice.",
+      "cliffhanger": "The taleb leaves in silence; that night his own voice comes out of the well."
+    },
+    {
+      "title": "الخبيرة السادسة: الصورة",
+      "summary": "A 30-year-old photograph in the neighbours' shop shows a man who looks like him standing at the riad door with a camera.",
+      "cliffhanger": "The man in the photograph is holding a camera, and the light on it is red."
+    },
+    {
+      "title": "الخبيرة السابعة: الأخ",
+      "summary": "His brother Younes went into the riad in 1994 and never came out; his mother still keeps Younes's slippers by the door.",
+      "cliffhanger": "His brother's voice answers from the well, calling him by his childhood nickname."
+    },
+    {
+      "title": "الخبيرة الثامنة: الفريق",
+      "summary": "He returns with cousins and a neighbour, salt on the threshold, the taleb's amulet; they answer the well one by one.",
+      "cliffhanger": "Only he is left, and the well is quiet."
+    },
+    {
+      "title": "الخبيرة التاسعة: القواعد",
+      "summary": "His grandmother's sayings turn out to be the rules of the well: never answer your name at night, say bismillah before you pour or enter, salt on the threshold, never look into water at midnight. It wants a voice, not a body.",
+      "cliffhanger": "It wants a voice, not a body."
+    },
+    {
+      "title": "الخبيرة العاشرة: الأخير",
+      "summary": "He goes down with the phone recording. The last file is recorded by whoever answers.",
+      "cliffhanger": "The final recording is not in his voice."
+    }
+  ],
+  "design": "medina",
+  "badge_label": "الخبير",
+  "tape_label": "الخبير"
+}

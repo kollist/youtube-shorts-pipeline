@@ -16,6 +16,7 @@ _FONT_FILES = {
     "sans_bold": ["/System/Library/Fonts/Supplemental/Arial Bold.ttf", "/System/Library/Fonts/HelveticaNeue.ttc"],
     "mono": ["/System/Library/Fonts/Supplemental/Courier New.ttf", "/System/Library/Fonts/Menlo.ttc"],
     "mono_bold": ["/System/Library/Fonts/Supplemental/Courier New Bold.ttf", "/System/Library/Fonts/Menlo.ttc"],
+    "arabic": ["/System/Library/Fonts/GeezaPro.ttc", "/System/Library/Fonts/SFArabic.ttf"],
     "impact": ["/System/Library/Fonts/Supplemental/Impact.ttf", "/System/Library/Fonts/Supplemental/Arial Black.ttf"],
 }
 

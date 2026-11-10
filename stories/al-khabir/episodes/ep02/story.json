@@ -1,0 +1,299 @@
+{
+  "title": "الخبيرة التانية: الجارة",
+  "format": "arabic",
+  "voice_engine": "file",
+  "language": "ar",
+  "title_lines": [
+    "الخبيرة التانية",
+    "الجارة"
+  ],
+  "audience": "horror",
+  "style": "found-footage horror photograph at night, one weak flashlight beam, authentic old Moroccan medina setting: zellige mosaic tiles, carved plaster and cedar, iron-studded wooden doors, brass lanterns, worn rugs, heavy film grain, crushed blacks, desaturated, photorealistic, absolutely no text, no letters, no numbers, no timestamps, no watermarks, vertical composition",
+  "tape_label": "الخبير",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "poster_tag": "الصوت اللي طالع من الحيط",
+  "post_caption": "جارتي ما بانتش، وصوت بنيتة كيغني من الحيط... واش كنتي غادي تحط ودنك؟",
+  "summary": "After the recording, the neighbour vanishes; the song comes through the wall.",
+  "scare_profile": "classic",
+  "finale_type": "narrator_is_it",
+  "picture_style": "flashlight",
+  "tape_no": 2,
+  "cliffhanger": "The neighbour stands behind him in his own recording; her eyes are black.",
+  "characters": {
+    "Narrator": {
+      "voice": "clone",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "clone",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "look": "a Moroccan man in a hooded grey djellaba seen from behind"
+    },
+    "Girl": {
+      "voice": "clone",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "look": "a small Moroccan girl with long wet black hair in a plain white cotton dress"
+    },
+    "LallaFatima": {
+      "voice": "clone",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "look": "an elderly Moroccan woman wrapped in a white haik, weathered face"
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "a narrow dark corridor of an old medina apartment building at night, two carved wooden doors facing each other, one slightly ajar, zellige tiled wall, a brass hamsa on a door, a flashlight beam, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "هادي هي الخبيرة التانية: من بعد ما شفت التسجيل، ما بقيتش قادر نعس."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "",
+      "image_prompt": "an old woman's closed wooden door with a blue painted frame, a pair of worn yellow babouche slippers on the dusty doorstep, a small hamsa charm hung on the door, flashlight beam, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "جارتي لالة فاطمة، اللي كتسكن حدايا من عشرين عام، ما بانتش من نهار الاحد."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "",
+      "image_prompt": "close view of an old wooden door with an iron bolt shot from the inside, a brass hamsa door knocker, dust on the handle, flashlight beam, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "حتى واحد ما شافها هابطة ولا طالعة. والباب ديالها مسدود من الداخل."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "",
+      "image_prompt": "point of view of a hand in a grey djellaba sleeve knocking on an old wooden door in a dark tiled stairwell, flashlight shaking, handheld camera, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "دقيت عليها بزاف. ولاكن ما جاوبني حتى واحد."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "الحيط",
+      "image_prompt": "a dark bedroom in an old medina house, a bare cracked plaster wall with a carved plaster niche, a floor mattress with a folded wool blanket at the edge of the frame, weak flashlight beam, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "فنص الليل، سمعت صوت جاي من الحيط اللي بيني وبينها."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "",
+      "image_prompt": "the plaster wall in the flashlight beam, a faint small pale handprint on it as if pressed from the other side, a hanging brass lantern, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "كان صوت بنيتة صغيرة كتغني نفس الاغنية اللي كانت فالتسجيل."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "",
+      "image_prompt": "point of view very close to a plaster wall, an ear almost touching it, the flashlight grazing the cracks, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "حطيت ودني على الحيط. والغنا كان كيقرب."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "",
+      "image_prompt": "a dark hallway of an old medina house, a thin line of pale light under a closed carved door, a rolled prayer rug leaning on the wall, the wall beside it slightly bulging, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "وفجأة وقف. ومن بعد سمعت لالة فاطمة كتقول بصوت مرعوب: اهرب."
+        }
+      ]
+    },
+    {
+      "image": "images/scene9.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "الجيران",
+      "image_prompt": "a narrow tiled stone staircase in an old medina house crowded with silent neighbours in djellabas and headscarves standing in the dark, faces in shadow, flashlight beam from below, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "جريت لباب الدار. ولاكن لقيت الجيران كاملين واقفين فالدرج."
+        }
+      ]
+    },
+    {
+      "image": "images/scene10.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "",
+      "image_prompt": "rows of pale expressionless faces of men in djellaba hoods and women in headscarves turned toward the camera in a dark stairwell, eyes in shadow, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "كلهم كيشوفو فيا، وما كيتكلمش حتى واحد."
+        }
+      ]
+    },
+    {
+      "image": "images/scene11.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "",
+      "image_prompt": "a middle-aged man in a grey djellaba on the stairs smiling slightly in the flashlight beam, his eyes lost in shadow, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "سولت واحد منهم على لالة فاطمة. ضحك وقال ليا: هي عمرها ما خرجات من دارها."
+        }
+      ]
+    },
+    {
+      "image": "images/scene12.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "",
+      "image_prompt": "an old carved cedar door burst open by force, splinters on the zellige floor, a pitch dark room beyond, flashlight beam entering, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "رجعت للدار، وفتحت باب جارتي بالقوة."
+        }
+      ]
+    },
+    {
+      "image": "images/scene13.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "",
+      "image_prompt": "an empty abandoned apartment room covered with thick dust and cobwebs, a faded rug, one old low wooden table with an overturned tea glass, flashlight beam, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "الدار كانت خاوية. والغبرة كتغطي كلشي بحال دار عمرها ما سكنها حد."
+        }
+      ]
+    },
+    {
+      "image": "images/scene14.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "التيلفون",
+      "image_prompt": "an old smartphone lying on a dusty low wooden table beside a silver teapot, in a dark room, its screen glowing cold blue, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "وفوق الطاولة، لقيت تيليفون قديم كيشعل بوحدو."
+        }
+      ]
+    },
+    {
+      "image": "images/scene15.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "close view of a phone screen showing night camera footage of a man pressing his ear against a wall, grainy, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "فالشاشة، كان تسجيل ديالي من البارح، وأنا حاط ودني على الحيط."
+        }
+      ]
+    },
+    {
+      "image": "images/scene16.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "{LallaFatima} standing close behind a man in a grey djellaba who has his ear to a wall, her eyes completely black, night camera view, mostly in shadow, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "وفالتسجيل، كانت لالة فاطمة واقفة وراي، وعينيها كحلين بالكامل."
+        }
+      ]
+    },
+    {
+      "image": "images/scene17.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "extreme close-up of {LallaFatima}'s pale face in her white haik against a plaster wall, eyes completely black, mouth slightly open, mostly in shadow, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "ما تدقش على الحيط... أنا كنسمعك. وأنا وراك دابا. واش كنتي غادي تلفت؟"
+        }
+      ]
+    }
+  ],
+  "dialect": "darija",
+  "narration_audio": "narration.mp3",
+  "question_spoken": true,
+  "design": "medina",
+  "badge_label": "الخبير"
+}

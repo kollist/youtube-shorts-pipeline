@@ -95,9 +95,13 @@ def _frames(path: str):
 
 
 def process(in_mp4: str, out_mp4: str, curve: list[tuple[float, float]], events: list[dict], label: str, flash_images: dict | None = None,
-            out_size=(1080, 1920), log=print, beats: list[float] | None = None, soft: bool = False) -> Path:
+            out_size=(1080, 1920), log=print, beats: list[float] | None = None, soft: bool = False, look: str = "tape", number: str = "") -> Path:
     """curve: [(seconds, tension 0..1), ...] linear in between. events: {"t", "dur", "kind": static|roll|freeze|black|flash, "image": key into flash_images}."""
-    tape = Tape(label, soft=soft)
+    if look == "medina":                                       # the Khbir series: lantern-lit, gold frame, no camcorder (medina_look.py)
+        import medina_look
+        tape = medina_look.Medina(label, number, soft=soft)
+    else:
+        tape = Tape(label, soft=soft)
     flash = {k: np.asarray(Image.open(v).convert("RGB").resize((W, H), Image.LANCZOS), np.float32) for k, v in (flash_images or {}).items()}
     xs, ys = zip(*curve)
     enc = subprocess.Popen(["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
@@ -118,11 +122,15 @@ def process(in_mp4: str, out_mp4: str, curve: list[tuple[float, float]], events:
                 held = None
             if kind == "flash" and ev.get("image") in flash:
                 f = flash[ev["image"]]
-            out = tape.frame(f, t, 1.0 if kind in ("static", "roll") else k, i)
+            out = tape.frame(f, t, k if look == "medina" else (1.0 if kind in ("static", "roll") else k), i)
             if beats:                                              # the picture dips dark on every heartbeat - the chest-tightening pulse
                 lub = max((np.exp(-(t - b) / 0.06) for b in beats if 0 <= t - b < 0.35), default=0.0)
                 out = out * (1 - 0.30 * min(1.0, k + 0.25) * lub)
-            if kind == "static":
+            if look == "medina" and kind in ("static", "roll"):                # the lantern gutters instead of the tape tearing
+                out = out * (0.18 + 0.3 * abs(np.sin(t * 53)))
+            elif look == "medina" and kind == "card":
+                a_ = min(1.0, (t - ev["t"]) / 0.18); out = out * (1 - a_) + tape.card * a_
+            elif kind == "static":
                 out = np.clip(128 + tape.noise[i % 6] * 70 + out * 0.15, 0, 255)
             elif kind == "roll":
                 out = np.roll(out, int((t - ev["t"]) / ev["dur"] * H * 1.5) % H, axis=0)

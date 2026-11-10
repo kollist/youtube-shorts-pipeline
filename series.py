@@ -454,7 +454,7 @@ def archive_posted(ep_dir, results: dict) -> list[str]:
 def render_episode(slug: str, number: int, motion: str | None = None, cancel_event=None) -> Path:
     """Renders the finished video for an episode: a tape for SCP series, the narrated animated story for the rest."""
     ep = episode_dir(slug, number)
-    if is_scp(_read(STORIES_DIR / slug / "series.json")):
+    if is_scp(_read(STORIES_DIR / slug / "series.json")) or _read(STORIES_DIR / slug / "series.json").get("format") == "arabic":
         from horror_video import build_horror_video
         return build_horror_video(str(ep))
     from story_video import build_story

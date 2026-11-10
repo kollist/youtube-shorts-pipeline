@@ -77,14 +77,15 @@ def _poster(story: dict, image: Path, out: Path) -> Path:
     y = 150
     for i, line in enumerate(lines):
         size = 168 if i == 0 else 112
-        while size > 40 and g.text_size(line, g.font("impact", size))[0] > W - 150:      # shrink until the whole line fits
+        kind = "arabic" if story.get("language") == "ar" else "impact"
+        while size > 40 and g.text_size(line, g.font(kind, size))[0] > W - 150:      # shrink until the whole line fits
             size -= 4
         col = (255, 196, 20) if i == 0 else (255, 255, 255)
-        lay = g.text_layer(line, "impact", size, col, W - 80, "center", stroke=11, stroke_color=(10, 4, 4))
+        lay = g.text_layer(line, kind, size, col, W - 80, "center", stroke=11, stroke_color=(10, 4, 4))
         im.alpha_composite(lay, ((W - lay.width) // 2, y)); y += int(size * 1.12)
     n_rules = max([s.get("rule_no", 0) for s in story["scenes"] if s.get("kind") == "rule"] + [0])
     tag = story.get("poster_tag") or (f"{n_rules + 1} RULES TO SURVIVE" if story.get("format") == "rules" else f"{n_rules} RULES TO SURVIVE")
-    badge = g.text_layer(tag, "impact", 70, (255, 60, 50), W - 100, "center", stroke=8, stroke_color=(10, 4, 4))
+    badge = g.text_layer(tag, kind if story.get("language") == "ar" else "impact", 70, (255, 60, 50), W - 100, "center", stroke=8, stroke_color=(10, 4, 4))
     im.alpha_composite(badge, ((W - badge.width) // 2, H - 640))
     im.convert("RGB").save(out)
     return out
@@ -104,7 +105,8 @@ def _ass_time(s: float) -> str:
     return f"{int(h)}:{int(m):02d}:{sec:05.2f}"
 
 
-def _captions(scenes: list[dict], out: Path) -> None:
+def _captions(scenes: list[dict], out: Path, font: str = "Impact", size: int = 96, bold: int = 0, badge_size: int = 190, rtl: bool = False, base: str = "&H00FFFFFF", hi: str = "&H0014C4FF&", outline: str = "&H00000000") -> None:
+    vis = (lambda t: __import__("arabic_voice").visual(t)) if rtl else (lambda t: t.upper())      # the subtitle renderer has no right-to-left support: Arabic is shaped and reordered here
     head = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {W}
@@ -113,8 +115,8 @@ WrapStyle: 0
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Cap,Impact,96,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,1,0,1,9,0,2,60,60,330,1
-Style: Badge,Impact,190,&H003C3CFF,&H003C3CFF,&H00000000,&H00000000,0,0,0,0,100,100,2,0,1,10,0,8,60,60,230,1
+Style: Cap,{font},{size},{base},{base},{outline},&H00000000,{bold},0,0,0,100,100,1,0,1,9,0,2,60,60,330,1
+Style: Badge,{font},{badge_size},&H003C3CFF,&H003C3CFF,&H00000000,&H00000000,{bold},0,0,0,100,100,2,0,1,10,0,8,60,60,230,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -122,12 +124,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     ev = []
     for sc in scenes:
         if sc["badge"]:
-            ev.append(f"Dialogue: 2,{_ass_time(sc['start'])},{_ass_time(sc['start'] + 1.5)},Badge,,0,0,0,,{{\\fad(50,300)\\fscx150\\fscy150\\t(0,140,\\fscx100\\fscy100)}}{sc['badge']}")
+            ev.append(f"Dialogue: 2,{_ass_time(sc['start'])},{_ass_time(sc['start'] + 1.5)},Badge,,0,0,0,,{{\\fad(50,300)\\fscx150\\fscy150\\t(0,140,\\fscx100\\fscy100)}}{vis(sc['badge']) if rtl else sc['badge']}")
         words = [(sc["start"] + sc["lead"] + a, sc["start"] + sc["lead"] + b, w) for a, b, w in sc["words"]]
         chunks, cur = [], []
         for w in words:
             cur.append(w)
-            if len(cur) >= 3 or re.search(r"[.?!,:;]$", w[2]):
+            if len(cur) >= 3 or re.search(r"[.?!,:;\u061f\u060c\u061b]$", w[2]):
                 chunks.append(cur); cur = []
         if cur:
             if chunks and len(cur) == 1:
@@ -137,7 +139,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         for ci, ch in enumerate(chunks):
             for wi, (a, b, w) in enumerate(ch):
                 end = ch[wi + 1][0] if wi + 1 < len(ch) else (chunks[ci + 1][0][0] if ci + 1 < len(chunks) and chunks[ci + 1][0][0] - b < 0.35 else b + 0.12)
-                text = " ".join((f"{{\\c&H0014C4FF&\\fscx114\\fscy114}}{x[2].upper()}{{\\r}}" if k == wi else x[2].upper()) for k, x in enumerate(ch))
+                order = range(len(ch) - 1, -1, -1) if rtl else range(len(ch))                    # right-to-left: the first word is drawn at the right
+                text = " ".join((f"{{\\c{hi}\\fscx114\\fscy114}}{vis(ch[k][2])}{{\\r}}" if k == wi else vis(ch[k][2])) for k in order)
                 ev.append(f"Dialogue: 0,{_ass_time(a)},{_ass_time(end)},Cap,,0,0,0,,{text}")
     out.write_text(head + "\n".join(ev) + "\n", encoding="utf-8")
 

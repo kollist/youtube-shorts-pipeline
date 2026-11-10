@@ -1,0 +1,298 @@
+{
+  "title": "الخبيرة التالتة: الاسم",
+  "format": "arabic",
+  "voice_engine": "file",
+  "language": "ar",
+  "title_lines": [
+    "الخبيرة التانية",
+    "الجارة"
+  ],
+  "audience": "horror",
+  "style": "found-footage horror photograph at night, one weak flashlight beam, authentic old Moroccan medina setting: zellige mosaic tiles, carved plaster and cedar, iron-studded wooden doors, brass lanterns, worn rugs, heavy film grain, crushed blacks, desaturated, photorealistic, absolutely no text, no letters, no numbers, no timestamps, no watermarks, vertical composition",
+  "tape_label": "الخبير",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "poster_tag": "إلا عيطو عليك فالليل، ما تجاوبش",
+  "post_caption": "جارتي ما بانتش، وصوت بنيتة كيغني من الحيط... واش كنتي غادي تحط ودنك؟",
+  "summary": "He replays the recording every night; between the verses of the song a whisper says his own name. He remembers his grandmother's rule: if you are called by name at night, never answer, because jinn imitate voices and an answer shows them the way in. He burns jawi incense as she used to.",
+  "scare_profile": "classic",
+  "finale_type": "narrator_is_it",
+  "picture_style": "flashlight",
+  "tape_no": 3,
+  "cliffhanger": "The voice at the door calls the name of his brother, Younes.",
+  "characters": {
+    "Narrator": {
+      "voice": "clone",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "clone",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "look": "a Moroccan man in a hooded grey djellaba seen from behind"
+    },
+    "Girl": {
+      "voice": "clone",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "look": "a small Moroccan girl with long wet black hair in a plain white cotton dress"
+    },
+    "LallaFatima": {
+      "voice": "clone",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "look": "an elderly Moroccan woman wrapped in a white haik, weathered face"
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "{Hero} sitting on a low Moroccan sofa in a dark salon, a phone glowing in his hand, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "هادي هي الخبيرة التالتة: من نهار شفت لالة فاطمة، وأنا كنعاود نسمع التسجيل كل ليلة."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "",
+      "image_prompt": "a low round table in a Moroccan salon with a silver teapot and a cold glass of tea, a phone glowing beside it, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "بقيت قاعد فالصالون، والتيليفون قدامي، وكاس ديال أتاي بارد حدايا."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "",
+      "image_prompt": "close view of a phone screen showing a paused night video, glowing cold blue in a dark room, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "فالدقيقة التالتة، كتبدا الأغنية ديال البنيتة، كيف العادة."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "",
+      "image_prompt": "extreme close view of an ear and a phone speaker, the cold glow on a cheek, tense, dark room, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "ولاكن هاد المرة، سمعت حاجة جديدة بين الأغنية والأغنية: همسة."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "الحيط",
+      "image_prompt": "a phone held close in the dark with an audio waveform showing a tiny spike, cold blue glow, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "طلعت الصوت للآخر. والهمسة كانت كتقول سميتي: ياسين."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "",
+      "image_prompt": "an old framed black and white photograph of an elderly Moroccan grandmother in a white haik hanging on the wall of a dark salon, a flashlight beam on it, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "جدتي الله يرحمها، كانت دايما كتقول: إلا عيطو عليك فالليل، ما تجاوبش."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "",
+      "image_prompt": "a dark window with a curtain, behind the curtain a faint pale silhouette, a night medina rooftop with satellite dishes outside, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "حيت الجن كيقلدو الصوت، وإلا جاوبتي، كيعرفو الباب فين يدخلو."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "",
+      "image_prompt": "a small brass incense burner with glowing coals on a zellige floor, a hand dropping resin, thin smoke rising, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "وقفت التسجيل، وحرقت شوية ديال الجاوي فالمجمر، كيف كانت كتدير هي."
+        }
+      ]
+    },
+    {
+      "image": "images/scene9.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "الجيران",
+      "image_prompt": "incense smoke crawling along zellige floor tiles toward a door like water, flashlight beam, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "الدخان ما طلعش لفوق. نزل للأرض، وبدا كيمشي بحال الما، لجهة الباب."
+        }
+      ]
+    },
+    {
+      "image": "images/scene10.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "",
+      "image_prompt": "a closed wooden door in a dark hallway with a thin line of pale light under it, a small hamsa on the door, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "سمعت دقة خفيفة على الباب. ومن بعد صوت ديال بنيتة صغيرة: ياسين... جاوبني."
+        }
+      ]
+    },
+    {
+      "image": "images/scene11.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "",
+      "image_prompt": "extreme close view of a hand covering a mouth, one wide frightened eye in shadow, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "حطيت يدي على فمي. وكان قلبي كيدق بحال إلا غادي يخرج."
+        }
+      ]
+    },
+    {
+      "image": "images/scene12.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "",
+      "image_prompt": "a dark hallway, a small wet footprint on the zellige tiles in front of the door, flashlight beam, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "عيطات عليا تلات مرات. والمرة التالتة، كان صوتها بحال صوت أمي."
+        }
+      ]
+    },
+    {
+      "image": "images/scene13.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "",
+      "image_prompt": "a phone lighting up by itself on a low table in a dark room, cold blue glow, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "كنت غادي نجاوب بلا ما نحس. ولاكن التيليفون تشعل بوحدو."
+        }
+      ]
+    },
+    {
+      "image": "images/scene14.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "التيلفون",
+      "image_prompt": "a phone screen showing night camera footage of a man standing at his own front door with his hand on the lock, grainy, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "ورجع التسجيل يخدم. وفالشاشة، كنت أنا، واقف قدام الباب، وكنفتحو."
+        }
+      ]
+    },
+    {
+      "image": "images/scene15.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "night camera view of a man in a hooded djellaba opening a door onto a black void, motion blur, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "وفالتسجيل، سمعت صوتي أنا كيقول: أنا هنا... دخلي."
+        }
+      ]
+    },
+    {
+      "image": "images/scene16.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "close view of a man's face half in shadow lit by a phone, mouth tightly shut, terrified, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "شكون كان كيهضر بصوتي؟ أنا ما نطقتش حتى كلمة."
+        }
+      ]
+    },
+    {
+      "image": "images/scene17.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "extreme close-up of {Girl}'s face behind a slightly open wooden door, one black eye visible, wet hair, mostly in shadow, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "ما تجاوبش... أنا كنعرف سميتك. وسمية خوك يونس. وهو كيستناك دابا. واش كنتي غادي تجاوب؟"
+        }
+      ]
+    }
+  ],
+  "dialect": "darija",
+  "question_spoken": true,
+  "design": "medina",
+  "badge_label": "الخبير"
+}

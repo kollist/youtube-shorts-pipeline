@@ -1,0 +1,298 @@
+{
+  "title": "الخبيرة الأولى: البئر",
+  "format": "arabic",
+  "voice_engine": "file",
+  "language": "ar",
+  "title_lines": [
+    "الخبيرة الأولى",
+    "البئر"
+  ],
+  "audience": "horror",
+  "style": "found-footage horror photograph at night, one weak flashlight beam, authentic old Moroccan medina setting: zellige mosaic tiles, carved plaster and cedar, iron-studded wooden doors, brass lanterns, worn rugs, heavy film grain, crushed blacks, desaturated, photorealistic, absolutely no text, no letters, no numbers, no timestamps, no watermarks, vertical composition",
+  "tape_label": "الخبير",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "poster_tag": "الصوت اللي طالع من البير",
+  "post_caption": "بيت مهجور، وصوت بنت تغني من طابق غير موجود... هل كنت ستجيب؟",
+  "summary": "The Expert enters an abandoned riad and finds a singing well.",
+  "scare_profile": "classic",
+  "finale_type": "narrator_is_it",
+  "picture_style": "flashlight",
+  "tape_no": 1,
+  "cliffhanger": "His own recording shows him standing at the well, singing in the girl's voice.",
+  "characters": {
+    "Narrator": {
+      "voice": "clone",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "clone",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "look": "a Moroccan man in a hooded grey djellaba seen from behind"
+    },
+    "Girl": {
+      "voice": "clone",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "look": "a small Moroccan girl with long wet black hair in a plain white cotton dress"
+    },
+    "LallaFatima": {
+      "voice": "clone",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "look": "an elderly Moroccan woman wrapped in a white haik, weathered face"
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "a narrow medina derb at night, whitewashed walls with a blue painted lower half, a rusty brass lantern, the carved cedar door of an abandoned riad slightly open, a stray cat, a pair of babouche slippers left on the step, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "هادي هي الخبيرة الأولى: دار قديمة فالمدينة القديمة، عمر ما دخلها شي واحد من تلاتين عام."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "",
+      "image_prompt": "dark ruined riad courtyard seen from below, a carved cedar balcony with wooden lattice screens high above, zellige tiled walls, a faint pale glow at the very top, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "الجيران كيقولو أنهم كيسمعو كل ليلة بنيتة صغيرة كتغني فالطابق الفوقاني."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "",
+      "image_prompt": "collapsed roof of an old riad, fallen painted cedar beams, a hole showing the night sky, broken zellige tiles and dust, a rusty brass lantern lying on the floor, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "ولاكن الدار ما فيها حتى طابق فوقاني. السقف طاح من شحال هادي."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "",
+      "image_prompt": "point of view walking through a dark narrow medina derb toward an old iron-studded door, a hand holding a phone flashlight, a sleeve of a grey djellaba, satellite dishes on the rooftops above, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "مشيت ليها وحدي، فنصاصات الليل، او مخدم لفلاش او الكاميرا ديال التيلفون."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "",
+      "image_prompt": "the open iron-studded carved cedar door of the riad, a floor of thick undisturbed dust with no footprints, a pair of old babouche slippers by the wall, a flashlight beam crossing it, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "الباب كان مفتوح. والغبرة فالارض مافيها حتى اتر ديال العفيط."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "البئر",
+      "image_prompt": "an old stone well in the middle of a ruined riad courtyard covered with a wooden board, zellige mosaic floor, a dead orange tree in the corner, small finger marks on the board, flashlight beam, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "فوسط الدار، لقيت بير قديم مغطي بلوحة ديال لخشب، وفوقها آثار د صبعان صغار."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "",
+      "image_prompt": "the covered well in the flashlight beam, zellige tiled courtyard, at the edge of the darkness behind it something very faint and pale, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "كأن شي حد كان كيدفعها من التحت. وفجأة، بدات الاغنية."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "",
+      "image_prompt": "the old stone well seen close, the wooden board slightly lifted, a thin pale glow leaking from underneath, dry orange tree leaves on the ground, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "الصوت ما كانش جاي من لفوق. كان طالع من البير."
+        }
+      ]
+    },
+    {
+      "image": "images/scene9.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "",
+      "image_prompt": "looking down into an old well, black water far below with slow ripples, a pale shape just under the surface, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "حيدت اللوحة. وشي حاجة كانت كتتحرك لتحت، كأنها كتعوم فالظلام."
+        }
+      ]
+    },
+    {
+      "image": "images/scene10.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "همس",
+      "image_prompt": "the stone rim of a well in a flashlight beam, small pale fingertips gripping the edge from inside the darkness, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "وقفات الاغنية. من بعد سمعت همسة قريبة بزاف: ما تبعدش... أنا تحتك."
+        }
+      ]
+    },
+    {
+      "image": "images/scene11.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "",
+      "image_prompt": "flashlight beam pointed straight down an endless well, the light fading into absolute black, no bottom, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "ضويت الضو لتحت. ما لقيت لا ما ولا قاع. غير ظلام طالع عليا."
+        }
+      ]
+    },
+    {
+      "image": "images/scene12.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "",
+      "image_prompt": "the old carved cedar door now shut, a hand in a grey djellaba sleeve pressed against the wood, a brass hamsa door knocker, flashlight shaking, motion blur, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "رجعت للباب، ولاكن لقيتو مسدود. وهو عمرو ما تسد."
+        }
+      ]
+    },
+    {
+      "image": "images/scene13.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "التسجيل",
+      "image_prompt": "night camera view of the riad courtyard from the doorway, {Girl} sitting on the edge of the well with her back to the camera, zellige tiles, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "فالتيليفون، شفت الدار من ورايا. وفوق حافة البير كانت جالسة بنيتة صغيرة، وظهرها ليا."
+        }
+      ]
+    },
+    {
+      "image": "images/scene14.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "",
+      "image_prompt": "extreme close view of the back of {Girl}'s head, wet dark hair, very close to the camera, face turned away, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "ما تلفتش. حيت كنعرف شنو كيوقع للي كيشوف وجهها."
+        }
+      ]
+    },
+    {
+      "image": "images/scene15.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "pale morning light in an old riad courtyard, zellige tiles and an orange tree, the well uncovered and calm, a tea glass left on its rim, everything wrong and too still, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "خرجت فالصباح، وما عرفتش كيفاش. واليوم كنشوف التسجيل للمرة العاشرة."
+        }
+      ]
+    },
+    {
+      "image": "images/scene16.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "a dark room, a laptop on a low Moroccan table with a tea tray and glasses beside it, the screen showing night camera footage of a man in a hooded djellaba standing at an old well with his back to us, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "فالتسجيل، أنا ما كنتش واقف حدا الباب. كنت واقف حدا البير... وكنغني."
+        }
+      ]
+    },
+    {
+      "image": "images/scene17.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "extreme close-up of a small pale girl's face rising out of a black well, wet hair, eyes completely black, mostly in shadow, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "ما تشوفش لتحت... أنا كنسمعك. وأنا قريبة بزاف. واش كنتي غادي تجاوب؟"
+        }
+      ]
+    }
+  ],
+  "dialect": "darija",
+  "narration_audio": "narration.mp3",
+  "design": "medina",
+  "badge_label": "الخبير"
+}
