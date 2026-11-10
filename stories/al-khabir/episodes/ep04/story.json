@@ -1,0 +1,298 @@
+{
+  "title": "الخبيرة الرابعة: الشوافة",
+  "format": "arabic",
+  "voice_engine": "file",
+  "language": "ar",
+  "title_lines": [
+    "الخبيرة الرابعة",
+    "الشوافة"
+  ],
+  "audience": "horror",
+  "style": "found-footage horror photograph at night, one weak flashlight beam, authentic old Moroccan medina setting: zellige mosaic tiles, carved plaster and cedar, iron-studded wooden doors, brass lanterns, worn rugs, heavy film grain, crushed blacks, desaturated, photorealistic, absolutely no text, no letters, no numbers, no timestamps, no watermarks, vertical composition",
+  "tape_label": "الخبير",
+  "music": {
+    "mood": "eerie"
+  },
+  "motion": "pan",
+  "caption_colors": {},
+  "caption_size": 84,
+  "caption_words": 3,
+  "poster_tag": "الشوافة ما بغاتش تهضر",
+  "post_caption": "جارتي ما بانتش، وصوت بنيتة كيغني من الحيط... واش كنتي غادي تحط ودنك؟",
+  "summary": "He goes to an old chouafa in the derb. She burns bakhour, the smoke bends toward his shadow, she refuses to say what is in the well and gives one order: bring salt and a taleb.",
+  "scare_profile": "classic",
+  "finale_type": "narrator_is_it",
+  "picture_style": "flashlight",
+  "tape_no": 4,
+  "cliffhanger": "She says the well has already taken one voice from his family, and it is asking for the second.",
+  "characters": {
+    "Narrator": {
+      "voice": "clone",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "look": ""
+    },
+    "Hero": {
+      "voice": "clone",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "look": "a Moroccan man in a hooded grey djellaba seen from behind"
+    },
+    "Girl": {
+      "voice": "clone",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "look": "a small Moroccan girl with long wet black hair in a plain white cotton dress"
+    },
+    "LallaFatima": {
+      "voice": "clone",
+      "rate": "+0%",
+      "pitch": "+0Hz",
+      "look": "an elderly Moroccan woman wrapped in a white haik, weathered face"
+    }
+  },
+  "scenes": [
+    {
+      "image": "images/scene1.png",
+      "min_seconds": 3.0,
+      "kind": "intro",
+      "rule_no": 0,
+      "label": "",
+      "image_prompt": "{Hero} sitting awake at night on the edge of a bed with a wool blanket in a dark Moroccan bedroom, phone light on his face, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "هادي هي الخبيرة الرابعة: من بعد الليلة اللي عيطات عليا فيها، ما بقيتش قادر نعس فدارنا."
+        }
+      ]
+    },
+    {
+      "image": "images/scene2.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "",
+      "image_prompt": "a narrow old medina derb at first grey light, blue painted walls, a hanging brass lantern, a small door far ahead, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "مشيت لدرب قديم فالمدينة، فين كتسكن شوافة كانت كتعرفها جدتي."
+        }
+      ]
+    },
+    {
+      "image": "images/scene3.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 1,
+      "label": "",
+      "image_prompt": "a small blue painted wooden door with a brass hamsa hand knocker in a narrow derb at night, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "الباب كان صغير ومصبوغ بالأزرق، وفوقو خميسة ديال النحاس."
+        }
+      ]
+    },
+    {
+      "image": "images/scene4.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "",
+      "image_prompt": "a dark Moroccan interior room full of incense smoke, a brass incense burner glowing in the corner, carved plaster niche, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "دخلت. الدار كانت ضلمة، وريحة الجاوي والبخور مغطية كلشي."
+        }
+      ]
+    },
+    {
+      "image": "images/scene5.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 2,
+      "label": "الحيط",
+      "image_prompt": "an old Moroccan fortune-teller woman in a dark kaftan and headscarf sitting on a red rug with candles in front of her, her eyes looking past the camera, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "الشوافة كانت جالسة فوق زربية حمرا، وعينيها كيشوفو شي حاجة وراي."
+        }
+      ]
+    },
+    {
+      "image": "images/scene6.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "",
+      "image_prompt": "close view of the old woman's lined face lit by candlelight, her mouth speaking, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "قبل ما نهضر، قالت: سميتك ياسين. وكاين واحد وراك ما بغاش يمشي."
+        }
+      ]
+    },
+    {
+      "image": "images/scene7.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 3,
+      "label": "",
+      "image_prompt": "hands dropping resin onto glowing coals in a brass incense burner, thin smoke rising, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "حرقات شوية ديال البخور فالمجمر. الدخان ما طلعش لفوق."
+        }
+      ]
+    },
+    {
+      "image": "images/scene8.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "",
+      "image_prompt": "incense smoke curling along a zellige floor toward a man's long shadow on the wall, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "دار حوالين ظلي، وبدا كيتلوى بحال شي ثعبان صغير."
+        }
+      ]
+    },
+    {
+      "image": "images/scene9.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "الجيران",
+      "image_prompt": "the silhouette of a man facing a seated old woman in a dark room, candles between them, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "سولتها: شنو كاين فالبير؟ سكتات بزاف."
+        }
+      ]
+    },
+    {
+      "image": "images/scene10.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 4,
+      "label": "",
+      "image_prompt": "extreme close view of an old woman's wrinkled eyes in candlelight, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "من بعد قالت: ما نقدرش نقولها ليك. إلا نطقت بيها، غادي تسمعني."
+        }
+      ]
+    },
+    {
+      "image": "images/scene11.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "",
+      "image_prompt": "a candle flame going out, a thin line of smoke rising into darkness, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "وقف الدخان فجأة. وطفات الشمعة اللي حدايا بلا ما تجي ريح."
+        }
+      ]
+    },
+    {
+      "image": "images/scene12.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "",
+      "image_prompt": "a bowl of coarse white salt on a low wooden table in candlelight, a silver teapot beside it, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "قالت بصوت واطي: جيب الملحة الكبيرة، وجيب معاك طالب كيحفظ القرآن."
+        }
+      ]
+    },
+    {
+      "image": "images/scene13.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "",
+      "image_prompt": "the open small blue door seen from inside, a dark derb outside with the first grey light of dawn, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "وما تمشيش للدار قبل الفجر. وما تجاوبش حتى واحد كيعيط عليك."
+        }
+      ]
+    },
+    {
+      "image": "images/scene14.png",
+      "min_seconds": 3.0,
+      "kind": "rule",
+      "rule_no": 5,
+      "label": "التيلفون",
+      "image_prompt": "close view of an old woman's wrinkled hand gripping a man's wrist tightly, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "كنت غادي نخرج، ولاكن مسكاتني من يدي بقوة ما كنتش كنتصورها."
+        }
+      ]
+    },
+    {
+      "image": "images/scene15.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "an old stone well in a dark riad courtyard seen from far away through a doorway, a faint pale glow, zellige tiles, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "قالت: البير خد صوت واحد من عائلتك من زمان."
+        }
+      ]
+    },
+    {
+      "image": "images/scene16.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "{Hero} standing in the small blue doorway looking back into the dark room, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "ومن نهار تما، وهو كيستنى الصوت التاني."
+        }
+      ]
+    },
+    {
+      "image": "images/scene17.png",
+      "min_seconds": 3.0,
+      "kind": "twist",
+      "rule_no": 6,
+      "label": "",
+      "image_prompt": "extreme close-up of an old woman's face in near darkness, only her eyes lit, solemn, {style}",
+      "lines": [
+        {
+          "who": "Narrator",
+          "text": "الصوت التاني... هو صوتك نتا. واش كنتي غادي تعطيه ليه؟"
+        }
+      ]
+    }
+  ],
+  "dialect": "darija",
+  "question_spoken": true,
+  "design": "medina",
+  "badge_label": "الخبير"
+}
