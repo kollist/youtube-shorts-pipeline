@@ -18,6 +18,8 @@ Run by launchd every 20 minutes (see launchd/com.shorts.foundation-tapes-daily.p
     python auto_daily.py remake N               after you take episode N down: wipe it and put its SCP back at the front of the queue
 """
 
+from __future__ import annotations
+
 import argparse
 import datetime as dt
 import fcntl
